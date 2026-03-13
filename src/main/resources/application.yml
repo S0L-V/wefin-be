@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: carecall
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
