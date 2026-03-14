@@ -1,7 +1,7 @@
 services:
   backend:
-    image: carecall-backend:latest
-    container_name: carecall-backend
+    image: solv2025/carecall-backend:dev
+    container_name: carecall-backend-dev
     ports:
       - "8080:8080"
     env_file:
