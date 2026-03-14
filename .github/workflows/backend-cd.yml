@@ -37,19 +37,22 @@ jobs:
           if [ "${GITHUB_REF_NAME}" = "main" ]; then
             echo "IMAGE_TAG=prod" >> $GITHUB_ENV
             echo "COMPOSE_FILE=docker-compose.prod.yml" >> $GITHUB_ENV
+            echo "PROJECT_NAME=carecall-prod" >> $GITHUB_ENV
           elif [ "${GITHUB_REF_NAME}" = "dev" ]; then
             echo "IMAGE_TAG=dev" >> $GITHUB_ENV
             echo "COMPOSE_FILE=docker-compose.dev.yml" >> $GITHUB_ENV
+            echo "PROJECT_NAME=carecall-dev" >> $GITHUB_ENV
           else
             echo "Unsupported branch: ${GITHUB_REF_NAME}"
             exit 1
           fi
 
-      - name: Check selected deployment target
+      - name: Check deployment config
         run: |
-          echo "GITHUB_REF_NAME=${GITHUB_REF_NAME}"
-          echo "IMAGE_TAG=${IMAGE_TAG}"
-          echo "COMPOSE_FILE=${COMPOSE_FILE}"
+          echo "Branch: ${GITHUB_REF_NAME}"
+          echo "IMAGE_TAG: ${IMAGE_TAG}"
+          echo "COMPOSE_FILE: ${COMPOSE_FILE}"
+          echo "PROJECT_NAME: ${PROJECT_NAME}"
 
       - name: Docker Hub login
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
@@ -63,7 +66,7 @@ jobs:
       - name: Check compose file exists
         run: ls -al ${{ env.COMPOSE_FILE }}
 
-      - name: Copy docker-compose to EC2
+      - name: Copy compose file to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -85,18 +88,18 @@ jobs:
             mkdir -p /home/${{ secrets.EC2_USERNAME }}/deploy
             cd /home/${{ secrets.EC2_USERNAME }}/deploy
 
-            echo "=== Current files in deploy dir ==="
+            echo "=== Current deploy files ==="
             ls -al
 
             echo "=== Pull latest image ==="
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/carecall-backend:${{ env.IMAGE_TAG }}
 
             echo "=== Restart container ==="
-            docker compose -f ${{ env.COMPOSE_FILE }} down || true
-            docker compose -f ${{ env.COMPOSE_FILE }} up -d
+            docker compose -p ${{ env.PROJECT_NAME }} -f ${{ env.COMPOSE_FILE }} down || true
+            docker compose -p ${{ env.PROJECT_NAME }} -f ${{ env.COMPOSE_FILE }} up -d
 
             echo "=== Running containers ==="
             docker ps
 
-            echo "=== Remove unused images ==="
+            echo "=== Clean unused images ==="
             docker image prune -f
