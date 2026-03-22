@@ -1,6 +1,6 @@
 spring:
   application:
-    name: carecall
+    name: wefin
 
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}

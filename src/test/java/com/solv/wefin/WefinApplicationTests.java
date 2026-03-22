@@ -1,4 +1,4 @@
-package com.solv.carecall;
+package com.solv.wefin;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -6,7 +6,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
 @ActiveProfiles("test")
-class CarecallApplicationTests {
+class WefinApplicationTests {
 
 	@Test
 	void contextLoads() {

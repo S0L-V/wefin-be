@@ -1,7 +1,9 @@
+name: wefin
+
 services:
   backend:
-    image: solv2025/carecall-backend:prod
-    container_name: carecall-backend-prod
+    image: solv2025/wefin-backend:prod
+    container_name: wefin-backend-prod
     ports:
       - "8081:8080"
     env_file:
