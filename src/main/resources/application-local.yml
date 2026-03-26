@@ -26,3 +26,12 @@ ai:
 
 jwt:
   secret: ${JWT_SECRET:local-secret-key-change-me}
+
+news:
+  naver:
+    client-id: ${NAVER_CLIENT_ID:}
+    client-secret: ${NAVER_CLIENT_SECRET:}
+    display: ${NAVER_NEWS_DISPLAY:100}
+    base-url: ${NAVER_NEWS_BASE_URL:https://openapi.naver.com/v1/search/news.json}
+  collect:
+    cron: "0 0 */2 * * *"
