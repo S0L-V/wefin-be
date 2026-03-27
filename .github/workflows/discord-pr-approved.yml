@@ -13,13 +13,12 @@ jobs:
       - name: Check approval count and notify
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          TITLE: ${{ github.event.pull_request.title }}
+          URL: ${{ github.event.pull_request.html_url }}
+          REPO: ${{ github.repository }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
-          PR_NUM=${{ github.event.pull_request.number }}
-          TITLE="${{ github.event.pull_request.title }}"
-          URL="${{ github.event.pull_request.html_url }}"
-          REPO="${{ github.repository }}"
-          AUTHOR="${{ github.event.pull_request.user.login }}"
-
           # 현재 PR의 approved 리뷰 수 카운트
           APPROVAL_COUNT=$(curl -sS \
             -H "Accept: application/vnd.github+json" \
