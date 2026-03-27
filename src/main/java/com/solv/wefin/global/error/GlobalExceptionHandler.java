@@ -8,6 +8,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.solv.wefin.global.common.ApiResponse;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -32,6 +35,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<?>> handleException(Exception e) {
+        log.error(e.getMessage(), e);
         ApiResponse<Object> error = ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR);
         return ResponseEntity.status(error.getStatus()).body(error);
     }
