@@ -32,7 +32,7 @@ public class RawNewsArticle {
     @Column(name = "external_article_id", length = 255)
     private String externalArticleId;
 
-    @Column(name = "original_url", nullable = false)
+    @Column(name = "original_url", nullable = false, unique = true)
     private String originalUrl;
 
     @Column(name = "original_title", nullable = false)

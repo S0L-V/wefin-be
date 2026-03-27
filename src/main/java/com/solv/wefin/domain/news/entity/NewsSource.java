@@ -19,7 +19,7 @@ public class NewsSource {
     @Column(name = "news_source_id")
     private Long id;
 
-    @Column(name = "source_name", nullable = false, length = 100)
+    @Column(name = "source_name", nullable = false, length = 100, unique = true)
     private String sourceName;
 
     @Enumerated(EnumType.STRING)
