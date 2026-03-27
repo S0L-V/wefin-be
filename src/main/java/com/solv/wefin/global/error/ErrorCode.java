@@ -26,6 +26,7 @@ public enum ErrorCode {
 
     // Account
     ACCOUNT_NOT_FOUND(404, "계좌를 찾을 수 없습니다."),
+    ACCOUNT_ALREADY_EXISTS(400, "이미 계좌가 존재합니다."),
 
     // Market
     MARKET_001(404, "종목을 찾을 수 없습니다.");
