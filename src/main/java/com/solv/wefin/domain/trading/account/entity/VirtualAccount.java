@@ -53,6 +53,9 @@ public class VirtualAccount {
 
 	// === 비즈니스 메서드 ===
 	public void deduct(BigDecimal amount) {
+		if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+			throw new BusinessException(ErrorCode.ORDER_INVALID_AMOUNT);
+		}
 		if (this.balance.compareTo(amount) < 0) {
 			throw new BusinessException(ErrorCode.ORDER_INSUFFICIENT_BALANCE);
 		}
@@ -60,6 +63,9 @@ public class VirtualAccount {
 	}
 
 	public void deposit(BigDecimal amount) {
+		if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+			throw new BusinessException(ErrorCode.ORDER_INVALID_AMOUNT);
+		}
 		this.balance = this.balance.add(amount);
 	}
 
