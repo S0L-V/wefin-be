@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -23,7 +22,6 @@ public class NewsSourceCollectService {
     private final NewsCollectBatchRepository newsCollectBatchRepository;
     private final ArticlePersistenceService articlePersistenceService;
 
-    @Transactional
     public void collectFromSource(NewsCollector collector, String category) {
         NewsSource source = getOrCreateSource(collector);
         if (!source.getIsActive()) {
@@ -31,11 +29,12 @@ public class NewsSourceCollectService {
             return;
         }
 
+        // Each article is persisted in REQUIRES_NEW, so the batch row must be committed first.
         NewsCollectBatch batch = NewsCollectBatch.builder()
                 .newsSource(source)
                 .requestedCategory(category)
                 .build();
-        newsCollectBatchRepository.save(batch);
+        batch = newsCollectBatchRepository.saveAndFlush(batch);
 
         int collectedCount = 0;
         int failedCount = 0;
@@ -54,11 +53,13 @@ public class NewsSourceCollectService {
             }
 
             batch.success(collectedCount, failedCount);
+            newsCollectBatchRepository.save(batch);
             log.info("뉴스 수집 배치 완료 - source: {}, collected: {}, failed: {}",
                     source.getSourceName(), collectedCount, failedCount);
 
         } catch (Exception e) {
             batch.fail(e.getMessage(), collectedCount, failedCount);
+            newsCollectBatchRepository.save(batch);
             log.error("뉴스 수집 배치 실패 - source: {}, error: {}", source.getSourceName(), e.getMessage());
         }
     }
