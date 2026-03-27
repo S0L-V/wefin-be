@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -17,7 +18,9 @@ public abstract class IntegrationTestBase {
 
     @Container
     static final PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>("pgvector/pgvector:pg16")
+            new PostgreSQLContainer<>(
+                    DockerImageName.parse("pgvector/pgvector:pg16")
+                            .asCompatibleSubstituteFor("postgres"))
                     .withDatabaseName("wefin_test")
                     .withUsername("test")
                     .withPassword("test");
