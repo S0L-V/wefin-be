@@ -59,7 +59,7 @@ public class NewsCollectService {
                 }
             }
 
-            batch.success(collectedCount);
+            batch.success(collectedCount, failedCount);
             log.info("뉴스 수집 배치 완료 - source: {}, collected: {}, failed: {}",
                     source.getSourceName(), collectedCount, failedCount);
 

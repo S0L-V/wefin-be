@@ -55,9 +55,10 @@ public class NewsCollectBatch {
         this.failedCount = 0;
     }
 
-    public void success(int collectedCount) {
+    public void success(int collectedCount, int failedCount) {
         this.status = BatchStatus.SUCCESS;
         this.collectedCount = collectedCount;
+        this.failedCount = failedCount;
         this.finishedAt = LocalDateTime.now();
     }
 
