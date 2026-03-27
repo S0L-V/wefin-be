@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,7 +32,11 @@ public class VirtualAccountService {
 			throw new BusinessException(ErrorCode.ACCOUNT_ALREADY_EXISTS);
 		}
 
-		return accountRepository.save(new VirtualAccount(userId));
+		try {
+			return accountRepository.save(new VirtualAccount(userId));
+		} catch (DataIntegrityViolationException e) {
+			throw new BusinessException(ErrorCode.ACCOUNT_ALREADY_EXISTS);
+		}
 	}
 
 	/**
