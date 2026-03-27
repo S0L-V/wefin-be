@@ -6,6 +6,7 @@ import com.solv.wefin.domain.news.entity.*;
 import com.solv.wefin.domain.news.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -70,8 +71,9 @@ public class NewsCollectService {
     }
 
     private void processArticle(CollectedNewsDto dto, NewsSource source, NewsCollectBatch batch) {
-        // 중복 체크 (URL 기준)
-        if (rawNewsArticleRepository.existsByOriginalUrl(dto.getOriginalUrl())) {
+        // 중복 체크 (URL + externalArticleId)
+        if (rawNewsArticleRepository.existsByOriginalUrlOrExternalArticleId(
+                dto.getOriginalUrl(), dto.getExternalArticleId())) {
             log.debug("중복 기사 스킵 - url: {}", dto.getOriginalUrl());
             return;
         }
@@ -88,7 +90,13 @@ public class NewsCollectService {
                 .originalPublishedAt(dto.getOriginalPublishedAt())
                 .rawPayload(dto.getRawPayload())
                 .build();
-        rawNewsArticleRepository.save(rawArticle);
+
+        try {
+            rawNewsArticleRepository.save(rawArticle);
+        } catch (DataIntegrityViolationException e) {
+            log.debug("중복 기사 DB 제약 위반 스킵 - url: {}", dto.getOriginalUrl());
+            return;
+        }
 
         // 정제 및 NewsArticle 저장
         normalizeAndSave(rawArticle, dto);
@@ -130,13 +138,20 @@ public class NewsCollectService {
 
     private NewsSource getOrCreateSource(NewsCollector collector) {
         return newsSourceRepository.findBySourceName(collector.getSourceName())
-                .orElseGet(() -> newsSourceRepository.save(
-                        NewsSource.builder()
-                                .sourceName(collector.getSourceName())
-                                .sourceType(NewsSource.SourceType.API)
-                                .isActive(true)
-                                .build()
-                ));
+                .orElseGet(() -> {
+                    try {
+                        return newsSourceRepository.save(
+                                NewsSource.builder()
+                                        .sourceName(collector.getSourceName())
+                                        .sourceType(NewsSource.SourceType.API)
+                                        .isActive(true)
+                                        .build()
+                        );
+                    } catch (DataIntegrityViolationException e) {
+                        return newsSourceRepository.findBySourceName(collector.getSourceName())
+                                .orElseThrow(() -> e);
+                    }
+                });
     }
 
     private String generateDedupKey(String url) {

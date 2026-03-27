@@ -7,9 +7,7 @@ import java.util.List;
 
 public interface RawNewsArticleRepository extends JpaRepository<RawNewsArticle, Long> {
 
-    boolean existsByOriginalUrl(String originalUrl);
-
-    boolean existsByExternalArticleId(String externalArticleId);
+    boolean existsByOriginalUrlOrExternalArticleId(String originalUrl, String externalArticleId);
 
     List<RawNewsArticle> findByProcessingStatus(RawNewsArticle.ProcessingStatus processingStatus);
 }
