@@ -1,5 +1,6 @@
 package com.solv.wefin.domain.news.entity;
 
+import com.solv.wefin.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -12,7 +13,7 @@ import java.time.LocalDateTime;
 @Table(name = "news_article")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class NewsArticle {
+public class NewsArticle extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -57,14 +58,6 @@ public class NewsArticle {
 
     @Column(name = "collected_at")
     private LocalDateTime collectedAt;
-
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-    }
 
     @Builder
     public NewsArticle(Long rawNewsArticleId, String publisherName, String title,

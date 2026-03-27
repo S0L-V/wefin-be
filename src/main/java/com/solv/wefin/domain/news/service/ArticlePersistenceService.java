@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.solv.wefin.global.util.StringUtils;
+
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.security.MessageDigest;
@@ -33,17 +35,7 @@ public class ArticlePersistenceService {
             return;
         }
 
-        RawNewsArticle rawArticle = RawNewsArticle.builder()
-                .newsSource(source)
-                .newsCollectBatch(batch)
-                .externalArticleId(dto.getExternalArticleId())
-                .originalUrl(dto.getOriginalUrl())
-                .originalTitle(dto.getOriginalTitle())
-                .originalContent(dto.getOriginalContent())
-                .originalThumbnailUrl(dto.getOriginalThumbnailUrl())
-                .originalPublishedAt(dto.getOriginalPublishedAt())
-                .rawPayload(dto.getRawPayload())
-                .build();
+        RawNewsArticle rawArticle = RawNewsArticle.of(dto, source, batch);
 
         try {
             rawNewsArticleRepository.saveAndFlush(rawArticle);
@@ -160,14 +152,10 @@ public class ArticlePersistenceService {
     }
 
     private String detectLanguage(String title) {
-        if (title == null) return "EN";
-        boolean hasKorean = title.chars().anyMatch(c -> Character.UnicodeScript.of(c) == Character.UnicodeScript.HANGUL);
-        return hasKorean ? "KO" : "EN";
+        return StringUtils.containsKorean(title) ? "KO" : "EN";
     }
 
     private String detectMarketScope(String title) {
-        if (title == null) return "GLOBAL";
-        boolean hasKorean = title.chars().anyMatch(c -> Character.UnicodeScript.of(c) == Character.UnicodeScript.HANGUL);
-        return hasKorean ? "DOMESTIC" : "GLOBAL";
+        return StringUtils.containsKorean(title) ? "DOMESTIC" : "GLOBAL";
     }
 }

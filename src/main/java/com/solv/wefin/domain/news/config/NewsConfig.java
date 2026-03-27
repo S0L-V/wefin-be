@@ -9,7 +9,7 @@ import org.springframework.web.client.RestTemplate;
 public class NewsConfig {
 
     @Bean
-    public RestTemplate restTemplate() {
+    public RestTemplate newsRestTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5000);
         factory.setReadTimeout(10000);

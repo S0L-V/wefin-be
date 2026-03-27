@@ -1,5 +1,6 @@
 package com.solv.wefin.domain.news.entity;
 
+import com.solv.wefin.domain.news.dto.CollectedNewsDto;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -59,10 +60,10 @@ public class RawNewsArticle {
     private LocalDateTime collectedAt;
 
     @Builder
-    public RawNewsArticle(NewsSource newsSource, NewsCollectBatch newsCollectBatch,
-                          String externalArticleId, String originalUrl, String originalTitle,
-                          String originalContent, String originalThumbnailUrl,
-                          LocalDateTime originalPublishedAt, String rawPayload) {
+    private RawNewsArticle(NewsSource newsSource, NewsCollectBatch newsCollectBatch,
+                           String externalArticleId, String originalUrl, String originalTitle,
+                           String originalContent, String originalThumbnailUrl,
+                           LocalDateTime originalPublishedAt, String rawPayload) {
         this.newsSource = newsSource;
         this.newsCollectBatch = newsCollectBatch;
         this.externalArticleId = externalArticleId;
@@ -74,6 +75,20 @@ public class RawNewsArticle {
         this.rawPayload = rawPayload;
         this.processingStatus = ProcessingStatus.PENDING;
         this.collectedAt = LocalDateTime.now();
+    }
+
+    public static RawNewsArticle of(CollectedNewsDto dto, NewsSource source, NewsCollectBatch batch) {
+        return RawNewsArticle.builder()
+                .newsSource(source)
+                .newsCollectBatch(batch)
+                .externalArticleId(dto.getExternalArticleId())
+                .originalUrl(dto.getOriginalUrl())
+                .originalTitle(dto.getOriginalTitle())
+                .originalContent(dto.getOriginalContent())
+                .originalThumbnailUrl(dto.getOriginalThumbnailUrl())
+                .originalPublishedAt(dto.getOriginalPublishedAt())
+                .rawPayload(dto.getRawPayload())
+                .build();
     }
 
     public void markNormalized() {

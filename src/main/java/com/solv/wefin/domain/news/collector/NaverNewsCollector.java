@@ -3,8 +3,8 @@ package com.solv.wefin.domain.news.collector;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solv.wefin.domain.news.dto.CollectedNewsDto;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -22,7 +22,6 @@ import java.util.*;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class NaverNewsCollector implements NewsCollector {
 
     private static final String SOURCE_NAME = "NaverNews";
@@ -40,6 +39,12 @@ public class NaverNewsCollector implements NewsCollector {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+
+    public NaverNewsCollector(@Qualifier("newsRestTemplate") RestTemplate restTemplate,
+                              ObjectMapper objectMapper) {
+        this.restTemplate = restTemplate;
+        this.objectMapper = objectMapper;
+    }
 
     @Value("${news.naver.client-id:}")
     private String clientId;
