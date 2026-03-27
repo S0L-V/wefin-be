@@ -144,7 +144,17 @@ public class NewsSourceCollectService {
     }
 
     private String generateDedupKey(String url) {
-        return "url:" + Math.abs(url.hashCode());
+        try {
+            byte[] hash = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(url.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder();
+            for (byte b : hash) {
+                hex.append(String.format("%02x", b));
+            }
+            return "url:" + hex;
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 not available", e);
+        }
     }
 
     private String cleanText(String text) {
