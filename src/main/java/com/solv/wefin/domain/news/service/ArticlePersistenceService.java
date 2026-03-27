@@ -6,14 +6,17 @@ import com.solv.wefin.domain.news.repository.NewsArticleRepository;
 import com.solv.wefin.domain.news.repository.RawNewsArticleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Locale;
 
 @Slf4j
 @Service
@@ -25,8 +28,7 @@ public class ArticlePersistenceService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void processSingleArticle(CollectedNewsDto dto, NewsSource source, NewsCollectBatch batch) {
-        if (rawNewsArticleRepository.existsByOriginalUrlOrExternalArticleId(
-                dto.getOriginalUrl(), dto.getExternalArticleId())) {
+        if (rawNewsArticleRepository.existsByOriginalUrl(dto.getOriginalUrl())) {
             log.debug("중복 기사 스킵 - url: {}", dto.getOriginalUrl());
             return;
         }
@@ -44,13 +46,55 @@ public class ArticlePersistenceService {
                 .build();
 
         try {
-            rawNewsArticleRepository.save(rawArticle);
+            rawNewsArticleRepository.saveAndFlush(rawArticle);
         } catch (DataIntegrityViolationException e) {
-            log.debug("중복 기사 DB 제약 위반 스킵 - url: {}", dto.getOriginalUrl());
-            return;
+            if (isDuplicateOriginalUrlViolation(e)) {
+                log.debug("중복 기사 DB 제약 위반 스킵 - url: {}", dto.getOriginalUrl());
+                return;
+            }
+            log.error("raw 기사 저장 실패 - url: {}", dto.getOriginalUrl(), e);
+            throw e;
         }
 
         normalizeAndSave(rawArticle, dto);
+    }
+
+    private boolean isDuplicateOriginalUrlViolation(DataIntegrityViolationException exception) {
+        Throwable cause = exception;
+        while (cause != null) {
+            if (cause instanceof ConstraintViolationException constraintViolation) {
+                if (isOriginalUrlConstraintName(constraintViolation.getConstraintName())) {
+                    return true;
+                }
+                if (refersToOriginalUrlUniqueConstraint(constraintViolation.getSQLException())) {
+                    return true;
+                }
+            } else if (cause instanceof SQLException sqlException
+                    && refersToOriginalUrlUniqueConstraint(sqlException)) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
+    }
+
+    private boolean isOriginalUrlConstraintName(String constraintName) {
+        return "uk_raw_news_article_original_url".equalsIgnoreCase(constraintName);
+    }
+
+    private boolean refersToOriginalUrlUniqueConstraint(SQLException exception) {
+        String message = exception.getMessage();
+        if (message == null || message.isBlank()) {
+            return false;
+        }
+
+        String normalized = message.toLowerCase(Locale.ROOT);
+        return normalized.contains("uk_raw_news_article_original_url")
+                || (normalized.contains("raw_news_article")
+                && normalized.contains("original_url")
+                && (normalized.contains("duplicate key")
+                || normalized.contains("unique constraint")
+                || normalized.contains("unique index")));
     }
 
     private void normalizeAndSave(RawNewsArticle rawArticle, CollectedNewsDto dto) {
