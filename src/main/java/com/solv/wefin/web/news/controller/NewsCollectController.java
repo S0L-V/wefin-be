@@ -1,4 +1,4 @@
-package com.solv.wefin.domain.news.controller;
+package com.solv.wefin.web.news.controller;
 
 import com.solv.wefin.domain.news.service.NewsCollectService;
 import com.solv.wefin.global.common.ApiResponse;
