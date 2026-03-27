@@ -1,5 +1,6 @@
 package com.solv.wefin.domain.news.entity;
 
+import com.solv.wefin.domain.news.dto.CollectedNewsDto;
 import com.solv.wefin.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -60,11 +61,11 @@ public class NewsArticle extends BaseEntity {
     private LocalDateTime collectedAt;
 
     @Builder
-    public NewsArticle(Long rawNewsArticleId, String publisherName, String title,
-                       String summary, String content, String originalUrl,
-                       String thumbnailUrl, LocalDateTime publishedAt,
-                       String category, String marketScope, String languageCode,
-                       String dedupKey, LocalDateTime collectedAt) {
+    private NewsArticle(Long rawNewsArticleId, String publisherName, String title,
+                        String summary, String content, String originalUrl,
+                        String thumbnailUrl, LocalDateTime publishedAt,
+                        String category, String marketScope, String languageCode,
+                        String dedupKey, LocalDateTime collectedAt) {
         this.rawNewsArticleId = rawNewsArticleId;
         this.publisherName = publisherName;
         this.title = title;
@@ -78,5 +79,23 @@ public class NewsArticle extends BaseEntity {
         this.languageCode = languageCode;
         this.dedupKey = dedupKey;
         this.collectedAt = collectedAt;
+    }
+
+    public static NewsArticle of(RawNewsArticle rawArticle, CollectedNewsDto dto,
+                                 String title, String content, String languageCode,
+                                 String marketScope, String dedupKey) {
+        return NewsArticle.builder()
+                .rawNewsArticleId(rawArticle.getId())
+                .publisherName(dto.getPublisherName())
+                .title(title)
+                .content(content)
+                .originalUrl(dto.getOriginalUrl())
+                .thumbnailUrl(dto.getOriginalThumbnailUrl())
+                .publishedAt(dto.getOriginalPublishedAt())
+                .languageCode(languageCode)
+                .marketScope(marketScope)
+                .dedupKey(dedupKey)
+                .collectedAt(rawArticle.getCollectedAt())
+                .build();
     }
 }

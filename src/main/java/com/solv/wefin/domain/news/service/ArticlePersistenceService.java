@@ -98,19 +98,13 @@ public class ArticlePersistenceService {
         }
 
         try {
-            NewsArticle article = NewsArticle.builder()
-                    .rawNewsArticleId(rawArticle.getId())
-                    .publisherName(dto.getPublisherName())
-                    .title(cleanText(dto.getOriginalTitle()))
-                    .content(cleanHtml(dto.getOriginalContent()))
-                    .originalUrl(dto.getOriginalUrl())
-                    .thumbnailUrl(dto.getOriginalThumbnailUrl())
-                    .publishedAt(dto.getOriginalPublishedAt())
-                    .languageCode(detectLanguage(dto.getOriginalTitle()))
-                    .marketScope(detectMarketScope(dto.getOriginalTitle()))
-                    .dedupKey(dedupKey)
-                    .collectedAt(rawArticle.getCollectedAt())
-                    .build();
+            NewsArticle article = NewsArticle.of(
+                    rawArticle, dto,
+                    cleanText(dto.getOriginalTitle()),
+                    cleanHtml(dto.getOriginalContent()),
+                    detectLanguage(dto.getOriginalTitle()),
+                    detectMarketScope(dto.getOriginalTitle()),
+                    dedupKey);
 
             newsArticleRepository.save(article);
             rawArticle.markNormalized();
