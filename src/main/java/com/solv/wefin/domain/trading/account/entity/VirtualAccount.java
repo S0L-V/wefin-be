@@ -70,6 +70,9 @@ public class VirtualAccount {
 	}
 
 	public void addProfit(BigDecimal realizedProfit) {
+		if (realizedProfit == null) {
+			throw new BusinessException(ErrorCode.ORDER_INVALID_AMOUNT);
+		}
 		this.totalRealizedProfit = this.totalRealizedProfit.add(realizedProfit);
 	}
 }
