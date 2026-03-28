@@ -15,13 +15,15 @@ public class GlobalChatService {
     private final SimpMessagingTemplate messagingTemplate;
 
     public void sendMessage(GlobalChatSendRequest request, String sender) {
-        System.out.println("controller 진입");
-        validateMessage(request.getContent());
+
+        String content = (request != null) ? request.getContent() : null;
+
+        validateMessage(content);
 
         GlobalChatMessageResponse response = GlobalChatMessageResponse.builder()
                 .messageId(null)
                 .sender(sender)
-                .content(request.getContent())
+                .content(content)
                 .build();
 
         messagingTemplate.convertAndSend("/topic/chat/global", response);
@@ -33,7 +35,7 @@ public class GlobalChatService {
         }
 
         if (content.length() > 1000) {
-            throw new BusinessException(ErrorCode.CHAT_MESSAGE_EMPTY);
+            throw new BusinessException(ErrorCode.CHAT_MESSAGE_TOO_LONG);
         }
     }
 }
