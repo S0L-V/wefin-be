@@ -24,5 +24,17 @@ ai:
 jwt:
   secret: ${JWT_SECRET}
 
+news:
+  naver:
+    client-id: ${NAVER_CLIENT_ID}
+    client-secret: ${NAVER_CLIENT_SECRET}
+    display: ${NAVER_NEWS_DISPLAY:100}
+  collect:
+    cron: "0 0 */2 * * *"
+
 server:
   forward-headers-strategy: native
+
+websocket:
+  allowed-origins:
+    - https://dev.wefin.ai.kr
