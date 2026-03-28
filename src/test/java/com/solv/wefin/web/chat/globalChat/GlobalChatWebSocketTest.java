@@ -21,9 +21,9 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 class GlobalChatWebSocketTest extends WebSocketIntegrationTestBase {
 
@@ -45,6 +45,7 @@ class GlobalChatWebSocketTest extends WebSocketIntegrationTestBase {
 
         // 서버에서 오는 메시지를 담을 큐
         BlockingQueue<GlobalChatMessageResponse> queue = new LinkedBlockingQueue<>();
+        AtomicReference<Throwable> asyncError = new AtomicReference<>();
 
         // CONNECT 시 nickname 해더 전달 (서버에서 Principal로 사용됨)
         StompHeaders connectHeaders = new StompHeaders();
@@ -62,13 +63,13 @@ class GlobalChatWebSocketTest extends WebSocketIntegrationTestBase {
                             @Override
                             public void handleException(StompSession session, StompCommand command,
                                                         StompHeaders headers, byte[] payload, Throwable exception) {
-                                exception.printStackTrace();
+                                asyncError.compareAndSet(null, exception);
                             }
 
                             // 연결 자체 문제 발생 시 로그 출력
                             @Override
                             public void handleTransportError(StompSession session, Throwable exception) {
-                                exception.printStackTrace();
+                                asyncError.compareAndSet(null, exception);
                             }
                         }
                 )
@@ -111,6 +112,7 @@ class GlobalChatWebSocketTest extends WebSocketIntegrationTestBase {
         GlobalChatMessageResponse response = queue.poll(5, TimeUnit.SECONDS);
 
         // 결과 검증
+        assertNull(asyncError.get(), "비동기 처리 중 예외가 발생했습니다: " + asyncError.get());
         assertNotNull(response, "구독 메시지를 받지 못했습니다.");
         assertEquals("testUser", response.getSender());
         assertEquals("테스트 메시지", response.getContent());
