@@ -4,6 +4,7 @@ import com.solv.wefin.domain.news.entity.NewsArticle;
 import com.solv.wefin.domain.news.repository.NewsArticleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -22,7 +23,7 @@ public class ArticleCrawlPersistenceService {
      * @param content 크롤링된 본문 텍스트
      * @param thumbnailUrl og:image에서 추출한 썸네일 URL (없으면 null)
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveCrawlSuccess(Long articleId, String content, String thumbnailUrl) {
         NewsArticle article = newsArticleRepository.findById(articleId)
                 .orElseThrow(() -> new IllegalStateException("기사를 찾을 수 없습니다: " + articleId));
@@ -35,7 +36,7 @@ public class ArticleCrawlPersistenceService {
      * @param articleId 대상 기사 ID
      * @param errorMessage 실패 원인 메시지
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveCrawlFailure(Long articleId, String errorMessage) {
         NewsArticle article = newsArticleRepository.findById(articleId)
                 .orElseThrow(() -> new IllegalStateException("기사를 찾을 수 없습니다: " + articleId));

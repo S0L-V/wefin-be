@@ -107,7 +107,8 @@ public class NewsArticle extends BaseEntity {
      */
     public void updateCrawledContent(String crawledContent, String thumbnailUrl) {
         this.content = crawledContent;
-        if (this.thumbnailUrl == null && thumbnailUrl != null) {
+        if ((this.thumbnailUrl == null || this.thumbnailUrl.isBlank())
+                && thumbnailUrl != null && !thumbnailUrl.isBlank()) {
             this.thumbnailUrl = thumbnailUrl;
         }
         this.crawlStatus = CrawlStatus.SUCCESS;
@@ -131,6 +132,7 @@ public class NewsArticle extends BaseEntity {
     public void markCrawlSkipped() {
         this.crawlStatus = CrawlStatus.SKIPPED;
         this.crawlAttemptedAt = LocalDateTime.now();
+        this.crawlErrorMessage = null;
     }
 
     public enum CrawlStatus {

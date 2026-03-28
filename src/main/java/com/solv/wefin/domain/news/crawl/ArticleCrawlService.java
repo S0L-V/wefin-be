@@ -19,8 +19,12 @@ import org.springframework.web.client.RestTemplate;
 
 import org.springframework.data.domain.PageRequest;
 
+import java.net.InetAddress;
+import java.net.URI;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -31,6 +35,7 @@ public class ArticleCrawlService {
     private static final int ERROR_MESSAGE_MAX_LENGTH = 500;
     private static final int MAX_RETRY = 3;
     private static final int CRAWL_BATCH_SIZE = 500;
+    private static final Set<String> ALLOWED_SCHEMES = Set.of("http", "https");
 
     private final NewsArticleRepository newsArticleRepository;
     private final ArticleCrawlPersistenceService persistenceService;
@@ -111,11 +116,38 @@ public class ArticleCrawlService {
     }
 
     private String fetchHtml(String url) {
+        validateUrl(url);
         HttpHeaders headers = new HttpHeaders();
         headers.set("User-Agent", USER_AGENT);
         ResponseEntity<String> response = newsRestTemplate.exchange(
                 url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
         return response.getBody();
+    }
+
+    /**
+     * SSRF 방지를 위해 URL 스킴과 호스트를 검증한다.
+     * http/https만 허용하고, 내부망/루프백/링크로컬 대역은 차단한다.
+     */
+    private void validateUrl(String url) {
+        URI uri = URI.create(url);
+        String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
+        if (!ALLOWED_SCHEMES.contains(scheme) || uri.getHost() == null) {
+            throw new IllegalArgumentException("Unsupported crawl URL scheme: " + url);
+        }
+
+        try {
+            InetAddress[] addresses = InetAddress.getAllByName(uri.getHost());
+            for (InetAddress addr : addresses) {
+                if (addr.isLoopbackAddress() || addr.isAnyLocalAddress()
+                        || addr.isSiteLocalAddress() || addr.isLinkLocalAddress()) {
+                    throw new IllegalArgumentException("Blocked internal network URL: " + url);
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Failed to resolve crawl URL: " + url, e);
+        }
     }
 
     private Optional<String> extractOgImage(Document doc) {
