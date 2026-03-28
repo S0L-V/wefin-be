@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solv.wefin.domain.news.dto.CollectedNewsDto;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -150,15 +151,7 @@ public class NaverNewsCollector implements NewsCollector {
 
     private String stripHtml(String text) {
         if (text == null || text.isBlank()) return text;
-        return text
-                .replaceAll("<[^>]+>", "")
-                .replace("&amp;", "&")
-                .replace("&lt;", "<")
-                .replace("&gt;", ">")
-                .replace("&quot;", "\"")
-                .replace("&#039;", "'")
-                .replace("&#39;", "'")
-                .trim();
+        return Jsoup.parse(text).text().trim();
     }
 
     private LocalDateTime parseNaverDate(String pubDate) {
