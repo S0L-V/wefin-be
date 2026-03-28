@@ -60,6 +60,19 @@ public class NewsArticle extends BaseEntity {
     @Column(name = "collected_at")
     private LocalDateTime collectedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "crawl_status", nullable = false, length = 30)
+    private CrawlStatus crawlStatus = CrawlStatus.PENDING;
+
+    @Column(name = "crawl_attempted_at")
+    private LocalDateTime crawlAttemptedAt;
+
+    @Column(name = "crawl_retry_count", nullable = false)
+    private int crawlRetryCount = 0;
+
+    @Column(name = "crawl_error_message")
+    private String crawlErrorMessage;
+
     @Builder
     private NewsArticle(Long rawNewsArticleId, String publisherName, String title,
                         String summary, String content, String originalUrl,
@@ -79,6 +92,49 @@ public class NewsArticle extends BaseEntity {
         this.languageCode = languageCode;
         this.dedupKey = dedupKey;
         this.collectedAt = collectedAt;
+        this.crawlStatus = CrawlStatus.PENDING;
+    }
+
+    /**
+     * 크롤링 성공 시 본문과 썸네일을 업데이트한다.
+     *
+     * <p>본문은 항상 최신 크롤링 결과로 덮어쓴다 (재크롤링 시 최신 본문 반영).
+     * 썸네일은 최초 1회만 저장하고 이후 덮어쓰지 않는다
+     * (원본 사이트의 og:image가 광고/기본 이미지로 변경되는 경우 방지).</p>
+     *
+     * @param crawledContent 크롤링된 본문 텍스트
+     * @param thumbnailUrl og:image 썸네일 URL (없으면 null)
+     */
+    public void updateCrawledContent(String crawledContent, String thumbnailUrl) {
+        this.content = crawledContent;
+        if (this.thumbnailUrl == null && thumbnailUrl != null) {
+            this.thumbnailUrl = thumbnailUrl;
+        }
+        this.crawlStatus = CrawlStatus.SUCCESS;
+        this.crawlAttemptedAt = LocalDateTime.now();
+        this.crawlErrorMessage = null;
+    }
+
+    /**
+     * 크롤링 실패를 기록한다. retryCount를 증가시키고 상태를 FAILED로 변경한다.
+     *
+     * @param errorMessage 실패 원인 메시지 (최대 500자)
+     */
+    public void markCrawlFailed(String errorMessage) {
+        this.crawlRetryCount++;
+        this.crawlStatus = CrawlStatus.FAILED;
+        this.crawlAttemptedAt = LocalDateTime.now();
+        this.crawlErrorMessage = errorMessage;
+    }
+
+    /** 크롤링 대상에서 제외한다. 상태를 SKIPPED로 변경한다. */
+    public void markCrawlSkipped() {
+        this.crawlStatus = CrawlStatus.SKIPPED;
+        this.crawlAttemptedAt = LocalDateTime.now();
+    }
+
+    public enum CrawlStatus {
+        PENDING, SUCCESS, FAILED, SKIPPED
     }
 
     public static NewsArticle of(RawNewsArticle rawArticle, CollectedNewsDto dto,
