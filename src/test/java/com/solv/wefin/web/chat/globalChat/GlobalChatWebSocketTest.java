@@ -1,9 +1,9 @@
 package com.solv.wefin.web.chat.globalChat;
 
+import com.solv.wefin.common.WebSocketIntegrationTestBase;
 import com.solv.wefin.web.chat.globalChat.dto.response.GlobalChatMessageResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
@@ -16,7 +16,6 @@ import org.springframework.web.socket.sockjs.client.Transport;
 import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 
 import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -26,8 +25,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class GlobalChatWebSocketTest {
+class GlobalChatWebSocketTest extends WebSocketIntegrationTestBase {
 
     @LocalServerPort
     private int port;
