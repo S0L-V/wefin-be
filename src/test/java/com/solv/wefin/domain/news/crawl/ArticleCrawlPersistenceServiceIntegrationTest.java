@@ -5,11 +5,14 @@ import com.solv.wefin.domain.news.entity.NewsArticle;
 import com.solv.wefin.domain.news.entity.NewsArticle.CrawlStatus;
 import com.solv.wefin.domain.news.repository.NewsArticleRepository;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
 class ArticleCrawlPersistenceServiceIntegrationTest extends IntegrationTestBase {
 
     @Autowired
@@ -21,6 +24,11 @@ class ArticleCrawlPersistenceServiceIntegrationTest extends IntegrationTestBase 
     @Autowired
     private EntityManager entityManager;
 
+    @AfterEach
+    void cleanup() {
+        newsArticleRepository.deleteAll();
+    }
+
     @Test
     void 크롤링_성공시_본문과_썸네일이_DB에_반영된다() {
         // given
@@ -28,7 +36,6 @@ class ArticleCrawlPersistenceServiceIntegrationTest extends IntegrationTestBase 
 
         // when
         persistenceService.saveCrawlSuccess(article.getId(), "크롤링된 본문 내용", "https://example.com/thumb.jpg");
-        flushAndClear();
 
         // then
         NewsArticle updated = newsArticleRepository.findById(article.getId()).orElseThrow();
@@ -45,11 +52,9 @@ class ArticleCrawlPersistenceServiceIntegrationTest extends IntegrationTestBase 
         // given — 이미 썸네일이 저장된 기사
         NewsArticle article = createAndSavePendingArticle("https://example.com/2");
         persistenceService.saveCrawlSuccess(article.getId(), "첫 번째 본문", "https://example.com/original.jpg");
-        flushAndClear();
 
         // when — 다른 썸네일로 다시 저장 시도
         persistenceService.saveCrawlSuccess(article.getId(), "두 번째 본문", "https://example.com/new.jpg");
-        flushAndClear();
 
         // then — 기존 썸네일 유지, 본문은 갱신
         NewsArticle result = newsArticleRepository.findById(article.getId()).orElseThrow();
@@ -62,11 +67,9 @@ class ArticleCrawlPersistenceServiceIntegrationTest extends IntegrationTestBase 
         // given — 이미 성공한 기사
         NewsArticle article = createAndSavePendingArticle("https://example.com/2-1");
         persistenceService.saveCrawlSuccess(article.getId(), "첫 번째 본문", "https://example.com/thumb.jpg");
-        flushAndClear();
 
         // when — 다시 성공
         persistenceService.saveCrawlSuccess(article.getId(), "두 번째 본문", null);
-        flushAndClear();
 
         // then
         NewsArticle updated = newsArticleRepository.findById(article.getId()).orElseThrow();
@@ -81,7 +84,6 @@ class ArticleCrawlPersistenceServiceIntegrationTest extends IntegrationTestBase 
 
         // when
         persistenceService.saveCrawlFailure(article.getId(), "Connection refused");
-        flushAndClear();
 
         // then
         NewsArticle updated = newsArticleRepository.findById(article.getId()).orElseThrow();
@@ -100,7 +102,6 @@ class ArticleCrawlPersistenceServiceIntegrationTest extends IntegrationTestBase 
         persistenceService.saveCrawlFailure(article.getId(), "1차 실패");
         persistenceService.saveCrawlFailure(article.getId(), "2차 실패");
         persistenceService.saveCrawlFailure(article.getId(), "3차 실패");
-        flushAndClear();
 
         // then
         NewsArticle updated = newsArticleRepository.findById(article.getId()).orElseThrow();
@@ -113,11 +114,9 @@ class ArticleCrawlPersistenceServiceIntegrationTest extends IntegrationTestBase 
         // given — 먼저 실패
         NewsArticle article = createAndSavePendingArticle("https://example.com/5");
         persistenceService.saveCrawlFailure(article.getId(), "Connection refused");
-        flushAndClear();
 
         // when — 재시도 후 성공
         persistenceService.saveCrawlSuccess(article.getId(), "크롤링 성공 본문", "https://example.com/thumb.jpg");
-        flushAndClear();
 
         // then — 에러 정보 초기화, retryCount는 유지
         NewsArticle updated = newsArticleRepository.findById(article.getId()).orElseThrow();
@@ -137,10 +136,5 @@ class ArticleCrawlPersistenceServiceIntegrationTest extends IntegrationTestBase 
                 .dedupKey("url:" + url)
                 .build();
         return newsArticleRepository.saveAndFlush(article);
-    }
-
-    private void flushAndClear() {
-        entityManager.flush();
-        entityManager.clear();
     }
 }
