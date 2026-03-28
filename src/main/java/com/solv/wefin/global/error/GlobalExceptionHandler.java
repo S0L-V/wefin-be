@@ -1,5 +1,6 @@
 package com.solv.wefin.global.error;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -30,6 +31,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<?>> handleJsonParseException(HttpMessageNotReadableException e) {
         ApiResponse<Object> error = ApiResponse.error(ErrorCode.INVALID_INPUT);
+        return ResponseEntity.status(error.getStatus()).body(error);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<?>> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        log.warn("DB 제약조건 위반: {}", e.getMessage());
+        ApiResponse<Object> error = ApiResponse.error(ErrorCode.ROOM_ALREADY_EXISTS);
         return ResponseEntity.status(error.getStatus()).body(error);
     }
 

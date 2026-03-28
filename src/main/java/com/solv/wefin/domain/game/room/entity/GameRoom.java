@@ -49,7 +49,7 @@ public class GameRoom {
     @Column(name ="created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name ="started_at", nullable = false)
+    @Column(name ="started_at")
     private LocalDateTime startedAt;
 
     @PrePersist

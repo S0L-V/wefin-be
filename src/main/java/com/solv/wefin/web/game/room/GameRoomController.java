@@ -32,7 +32,7 @@ public class GameRoomController {
 
         CreateRoomResponse response = gameRoomService.createRoom(TEMP_USER_ID, TEMP_GROUP_ID, request);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(201, response));
 
     }
 

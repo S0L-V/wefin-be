@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -27,7 +28,16 @@ public class GameRoomService {
     //게임방 생성
     @Transactional //트랜잭션으로 방생성과 방장유저 지정 동시에 이루어짐
     public CreateRoomResponse createRoom(UUID userId, Long groupId, CreateRoomRequest request) {
-        // 방장 횟수 제한 1일 1회
+        //그룹 게임방 있으면 차단
+        if (gameRoomRepository.existsByGroupIdAndStatusIn(groupId, List.of("WAITING", "IN_PROGRESS"))) {
+            throw new BusinessException(ErrorCode.ROOM_ALREADY_EXISTS);
+        }
+        // 방장 방 동시 생성 방지
+        if (gameRoomRepository.existsByUserIdAndStatusIn(userId, List.of("WAITING", "IN_PROGRESS"))) {
+            throw new BusinessException(ErrorCode.ROOM_HOST_ALREADY_EXISTS);
+        }
+
+            // 방장 횟수 제한 1일 1회
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();;
         LocalDateTime todayEnd = todayStart.plusDays(1);
 
@@ -70,7 +80,8 @@ public class GameRoomService {
 
 
 /** creatRooom
-방장 1일 1회 제한 검사
+
+ 방장 1일 1회 제한 검사
  created_at  user_id로 조회
  종료날짜 계산
  started_at , periodMonths
@@ -83,6 +94,9 @@ public class GameRoomService {
 gameParticipant.builder()
 
  return 응답dto = createRoomResponse
+
+ jpa 코드로 생성된 방 있으면 추가 생성 + 방장 방 동시 생성 차단
+ 유니크로 2차 차단그 아
 
  */
 /**cancel room

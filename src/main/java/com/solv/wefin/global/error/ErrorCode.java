@@ -37,7 +37,9 @@ public enum ErrorCode {
     MARKET_001(404, "종목을 찾을 수 없습니다."),
 
     // GameRoom
-    ROOM_NOT_FOUND(403,"게임장을 찾을 수 없습니다."),
+    ROOM_NOT_FOUND(404,"게임장을 찾을 수 없습니다."),
+    ROOM_ALREADY_EXISTS(409, "이미 진행 중이거나 대기 중인 게임방이 있습니다."),
+    ROOM_HOST_ALREADY_EXISTS(409, "이미 방장으로 참여 중인 게임방이 있습니다."),
     ROOM_HOST_DAILY_LIMIT(409, "하루 방 생성 가능 횟수 초과");
 
     private final int status;

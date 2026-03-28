@@ -7,9 +7,5 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/trading/accounts")
 public class AccountController {
-    @GetMapping
-    public String getAccounts() {
-        return "OK";
-    }
 }
 
