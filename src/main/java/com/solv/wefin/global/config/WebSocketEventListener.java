@@ -1,7 +1,6 @@
 package com.solv.wefin.global.config;
 
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.Session;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.security.core.Authentication;
