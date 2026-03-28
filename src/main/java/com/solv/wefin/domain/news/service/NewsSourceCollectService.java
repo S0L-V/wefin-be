@@ -36,7 +36,8 @@ public class NewsSourceCollectService {
                 .build();
         batch = newsCollectBatchRepository.saveAndFlush(batch);
 
-        int collectedCount = 0;
+        int savedCount = 0;
+        int skippedCount = 0;
         int failedCount = 0;
 
         try {
@@ -44,21 +45,22 @@ public class NewsSourceCollectService {
 
             for (CollectedNewsDto dto : articles) {
                 try {
-                    articlePersistenceService.processSingleArticle(dto, source, batch);
-                    collectedCount++;
+                    boolean saved = articlePersistenceService.processSingleArticle(dto, source, batch);
+                    if (saved) savedCount++;
+                    else skippedCount++;
                 } catch (Exception e) {
                     failedCount++;
                     log.warn("기사 처리 실패 - url: {}, error: {}", dto.getOriginalUrl(), e.getMessage());
                 }
             }
 
-            batch.success(collectedCount, failedCount);
+            batch.success(savedCount, failedCount);
             newsCollectBatchRepository.save(batch);
-            log.info("뉴스 수집 배치 완료 - source: {}, collected: {}, failed: {}",
-                    source.getSourceName(), collectedCount, failedCount);
+            log.info("뉴스 수집 배치 완료 - source: {}, saved: {}, skipped: {}, failed: {}",
+                    source.getSourceName(), savedCount, skippedCount, failedCount);
 
         } catch (Exception e) {
-            batch.fail(e.getMessage(), collectedCount, failedCount);
+            batch.fail(e.getMessage(), savedCount, failedCount);
             newsCollectBatchRepository.save(batch);
             log.error("뉴스 수집 배치 실패 - source: {}, error: {}", source.getSourceName(), e.getMessage());
         }

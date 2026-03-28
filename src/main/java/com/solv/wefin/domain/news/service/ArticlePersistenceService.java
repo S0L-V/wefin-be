@@ -28,11 +28,14 @@ public class ArticlePersistenceService {
     private final RawNewsArticleRepository rawNewsArticleRepository;
     private final NewsArticleRepository newsArticleRepository;
 
+    /**
+     * @return true if the article was saved, false if skipped (duplicate)
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void processSingleArticle(CollectedNewsDto dto, NewsSource source, NewsCollectBatch batch) {
+    public boolean processSingleArticle(CollectedNewsDto dto, NewsSource source, NewsCollectBatch batch) {
         if (rawNewsArticleRepository.existsByOriginalUrl(dto.getOriginalUrl())) {
             log.debug("중복 기사 스킵 - url: {}", dto.getOriginalUrl());
-            return;
+            return false;
         }
 
         RawNewsArticle rawArticle = RawNewsArticle.of(dto, source, batch);
@@ -42,13 +45,14 @@ public class ArticlePersistenceService {
         } catch (DataIntegrityViolationException e) {
             if (isDuplicateOriginalUrlViolation(e)) {
                 log.debug("중복 기사 DB 제약 위반 스킵 - url: {}", dto.getOriginalUrl());
-                return;
+                return false;
             }
             log.error("raw 기사 저장 실패 - url: {}", dto.getOriginalUrl(), e);
             throw e;
         }
 
         normalizeAndSave(rawArticle, dto);
+        return true;
     }
 
     private boolean isDuplicateOriginalUrlViolation(DataIntegrityViolationException exception) {
