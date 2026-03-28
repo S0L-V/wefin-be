@@ -1,5 +1,6 @@
 package com.solv.wefin.domain.chat.globalChat.service;
 
+import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.web.chat.globalChat.dto.response.GlobalChatMessageResponse;
 import com.solv.wefin.web.chat.globalChat.dto.request.GlobalChatSendRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,11 +39,11 @@ public class GlobalChatServiceTest {
 
     @Test
     @DisplayName("메시지가 비어있으면 예외가 발생한다")
-    void sendMessage_fail_blink() {
+    void sendMessage_fail_blank() {
         GlobalChatSendRequest request = new GlobalChatSendRequest();
         ReflectionTestUtils.setField(request, "content", " ");
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(BusinessException.class,
                 () -> globalChatService.sendMessage(request, "tico"));
     }
 
@@ -53,7 +54,7 @@ public class GlobalChatServiceTest {
         String longMessage = "a".repeat(1001);
         ReflectionTestUtils.setField(request, "content", longMessage);
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(BusinessException.class,
                 () -> globalChatService.sendMessage(request, "tico"));
     }
 }
