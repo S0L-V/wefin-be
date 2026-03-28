@@ -36,3 +36,6 @@ news:
   collect:
     cron: "0 0 */2 * * *"
 
+websocket:
+  allowed-origins:
+    - http://localhost:5173
