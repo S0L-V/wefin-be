@@ -35,3 +35,7 @@ news:
     base-url: ${NAVER_NEWS_BASE_URL:https://openapi.naver.com/v1/search/news.json}
   collect:
     cron: "0 0 */2 * * *"
+
+websocket:
+  allowed-origins:
+    - http://localhost:5173
