@@ -1,5 +1,6 @@
-package com.solv.wefin.domain.game.room.entity;
+package com.solv.wefin.domain.game.participant.entity;
 
+import com.solv.wefin.domain.game.room.entity.GameRoom;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;

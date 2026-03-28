@@ -34,7 +34,11 @@ public enum ErrorCode {
     ACCOUNT_ALREADY_EXISTS(400, "이미 계좌가 존재합니다."),
 
     // Market
-    MARKET_001(404, "종목을 찾을 수 없습니다.");
+    MARKET_001(404, "종목을 찾을 수 없습니다."),
+
+    // GameRoom
+    ROOM_NOT_FOUND(403,"게임장을 찾을 수 없습니다."),
+    ROOM_HOST_DAILY_LIMIT(409, "하루 방 생성 가능 횟수 초과");
 
     private final int status;
     private final String message;

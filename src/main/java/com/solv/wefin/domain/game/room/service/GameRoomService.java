@@ -1,0 +1,92 @@
+package com.solv.wefin.domain.game.room.service;
+
+import com.solv.wefin.domain.game.participant.entity.GameParticipant;
+import com.solv.wefin.domain.game.room.entity.GameRoom;
+import com.solv.wefin.domain.game.participant.repository.GameParticipantRepository;
+import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
+import com.solv.wefin.web.game.room.dto.request.CreateRoomRequest;
+import com.solv.wefin.web.game.room.dto.response.CreateRoomResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class GameRoomService {
+
+    private final GameRoomRepository gameRoomRepository;
+    private final GameParticipantRepository gameParticipantRepository;
+
+    //게임방 생성
+    @Transactional //트랜잭션으로 방생성과 방장유저 지정 동시에 이루어짐
+    public CreateRoomResponse createRoom(UUID userId, Long groupId, CreateRoomRequest request) {
+        // 방장 횟수 제한 1일 1회
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();;
+        LocalDateTime todayEnd = todayStart.plusDays(1);
+
+        if(gameRoomRepository.existsByUserIdAndStartedAtBetween(userId, todayStart, todayEnd)) {
+            throw new BusinessException(ErrorCode.ROOM_HOST_DAILY_LIMIT);
+        }
+
+        //endDate 계산
+        LocalDate startDate = LocalDate.parse(request.getStartDate()); // LocalDate.parse()로 객체 변환
+        LocalDate endDate = startDate.plusMonths(request.getPeriodMonths());
+
+        //게임룸 저장
+        GameRoom gameRoom =  GameRoom.builder()
+                .groupId(groupId)
+                .userId(userId)
+                .seed(request.getSeedMoney())
+                .periodMonth(request.getPeriodMonths())
+                .moveDays(request.getMoveDays())
+                .startDate(startDate)
+                .endDate(endDate)
+                .build();
+
+        gameRoomRepository.save(gameRoom);
+
+        //첫 번째 참가자 = 방장
+        GameParticipant host = GameParticipant.builder()
+                .gameRoom(gameRoom)
+                .userId(userId)
+                .isLeader(true)
+                .build();
+
+        gameParticipantRepository.save(host);
+
+        return new CreateRoomResponse(gameRoom.getRoomId(), gameRoom.getStatus());
+    }
+
+
+
+}
+
+
+/** creatRooom
+방장 1일 1회 제한 검사
+ created_at  user_id로 조회
+ 종료날짜 계산
+ started_at , periodMonths
+ gameroom.builder() 후 save() < db저장
+
+
+*/
+/**participant로 처음 create 방 생성한 사람 = 방장
+ 방 생성과 방장 지정 동시에 이루어지게 트랜잭션
+gameParticipant.builder()
+
+ return 응답dto = createRoomResponse
+
+ */
+/**cancel room
+ *
+ */
+
+

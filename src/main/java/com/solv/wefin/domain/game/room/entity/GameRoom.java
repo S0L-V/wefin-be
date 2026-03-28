@@ -20,10 +20,10 @@ public class GameRoom {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name= "room_id")
-    private UUID roomID;
+    private UUID roomId;
 
     @Column(name= "group_id", nullable = false)
-    private Long  groupID;
+    private Long  groupId;
 
     @Column(name = "user_id", nullable = false)
     private UUID  userId;
@@ -61,8 +61,8 @@ public class GameRoom {
     }
 
     @Builder
-    public GameRoom (Long groupID, UUID userId, Long seed, Integer periodMonth, Integer moveDays, LocalDate startDate, LocalDate endDate) {
-      this.groupID = groupID;
+    public GameRoom (Long groupId, UUID userId, Long seed, Integer periodMonth, Integer moveDays, LocalDate startDate, LocalDate endDate) {
+      this.groupId = groupId;
       this.userId = userId;
       this.seed = seed;
       this.periodMonth = periodMonth;
