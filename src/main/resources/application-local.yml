@@ -26,3 +26,7 @@ ai:
 
 jwt:
   secret: ${JWT_SECRET:local-secret-key-change-me}
+
+websocket:
+  allowed-origins:
+    - http://localhost:5173

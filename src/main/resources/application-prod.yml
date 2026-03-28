@@ -23,3 +23,7 @@ jwt:
 
 server:
   forward-headers-strategy: native
+
+websocket:
+  allowed-origins:
+    - https://wefin.ai.kr
