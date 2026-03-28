@@ -1,5 +1,7 @@
 package com.solv.wefin.domain.chat.globalChat.service;
 
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.chat.globalChat.dto.response.GlobalChatMessageResponse;
 import com.solv.wefin.web.chat.globalChat.dto.request.GlobalChatSendRequest;
 import lombok.RequiredArgsConstructor;
@@ -27,11 +29,11 @@ public class GlobalChatService {
 
     private void validateMessage(String content) {
         if (content == null || content.isBlank()) {
-            throw new IllegalArgumentException("메시지 내용은 비어있을 수 없습니다.");
+            throw new BusinessException(ErrorCode.CHAT_MESSAGE_EMPTY);
         }
 
         if (content.length() > 1000) {
-            throw new IllegalArgumentException("메시지는 1000자를 초과할 수 없습니다.");
+            throw new BusinessException(ErrorCode.CHAT_MESSAGE_EMPTY);
         }
     }
 }
