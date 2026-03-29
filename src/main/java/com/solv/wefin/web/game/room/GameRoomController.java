@@ -41,11 +41,9 @@ public class GameRoomController {
      get /api/rooms?status=WAITING or in_progress or finished
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<List<RoomListResponse>>> getRooms(
-            @RequestParam(required = false) String status) {
+    public ResponseEntity<ApiResponse<List<RoomListResponse>>> getRooms() {
 
-        List<RoomListResponse> response = gameRoomService.getRooms(TEMP_GROUP_ID, status);
-
+        List<RoomListResponse> response = gameRoomService.getRooms(TEMP_GROUP_ID, TEMP_USER_ID);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

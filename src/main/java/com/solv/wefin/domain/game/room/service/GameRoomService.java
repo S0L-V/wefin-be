@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -82,14 +83,14 @@ public class GameRoomService {
         return CreateRoomResponse.from(gameRoom);
     }
 
-    public List<RoomListResponse> getRooms(Long groupId, String status) {
+    public List<RoomListResponse> getRooms(Long groupId, UUID userId) {
+        List<GameRoom> activeRooms = gameRoomRepository.findByGroupIdAndStatusIn(groupId, List.of("WAITING", "IN_PROGRESS"));
 
-        List<GameRoom> rooms;
-        if(status != null && !status.isBlank()) {
-            rooms = gameRoomRepository.findByGroupIdAndStatus(groupId, status);
-        } else {
-            rooms = gameRoomRepository.findByGroupId(groupId);
-        }
+        List<GameRoom> myFinishedRooms = gameRoomRepository.findFinishedRoomsByGroupIdAndUserId((groupId), userId);
+
+        List<GameRoom> rooms = new ArrayList<>();
+        rooms.addAll(activeRooms);
+        rooms.addAll(myFinishedRooms);
 
         return rooms.stream().map(room -> {
             int playerCount = gameParticipantRepository.countByGameRoomAndStatus(room, "ACTIVE");
