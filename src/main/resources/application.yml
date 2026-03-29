@@ -12,3 +12,9 @@ spring:
 websocket:
   allowed-origins:
     - http://localhost:5173
+
+hantu:
+  api:
+    baseUrl: https://openapivts.koreainvestment.com:29443
+    appkey: ${HANTU_APPKEY}
+    appsecret: ${HANTU_APPSECRET}
