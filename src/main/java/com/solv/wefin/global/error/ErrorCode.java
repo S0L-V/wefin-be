@@ -7,6 +7,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum ErrorCode {
 
+    // User
+    USER_NOT_FOUND(404, "사용자를 찾을 수 없습니다."),
+
     // Chat
     CHAT_MESSAGE_EMPTY(400, "메시지 내용은 비어 있을 수 없습니다."),
     CHAT_MESSAGE_TOO_LONG(400, "메시지는 1000자를 초과할 수 없습니다."),
