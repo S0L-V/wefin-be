@@ -61,6 +61,11 @@ public class HantuTokenManager {
             } catch (Exception e) {
                 log.error("한투 토큰 발급 실패 ({}/3)", tries);
                 if (tries == 3) throw e;
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
     }
@@ -69,7 +74,7 @@ public class HantuTokenManager {
      * 6시간 주기로 토큰을 갱신합니다.
      */
     @Scheduled(fixedRate = 1000 * 60 * 60 * 6)
-    private void refreshToken() {
+    public void refreshToken() {
         fetchToken();
     }
 }
