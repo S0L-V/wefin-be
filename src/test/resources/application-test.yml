@@ -25,3 +25,10 @@ news:
     display: 10
   collect:
     cron: "-"
+
+market:
+  bok:
+    api-key: test-bok-key
+    base-url: https://ecos.bok.or.kr/api
+  collect:
+    cron: "-"
