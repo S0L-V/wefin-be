@@ -68,11 +68,13 @@ public class GlobalChatService {
     }
 
     private GlobalChatMessageResponse toResponse(GlobalChatMessage message) {
-        String sender = message.getRole() == ChatRole.SYSTEM
-                ? "시스템"
-                : message.getUser().getNickname();
+        Users user = message.getUser();
 
-        UUID userId = message.getUser() != null ? message.getUser().getId() : null;
+        String sender = (message.getRole() == ChatRole.SYSTEM || user == null)
+                ? "시스템"
+                : user.getNickname();
+
+        UUID userId = user != null ? user.getId() : null;
 
         return GlobalChatMessageResponse.builder()
                 .messageId(message.getId())
