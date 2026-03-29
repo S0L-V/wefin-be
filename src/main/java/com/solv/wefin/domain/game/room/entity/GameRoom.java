@@ -8,7 +8,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -55,7 +54,7 @@ public class GameRoom {
     private OffsetDateTime startedAt;
 
     @PrePersist
-    protected  void oncCreated() {
+    protected  void onCreated() {
         this.createdAt = OffsetDateTime.now();
         if(this.status==null) {
             this.status=WAITING;
