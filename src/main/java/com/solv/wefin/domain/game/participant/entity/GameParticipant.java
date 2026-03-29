@@ -8,7 +8,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
+
+import static com.solv.wefin.domain.game.participant.entity.ParticipantStatus.ACTIVE;
+import static com.solv.wefin.domain.game.participant.entity.ParticipantStatus.LEFT;
 
 @Entity
 @Table(name = "game_participant", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "room_id" }))
@@ -34,17 +38,18 @@ public class GameParticipant {
     @Column(name="seed")
     private Long seed;
 
+    @Enumerated(EnumType.STRING)
     @Column(name="status", nullable = false)
-    private String status;
+    private ParticipantStatus status;
 
     @Column(name="joined_at", nullable = false, updatable = false)
-    private LocalDateTime joinedAt;
+    private OffsetDateTime joinedAt;
 
     @PrePersist
     protected void onCreate() {
-        this.joinedAt = LocalDateTime.now();
+        this.joinedAt = OffsetDateTime.now();
         if (this.status == null) {
-            this.status = "ACTIVE";
+            this.status = ACTIVE;
         }
         if(this.isLeader == null) {
             this.isLeader = false;
@@ -55,7 +60,14 @@ public class GameParticipant {
         this.gameRoom = gameRoom;
         this.userId = userId;
         this.isLeader = isLeader != null ? isLeader : false;
-        this.status = "ACTIVE";
+        this.status = ACTIVE;
+    }
+    public static GameParticipant createLeader(GameRoom gameRoom, UUID userId) {
+        return GameParticipant.builder()
+                .gameRoom(gameRoom)
+                .userId(userId)
+                .isLeader(true)
+                .build();
     }
 
     public void assignSeed(Long seed) {
@@ -63,7 +75,7 @@ public class GameParticipant {
     }
 
     public void leave() {
-        this.status = "LEFT";
+        this.status = LEFT;
     }
 
 }
