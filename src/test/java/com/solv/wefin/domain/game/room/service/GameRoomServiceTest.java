@@ -89,6 +89,6 @@ class GameRoomServiceTest {
 
     // 테스트용 Request 생성 헬퍼 메서드
     private CreateRoomRequest createRequest() {
-        return new CreateRoomRequest(10000000L, 6, 7, "2020-01-02");
+        return new CreateRoomRequest(10000000L, 6, 7);
     }
 }

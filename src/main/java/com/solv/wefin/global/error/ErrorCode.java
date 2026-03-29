@@ -13,6 +13,7 @@ public enum ErrorCode {
 
     // Common
     INVALID_INPUT(400, "잘못된 입력입니다."),
+    DUPLICATE_RESOURCE(409,"중복된 리소스입니다."),
     INTERNAL_SERVER_ERROR(500, "서버 내부 오류가 발생했습니다."),
 
     // Order - BUY

@@ -23,6 +23,4 @@ public class CreateRoomRequest {
     @Min(value = 1, message = "턴당 이동 일수는 0보다 커야 합니다.")
     private Integer moveDays;
 
-    @NotNull(message = "게임 시작 날짜는 필수입니다.")
-    private String startDate;
 }

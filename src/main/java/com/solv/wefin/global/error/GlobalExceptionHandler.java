@@ -37,7 +37,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<?>> handleDataIntegrityViolation(DataIntegrityViolationException e) {
         log.warn("DB 제약조건 위반: {}", e.getMessage());
-        ApiResponse<Object> error = ApiResponse.error(ErrorCode.ROOM_ALREADY_EXISTS);
+        ApiResponse<Object> error = ApiResponse.error(ErrorCode.DUPLICATE_RESOURCE);
         return ResponseEntity.status(error.getStatus()).body(error);
     }
 

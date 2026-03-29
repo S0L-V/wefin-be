@@ -14,8 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -46,7 +48,11 @@ public class GameRoomService {
         }
 
         //endDate 계산
-        LocalDate startDate = LocalDate.parse(request.getStartDate()); // LocalDate.parse()로 객체 변환
+        LocalDate rangeStart = LocalDate.of(2020,1,1);
+        LocalDate rangeEnd = LocalDate.of(2024, 12, 31).minusMonths(request.getPeriodMonths());
+        long daysBetween = ChronoUnit.DAYS.between(rangeStart, rangeEnd);
+        long randomDays = ThreadLocalRandom.current().nextLong(daysBetween + 1);
+        LocalDate startDate = rangeStart.plusDays(randomDays);
         LocalDate endDate = startDate.plusMonths(request.getPeriodMonths());
 
         //게임룸 저장
