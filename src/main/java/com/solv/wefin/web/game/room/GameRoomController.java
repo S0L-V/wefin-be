@@ -22,7 +22,7 @@ public class GameRoomController {
     private final GameRoomService gameRoomService;
 
     //로그인 구현 전 묵데이터
-    private static final UUID TEMP_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    private static final UUID TEMP_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000001");
     private static final Long TEMP_GROUP_ID = 1L;
 
     @PostMapping
@@ -63,4 +63,6 @@ public class GameRoomController {
 조회 = get 요청
  서비스에서 그룹 id , status
  List roomListRespones
+
+ -> status는 ㄴ클라이언트가 아닌 서버에서 처리 프론트에서는 화면에 맞게 필터링 해서 사용
  */

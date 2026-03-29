@@ -1,6 +1,6 @@
 package com.solv.wefin.domain.game.room.entity;
 
-
+import static com.solv.wefin.domain.game.room.entity.RoomStatus.*;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
@@ -43,20 +44,21 @@ public class GameRoom {
     @Column(name ="end_date", nullable = false)
     private LocalDate endDate;
 
+    @Enumerated(EnumType.STRING)
     @Column(name ="status", nullable = false)
-    private String status;
+    private RoomStatus status;
 
     @Column(name ="created_at", nullable = false)
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
     @Column(name ="started_at")
-    private LocalDateTime startedAt;
+    private OffsetDateTime startedAt;
 
     @PrePersist
     protected  void oncCreated() {
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = OffsetDateTime.now();
         if(this.status==null) {
-            this.status="WAITING";
+            this.status=WAITING;
         }
     }
 
@@ -69,15 +71,28 @@ public class GameRoom {
       this.moveDays = moveDays;
       this.startDate = startDate;
       this.endDate = endDate;
-      this.status = "WAITING";
+      this.status = WAITING;
     }
 
+    public static GameRoom create(Long groupId, UUID userId, Long seed, Integer periodMonth, Integer moveDays, LocalDate startDate, LocalDate endDate) {
+        return GameRoom.builder()
+                .groupId(groupId)
+                .userId(userId)
+                .seed(seed)
+                .periodMonth(periodMonth)
+                .moveDays(moveDays)
+                .startDate(startDate)
+                .endDate(endDate)
+                .build();
+    }
+
+
     public void start() {
-        this.status = "IN_PROGRESS";
-        this.startedAt = LocalDateTime.now();
+        this.status = IN_PROGRESS;
+        this.startedAt = OffsetDateTime.now();
     }
 
     public void finish() {
-        this.status = "FINISHED";
+        this.status = FINISHED;
     }
 }

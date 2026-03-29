@@ -1,8 +1,10 @@
 package com.solv.wefin.domain.game.room.service;
 
 import com.solv.wefin.domain.game.participant.entity.GameParticipant;
+import com.solv.wefin.domain.game.participant.entity.ParticipantStatus;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.participant.repository.GameParticipantRepository;
+import com.solv.wefin.domain.game.room.entity.RoomStatus;
 import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
@@ -15,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,17 +38,18 @@ public class GameRoomService {
     @Transactional //트랜잭션으로 방생성과 방장유저 지정 동시에 이루어짐
     public CreateRoomResponse createRoom(UUID userId, Long groupId, CreateRoomRequest request) {
         //그룹 게임방 있으면 차단
-        if (gameRoomRepository.existsByGroupIdAndStatusIn(groupId, List.of("WAITING", "IN_PROGRESS"))) {
+        List<RoomStatus> activeStatuses = List.of(RoomStatus.WAITING, RoomStatus.IN_PROGRESS);
+        if (gameRoomRepository.existsByGroupIdAndStatusIn(groupId, activeStatuses)) {
             throw new BusinessException(ErrorCode.ROOM_ALREADY_EXISTS);
         }
         // 방장 방 동시 생성 방지
-        if (gameRoomRepository.existsByUserIdAndStatusIn(userId, List.of("WAITING", "IN_PROGRESS"))) {
+        if (gameRoomRepository.existsByUserIdAndStatusIn(userId, activeStatuses)) {
             throw new BusinessException(ErrorCode.ROOM_HOST_ALREADY_EXISTS);
         }
 
             // 방장 횟수 제한 1일 1회
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();;
-        LocalDateTime todayEnd = todayStart.plusDays(1);
+        OffsetDateTime todayStart = LocalDate.now().atStartOfDay().atZone(ZoneId.systemDefault()).toOffsetDateTime();
+        OffsetDateTime todayEnd = todayStart.plusDays(1);
 
         if(gameRoomRepository.existsByUserIdAndStartedAtBetween(userId, todayStart, todayEnd)) {
             throw new BusinessException(ErrorCode.ROOM_HOST_DAILY_LIMIT);
@@ -59,24 +64,12 @@ public class GameRoomService {
         LocalDate endDate = startDate.plusMonths(request.getPeriodMonths());
 
         //게임룸 저장
-        GameRoom gameRoom =  GameRoom.builder()
-                .groupId(groupId)
-                .userId(userId)
-                .seed(request.getSeedMoney())
-                .periodMonth(request.getPeriodMonths())
-                .moveDays(request.getMoveDays())
-                .startDate(startDate)
-                .endDate(endDate)
-                .build();
-
+        GameRoom gameRoom = GameRoom.create(groupId, userId, request.getSeedMoney(), request.getPeriodMonths(),
+                request.getMoveDays(), startDate, endDate);
         gameRoomRepository.save(gameRoom);
 
         //첫 번째 참가자 = 방장
-        GameParticipant host = GameParticipant.builder()
-                .gameRoom(gameRoom)
-                .userId(userId)
-                .isLeader(true)
-                .build();
+        GameParticipant host = GameParticipant.createLeader(gameRoom, userId);
 
         gameParticipantRepository.save(host);
 
@@ -84,19 +77,23 @@ public class GameRoomService {
     }
 
     public List<RoomListResponse> getRooms(Long groupId, UUID userId) {
-        List<GameRoom> activeRooms = gameRoomRepository.findByGroupIdAndStatusIn(groupId, List.of("WAITING", "IN_PROGRESS"));
+        //그룹 활성화된 방
+        List<RoomStatus> activeStatuses = List.of(RoomStatus.WAITING, RoomStatus.IN_PROGRESS);
+        List<GameRoom> activeRooms = gameRoomRepository.findByGroupIdAndStatusIn(groupId, activeStatuses);
 
+        // 내 과거 기록
         List<GameRoom> myFinishedRooms = gameRoomRepository.findFinishedRoomsByGroupIdAndUserId((groupId), userId);
 
         List<GameRoom> rooms = new ArrayList<>();
         rooms.addAll(activeRooms);
         rooms.addAll(myFinishedRooms);
 
+        //참가자 수 count
         return rooms.stream().map(room -> {
-            int playerCount = gameParticipantRepository.countByGameRoomAndStatus(room, "ACTIVE");
-            return RoomListResponse.from(room, playerCount);
-        })
-        .collect(Collectors.toList());
+                    int playerCount = gameParticipantRepository.countByGameRoomAndStatus(room, ParticipantStatus.ACTIVE);
+                    return RoomListResponse.from(room, playerCount);
+                })
+                .collect(Collectors.toList());
     }
 
 
@@ -122,6 +119,11 @@ gameParticipant.builder()
 
  jpa 코드로 생성된 방 있으면 추가 생성 + 방장 방 동시 생성 차단
  유니크로 2차 차단그 아
+
+ 방 목록 조회 그룹아이디 + status
+ progress , wating / finished
+
+ 과거 게임 이력 = finished + 유저아이디 ( 내 Id)
 
  */
 /**cancel room

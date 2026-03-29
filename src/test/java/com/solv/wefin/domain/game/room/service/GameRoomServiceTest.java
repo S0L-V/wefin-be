@@ -1,7 +1,9 @@
 package com.solv.wefin.domain.game.room.service;
 
+import com.solv.wefin.domain.game.participant.entity.ParticipantStatus;
 import com.solv.wefin.domain.game.participant.repository.GameParticipantRepository;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
+import com.solv.wefin.domain.game.room.entity.RoomStatus;
 import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
@@ -16,7 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -42,7 +44,7 @@ class GameRoomServiceTest {
     @Mock
     private GameParticipantRepository gameParticipantRepository;
 
-    private static final UUID TEST_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    private static final UUID TEST_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000001");
     private static final Long TEST_GROUP_ID = 1L;
 
     @Test
@@ -54,7 +56,7 @@ class GameRoomServiceTest {
         given(gameRoomRepository.existsByUserIdAndStatusIn(any(UUID.class), any(List.class)))
                 .willReturn(false);
         given(gameRoomRepository.existsByUserIdAndStartedAtBetween(
-                any(UUID.class), any(LocalDateTime.class), any(LocalDateTime.class)))
+                any(UUID.class), any(OffsetDateTime.class), any(OffsetDateTime.class)))
                 .willReturn(false);
 
         CreateRoomRequest request = createRequest();
@@ -63,7 +65,7 @@ class GameRoomServiceTest {
         CreateRoomResponse response = gameRoomService.createRoom(TEST_USER_ID, TEST_GROUP_ID, request);
 
         // Then — 결과 검증
-        assertThat(response.getStatus()).isEqualTo("WAITING");
+        assertThat(response.getStatus()).isEqualTo(RoomStatus.WAITING);
 
         // GameRoom이 저장됐는지 확인
         verify(gameRoomRepository).save(any(GameRoom.class));
@@ -81,7 +83,7 @@ class GameRoomServiceTest {
         given(gameRoomRepository.existsByUserIdAndStatusIn(any(UUID.class), any(List.class)))
                 .willReturn(false);
         given(gameRoomRepository.existsByUserIdAndStartedAtBetween(
-                any(UUID.class), any(LocalDateTime.class), any(LocalDateTime.class)))
+                any(UUID.class), any(OffsetDateTime.class), any(OffsetDateTime.class)))
                 .willReturn(true);
 
         CreateRoomRequest request = createRequest();
@@ -112,7 +114,7 @@ class GameRoomServiceTest {
                 .willReturn(List.of(activeRoom));
         given(gameRoomRepository.findFinishedRoomsByGroupIdAndUserId(TEST_GROUP_ID, TEST_USER_ID))
                 .willReturn(List.of(finishedRoom));
-        given(gameParticipantRepository.countByGameRoomAndStatus(any(GameRoom.class), eq("ACTIVE")))
+        given(gameParticipantRepository.countByGameRoomAndStatus(any(GameRoom.class), eq(ParticipantStatus.ACTIVE)))
                 .willReturn(1);
 
         // When
@@ -148,14 +150,7 @@ class GameRoomServiceTest {
     }
 
     private GameRoom createGameRoom() {
-        return GameRoom.builder()
-                .groupId(TEST_GROUP_ID)
-                .userId(TEST_USER_ID)
-                .seed(10000000L)
-                .periodMonth(6)
-                .moveDays(7)
-                .startDate(LocalDate.of(2020, 1, 2))
-                .endDate(LocalDate.of(2020, 7, 2))
-                .build();
+        return GameRoom.create(TEST_GROUP_ID, TEST_USER_ID, 10000000L,
+                6, 7, LocalDate.of(2020, 1, 2), LocalDate.of(2020, 7, 2));
     }
 }

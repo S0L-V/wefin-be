@@ -1,11 +1,13 @@
 package com.solv.wefin.web.game.room.dto.response;
 
 import com.solv.wefin.domain.game.room.entity.GameRoom;
+import com.solv.wefin.domain.game.room.entity.RoomStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Getter
@@ -19,9 +21,9 @@ public class RoomListResponse {
     private Integer moveDays;
     private LocalDate startDate;
     private LocalDate endDate;
-    private String status;
+    private RoomStatus status;
     private int currentPlayers;
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
     public static RoomListResponse from(GameRoom room, int currentPlayers) {
         return new RoomListResponse(
