@@ -3,6 +3,7 @@ package com.solv.wefin.domain.chat.globalChat.service;
 import com.solv.wefin.domain.chat.globalChat.entity.ChatRole;
 import com.solv.wefin.domain.chat.globalChat.entity.GlobalChatMessage;
 import com.solv.wefin.domain.chat.globalChat.entity.Users;
+import com.solv.wefin.domain.chat.globalChat.event.GlobalChatMessageCreatedEvent;
 import com.solv.wefin.domain.chat.globalChat.repository.GlobalChatMessageRepository;
 import com.solv.wefin.domain.chat.globalChat.repository.UsersRepository;
 import com.solv.wefin.global.error.BusinessException;
@@ -10,14 +11,13 @@ import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.chat.globalChat.dto.response.GlobalChatMessageResponse;
 import com.solv.wefin.web.chat.globalChat.dto.request.GlobalChatSendRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -26,7 +26,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class GlobalChatService {
 
-    private final SimpMessagingTemplate messagingTemplate;
+    private final ApplicationEventPublisher eventPublisher;
     private final GlobalChatMessageRepository globalChatMessageRepository;
     private final UsersRepository usersRepository;
 
@@ -47,7 +47,7 @@ public class GlobalChatService {
                         .build()
         );
 
-        messagingTemplate.convertAndSend("/topic/chat/global", toResponse(savedMessage));
+        eventPublisher.publishEvent(new GlobalChatMessageCreatedEvent(toResponse(savedMessage)));
     }
 
     @Transactional
@@ -64,7 +64,7 @@ public class GlobalChatService {
                         .build()
         );
 
-        messagingTemplate.convertAndSend("/topic/chat/global", toResponse(savedMessage));
+        eventPublisher.publishEvent(new GlobalChatMessageCreatedEvent(toResponse(savedMessage)));
     }
 
     private GlobalChatMessageResponse toResponse(GlobalChatMessage message) {
@@ -95,9 +95,10 @@ public class GlobalChatService {
     }
 
     @Transactional(readOnly = true)
-    public List<GlobalChatMessageResponse> getRecentMessages() {
+    public List<GlobalChatMessageResponse> getRecentMessages(int limit) {
 
-        Pageable pageable = PageRequest.of(0, 50);
+        int size = Math.min(Math.max(limit, 1), 100);
+        Pageable pageable = PageRequest.of(0, size);
 
         List<GlobalChatMessage> messages = globalChatMessageRepository.findRecentMessages(pageable);
 
