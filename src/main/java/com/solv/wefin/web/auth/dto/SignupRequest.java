@@ -22,7 +22,7 @@ public class SignupRequest {
     private String password;
 
     @NotBlank(message = "닉네임은 필수입니다.")
-    @Size(max = 20, message = "닉네임은 20자 이하이어햐 합니다.")
+    @Size(max = 20, message = "닉네임은 20자 이하이어야 합니다.")
     private String nickname;
 
 }

@@ -7,6 +7,7 @@ import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.auth.dto.SignupRequest;
 import com.solv.wefin.web.auth.dto.SignupResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,24 +16,31 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class AuthService {
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+        private final UserRepository userRepository;
+        private final PasswordEncoder passwordEncoder;
 
     public SignupResponse signup(SignupRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException(ErrorCode.EMAIL_DUPLICATED);
         }
-        User user = User.builder()
-                .email(request.getEmail())
-                .nickname(request.getNickname())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .build();
-        User savedUser = userRepository.save(user);
 
-        return SignupResponse.builder()
-                .userId(savedUser.getUserId())
-                .email(savedUser.getEmail())
-                .nickname(savedUser.getNickname())
-                .build();
+        try {
+            User user = User.builder()
+                    .email(request.getEmail())
+                    .nickname(request.getNickname())
+                    .password(passwordEncoder.encode(request.getPassword()))
+                    .build();
+
+            User savedUser = userRepository.save(user);
+
+            return SignupResponse.builder()
+                    .userId(savedUser.getUserId())
+                    .email(savedUser.getEmail())
+                    .nickname(savedUser.getNickname())
+                    .build();
+
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.EMAIL_DUPLICATED);
+        }
     }
 }

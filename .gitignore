@@ -43,4 +43,5 @@ out/
 ### .env ###
 .env
 .env.dev
-.env.prod.DS_Store
+.env.prod
+.DS_Store
