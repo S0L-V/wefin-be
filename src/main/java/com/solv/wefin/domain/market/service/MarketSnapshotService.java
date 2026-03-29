@@ -21,6 +21,7 @@ import java.util.List;
 public class MarketSnapshotService {
 
     private final List<MarketDataCollector> collectors;
+    private final MarketSnapshotPersistenceService persistenceService;
     private final MarketSnapshotRepository marketSnapshotRepository;
 
     /**
@@ -35,8 +36,10 @@ public class MarketSnapshotService {
 
     /**
      * 모든 수집기에서 데이터를 수집하고 DB에 upsert한다.
+     *
+     * <p>외부 API 호출은 트랜잭션 밖에서 수행하고,
+     * DB 저장은 별도 서비스(MarketSnapshotPersistenceService)에서 트랜잭션으로 처리한다.</p>
      */
-    @Transactional
     public void collectAndSave() {
         List<CollectedMarketData> allData = collectFromAllSources();
 
@@ -45,11 +48,7 @@ public class MarketSnapshotService {
             return;
         }
 
-        for (CollectedMarketData data : allData) {
-            upsertSnapshot(data);
-        }
-
-        log.info("시장 지표 upsert 완료: {}건", allData.size());
+        persistenceService.saveSnapshots(allData);
     }
 
     private List<CollectedMarketData> collectFromAllSources() {
@@ -66,30 +65,5 @@ public class MarketSnapshotService {
         }
 
         return allData;
-    }
-
-    private void upsertSnapshot(CollectedMarketData data) {
-        MarketSnapshot snapshot = marketSnapshotRepository
-                .findByMetricType(data.getMetricType())
-                .orElse(null);
-
-        if (snapshot != null) {
-            snapshot.updateValues(
-                    data.getValue(),
-                    data.getChangeRate(),
-                    data.getChangeValue(),
-                    data.getChangeDirection());
-        } else {
-            snapshot = MarketSnapshot.builder()
-                    .metricType(data.getMetricType())
-                    .label(data.getLabel())
-                    .value(data.getValue())
-                    .changeRate(data.getChangeRate())
-                    .changeValue(data.getChangeValue())
-                    .unit(data.getUnit())
-                    .changeDirection(data.getChangeDirection())
-                    .build();
-            marketSnapshotRepository.save(snapshot);
-        }
     }
 }
