@@ -17,6 +17,12 @@ ALTER TABLE "market_snapshot"
 ALTER TABLE "market_snapshot"
     DROP COLUMN "market_trend_id";
 
+-- metric_type별 중복 데이터 정리 (최신 1건만 보존)
+DELETE FROM "market_snapshot" a
+    USING "market_snapshot" b
+WHERE a.market_snapshot_id < b.market_snapshot_id
+  AND a.metric_type = b.metric_type;
+
 -- metric_type 단독 unique 제약조건 추가 (지표별 최신 값 1건 유지)
 ALTER TABLE "market_snapshot"
     ADD CONSTRAINT "uk_market_snapshot_metric_type" UNIQUE ("metric_type");

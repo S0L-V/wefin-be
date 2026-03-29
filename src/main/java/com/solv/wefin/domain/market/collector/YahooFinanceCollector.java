@@ -60,61 +60,27 @@ public class YahooFinanceCollector implements MarketDataCollector {
     }
 
     private void collectKospi(List<CollectedMarketData> results) {
-        try {
-            JsonNode meta = fetchChartMeta(KOSPI_SYMBOL);
-            if (meta == null) return;
-
-            BigDecimal price = BigDecimal.valueOf(meta.get("regularMarketPrice").asDouble());
-            BigDecimal previousClose = BigDecimal.valueOf(meta.get("chartPreviousClose").asDouble());
-            BigDecimal changeValue = price.subtract(previousClose);
-            BigDecimal changeRate = calculateChangeRate(changeValue, previousClose);
-
-            results.add(CollectedMarketData.builder()
-                    .metricType(MetricType.KOSPI)
-                    .label("코스피")
-                    .value(price)
-                    .changeRate(changeRate)
-                    .changeValue(changeValue)
-                    .unit(Unit.POINT)
-                    .changeDirection(resolveDirection(changeValue))
-                    .build());
-
-            log.debug("KOSPI 수집 완료: {}", price);
-        } catch (Exception e) {
-            log.error("KOSPI 수집 실패: {}", e.getMessage(), e);
-        }
+        collectSymbol(results, KOSPI_SYMBOL, MetricType.KOSPI, "코스피", Unit.POINT);
     }
 
     private void collectNasdaq(List<CollectedMarketData> results) {
-        try {
-            JsonNode meta = fetchChartMeta(NASDAQ_SYMBOL);
-            if (meta == null) return;
-
-            BigDecimal price = BigDecimal.valueOf(meta.get("regularMarketPrice").asDouble());
-            BigDecimal previousClose = BigDecimal.valueOf(meta.get("chartPreviousClose").asDouble());
-            BigDecimal changeValue = price.subtract(previousClose);
-            BigDecimal changeRate = calculateChangeRate(changeValue, previousClose);
-
-            results.add(CollectedMarketData.builder()
-                    .metricType(MetricType.NASDAQ)
-                    .label("나스닥")
-                    .value(price)
-                    .changeRate(changeRate)
-                    .changeValue(changeValue)
-                    .unit(Unit.POINT)
-                    .changeDirection(resolveDirection(changeValue))
-                    .build());
-
-            log.debug("NASDAQ 수집 완료: {}", price);
-        } catch (Exception e) {
-            log.error("NASDAQ 수집 실패: {}", e.getMessage(), e);
-        }
+        collectSymbol(results, NASDAQ_SYMBOL, MetricType.NASDAQ, "나스닥", Unit.POINT);
     }
 
     private void collectUsdKrw(List<CollectedMarketData> results) {
+        collectSymbol(results, USD_KRW_SYMBOL, MetricType.USD_KRW, "원/달러 환율", Unit.KRW);
+    }
+
+    private void collectSymbol(List<CollectedMarketData> results, String symbol,
+                                MetricType metricType, String label, Unit unit) {
         try {
-            JsonNode meta = fetchChartMeta(USD_KRW_SYMBOL);
+            JsonNode meta = fetchChartMeta(symbol);
             if (meta == null) return;
+
+            if (!meta.has("regularMarketPrice") || !meta.has("chartPreviousClose")) {
+                log.warn("{} 응답에 필수 필드가 없습니다: {}", symbol, meta);
+                return;
+            }
 
             BigDecimal price = BigDecimal.valueOf(meta.get("regularMarketPrice").asDouble());
             BigDecimal previousClose = BigDecimal.valueOf(meta.get("chartPreviousClose").asDouble());
@@ -122,18 +88,18 @@ public class YahooFinanceCollector implements MarketDataCollector {
             BigDecimal changeRate = calculateChangeRate(changeValue, previousClose);
 
             results.add(CollectedMarketData.builder()
-                    .metricType(MetricType.USD_KRW)
-                    .label("원/달러 환율")
+                    .metricType(metricType)
+                    .label(label)
                     .value(price)
                     .changeRate(changeRate)
                     .changeValue(changeValue)
-                    .unit(Unit.KRW)
+                    .unit(unit)
                     .changeDirection(resolveDirection(changeValue))
                     .build());
 
-            log.debug("USD/KRW 수집 완료: {}", price);
+            log.debug("{} 수집 완료: {}", symbol, price);
         } catch (Exception e) {
-            log.error("USD/KRW 수집 실패: {}", e.getMessage(), e);
+            log.error("{} 수집 실패: {}", symbol, e.getMessage(), e);
         }
     }
 
@@ -167,7 +133,12 @@ public class YahooFinanceCollector implements MarketDataCollector {
                 return null;
             }
 
-            return results.get(0).get("meta");
+            JsonNode meta = results.path(0).path("meta");
+            if (meta.isMissingNode()) {
+                log.warn("Yahoo Finance {} 응답에 meta가 없습니다", symbol);
+                return null;
+            }
+            return meta;
         } catch (Exception e) {
             log.error("Yahoo Finance {} 응답 파싱 실패: {}", symbol, e.getMessage(), e);
             return null;

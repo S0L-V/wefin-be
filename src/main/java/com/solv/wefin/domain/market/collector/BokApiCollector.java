@@ -26,8 +26,8 @@ import java.util.List;
 @Component
 public class BokApiCollector implements MarketDataCollector {
 
-    private static final String SOURCE_NAME = "BOK"; // ECOS 기준금리 통계표 코드
-    private static final String STAT_CODE = "722Y001"; // COS 기준금리 통계표 코드기준금리 항목 코드
+    private static final String SOURCE_NAME = "BOK";
+    private static final String STAT_CODE = "722Y001"; // ECOS 기준금리 통계표 코드
     private static final String ITEM_CODE = "0101000"; // 기준금리 항목 코드
     private static final String PERIOD_TYPE = "M"; // 월 단위 조회
     private static final DateTimeFormatter MONTH_FORMAT = DateTimeFormatter.ofPattern("yyyyMM"); // ECOS 월 파라미터 포맷
