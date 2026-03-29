@@ -88,7 +88,7 @@ class GlobalChatWebSocketTest extends WebSocketIntegrationTestBase {
         BlockingQueue<GlobalChatMessageResponse> queue = new LinkedBlockingQueue<>();
         AtomicReference<Throwable> asyncError = new AtomicReference<>();
 
-        // CONNECT 시 nickname 해더 전달 (서버에서 Principal로 사용됨)
+        // CONNECT 시 userId 해더 전달
         StompHeaders connectHeaders = new StompHeaders();
         connectHeaders.add("userId", userId.toString());
 
