@@ -17,6 +17,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -24,7 +25,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "virtual_account")
 @Getter
 @EntityListeners(AuditingEntityListener.class)
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class VirtualAccount {
 
 	@Id @GeneratedValue(strategy = GenerationType.IDENTITY)
