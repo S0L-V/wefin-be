@@ -14,4 +14,8 @@ public interface GameRoomRepository extends JpaRepository<GameRoom, UUID> {
 
     //중복 방 방지
     boolean existsByUserIdAndStatusIn(UUID userId, List<String> statuses);
+
+    // 목록 조회용
+    List<GameRoom> findByGroupId(Long groupId);
+    List<GameRoom> findByGroupIdAndStatus(Long groupId, String status);
 }

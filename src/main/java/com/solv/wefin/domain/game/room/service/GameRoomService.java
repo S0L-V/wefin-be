@@ -8,6 +8,7 @@ import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.game.room.dto.request.CreateRoomRequest;
 import com.solv.wefin.web.game.room.dto.response.CreateRoomResponse;
+import com.solv.wefin.web.game.room.dto.response.RoomListResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -77,7 +79,23 @@ public class GameRoomService {
 
         gameParticipantRepository.save(host);
 
-        return new CreateRoomResponse(gameRoom.getRoomId(), gameRoom.getStatus());
+        return CreateRoomResponse.from(gameRoom);
+    }
+
+    public List<RoomListResponse> getRooms(Long groupId, String status) {
+
+        List<GameRoom> rooms;
+        if(status != null && !status.isBlank()) {
+            rooms = gameRoomRepository.findByGroupIdAndStatus(groupId, status);
+        } else {
+            rooms = gameRoomRepository.findByGroupId(groupId);
+        }
+
+        return rooms.stream().map(room -> {
+            int playerCount = gameParticipantRepository.countByGameRoomAndStatus(room, "ACTIVE");
+            return RoomListResponse.from(room, playerCount);
+        })
+        .collect(Collectors.toList());
     }
 
 

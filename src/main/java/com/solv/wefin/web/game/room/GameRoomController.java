@@ -4,15 +4,14 @@ import com.solv.wefin.domain.game.room.service.GameRoomService;
 import com.solv.wefin.global.common.ApiResponse;
 import com.solv.wefin.web.game.room.dto.request.CreateRoomRequest;
 import com.solv.wefin.web.game.room.dto.response.CreateRoomResponse;
+import com.solv.wefin.web.game.room.dto.response.RoomListResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -36,14 +35,34 @@ public class GameRoomController {
 
     }
 
+    /**
+     게임방 목록 조회
+     get /api/rooms
+     get /api/rooms?status=WAITING or in_progress or finished
+     */
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<RoomListResponse>>> getRooms(
+            @RequestParam(required = false) String status) {
+
+        List<RoomListResponse> response = gameRoomService.getRooms(TEMP_GROUP_ID, status);
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 
 }
 
 /**
+ 1. 방 생성 컨트롤러
  클라이언트에서 입력
  서비스 처리
  출력값 클라이언트 리턴
 
  그룹아이디, 유저아이디 묵데이터 입력 post요청
  createRoomRequest입력값 -> createRoom 서비스 출력값으로 응답 dto 클라이언트 리턴
+
+ 2. 게임방 목록 조회 컨트롤러
+그룹 방 조회 -> 상태로 필터
+조회 = get 요청
+ 서비스에서 그룹 id , status
+ List roomListRespones
  */
