@@ -89,15 +89,21 @@ public class BokApiCollector implements MarketDataCollector {
             }
 
             JsonNode latest = rows.get(rows.size() - 1);
+            if (!latest.has("DATA_VALUE")) {
+                log.warn("한국은행 API 응답에 DATA_VALUE가 없습니다");
+                return Collections.emptyList();
+            }
             BigDecimal currentRate = new BigDecimal(latest.get("DATA_VALUE").asText());
 
             ChangeDirection direction = ChangeDirection.FLAT;
             BigDecimal changeValue = BigDecimal.ZERO;
             if (rows.size() >= 2) {
                 JsonNode previous = rows.get(rows.size() - 2);
-                BigDecimal previousRate = new BigDecimal(previous.get("DATA_VALUE").asText());
-                changeValue = currentRate.subtract(previousRate);
-                direction = resolveDirection(changeValue);
+                if (previous.has("DATA_VALUE")) {
+                    BigDecimal previousRate = new BigDecimal(previous.get("DATA_VALUE").asText());
+                    changeValue = currentRate.subtract(previousRate);
+                    direction = resolveDirection(changeValue);
+                }
             }
 
             CollectedMarketData data = CollectedMarketData.builder()
