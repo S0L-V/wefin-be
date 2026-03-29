@@ -1,13 +1,21 @@
 package com.solv.wefin.web.chat.globalChat;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.solv.wefin.common.WebSocketIntegrationTestBase;
+import com.solv.wefin.domain.chat.globalChat.entity.Users;
+import com.solv.wefin.domain.chat.globalChat.repository.UsersRepository;
 import com.solv.wefin.web.chat.globalChat.dto.response.GlobalChatMessageResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.simp.stomp.*;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
@@ -18,6 +26,7 @@ import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -27,12 +36,36 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class GlobalChatWebSocketTest extends WebSocketIntegrationTestBase {
 
+    @Autowired
+    private UsersRepository usersRepository;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
     @LocalServerPort
     private int port;
 
     @Test
     @DisplayName("SockJS 기반 전체 채팅 송수신 테스트")
     void globalChat_sockJs_sendAndReceive() throws Exception {
+
+        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+
+        // 별도 트랜젝션으로 사용자 저장
+        TransactionTemplate requiresNewTx = new TransactionTemplate(transactionManager);
+        requiresNewTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+
+        requiresNewTx.executeWithoutResult(status -> {
+            if (!usersRepository.existsById(userId)) {
+                Users user = Users.builder()
+                        .id(userId)
+                        .email("test1@test.com")
+                        .nickname("testUser")
+                        .password("password1")
+                        .build();
+                usersRepository.saveAndFlush(user); // 즉시 DB 반영
+            }
+        });
 
         // SockJS + WebSocket 기반 STOMP 클라이언트 생성
         List<Transport> transports = List.of(
@@ -41,7 +74,15 @@ class GlobalChatWebSocketTest extends WebSocketIntegrationTestBase {
         SockJsClient sockJsClient = new SockJsClient(transports);
 
         WebSocketStompClient stompClient = new WebSocketStompClient(sockJsClient);
-        stompClient.setMessageConverter(new MappingJackson2MessageConverter());
+
+        // LocalDateTime 직렬화를 위한 Jackson 설정
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+
+        MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
+        converter.setObjectMapper(objectMapper);
+
+        stompClient.setMessageConverter(converter);
 
         // 서버에서 오는 메시지를 담을 큐
         BlockingQueue<GlobalChatMessageResponse> queue = new LinkedBlockingQueue<>();
@@ -49,7 +90,7 @@ class GlobalChatWebSocketTest extends WebSocketIntegrationTestBase {
 
         // CONNECT 시 nickname 해더 전달 (서버에서 Principal로 사용됨)
         StompHeaders connectHeaders = new StompHeaders();
-        connectHeaders.add("nickname", "testUser");
+        connectHeaders.add("userId", userId.toString());
 
         // WebSocket 연결
         StompSession session = stompClient
@@ -114,6 +155,8 @@ class GlobalChatWebSocketTest extends WebSocketIntegrationTestBase {
         // 결과 검증
         assertNull(asyncError.get(), "비동기 처리 중 예외가 발생했습니다: " + asyncError.get());
         assertNotNull(response, "구독 메시지를 받지 못했습니다.");
+        assertEquals(userId, response.getUserId());
+        assertEquals("USER", response.getRole());
         assertEquals("testUser", response.getSender());
         assertEquals("테스트 메시지", response.getContent());
     }
