@@ -13,6 +13,7 @@ public enum ErrorCode {
 
     // Common
     INVALID_INPUT(400, "잘못된 입력입니다."),
+    DUPLICATE_RESOURCE(409,"중복된 리소스입니다."),
     INTERNAL_SERVER_ERROR(500, "서버 내부 오류가 발생했습니다."),
 
     // Order - BUY
@@ -34,7 +35,13 @@ public enum ErrorCode {
     ACCOUNT_ALREADY_EXISTS(400, "이미 계좌가 존재합니다."),
 
     // Market
-    MARKET_001(404, "종목을 찾을 수 없습니다.");
+    MARKET_001(404, "종목을 찾을 수 없습니다."),
+
+    // GameRoom
+    ROOM_NOT_FOUND(404,"게임장을 찾을 수 없습니다."),
+    ROOM_ALREADY_EXISTS(409, "이미 진행 중이거나 대기 중인 게임방이 있습니다."),
+    ROOM_HOST_ALREADY_EXISTS(409, "이미 방장으로 참여 중인 게임방이 있습니다."),
+    ROOM_HOST_DAILY_LIMIT(409, "하루 방 생성 가능 횟수 초과");
 
     private final int status;
     private final String message;

@@ -18,6 +18,11 @@ public class ApiResponse<T> {
         return new ApiResponse<>(200, null, null, data);
     }
 
+    //201 요청 때
+    public static <T> ApiResponse<T> success(int status, T data) {
+        return new ApiResponse<>(status, null, null, data);
+    }
+
     public static <T> ApiResponse<T> error(ErrorCode code) {
         return new ApiResponse<>(code.getStatus(), code.name(), code.getMessage(), null);
     }
