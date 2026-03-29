@@ -155,7 +155,7 @@ public class GlobalChatServiceTest {
         var result = globalChatService.getRecentMessages();
 
         assertEquals(1, result.size());
-        assertEquals("testUser", result.get(0).getSender());
+        assertEquals("testUser1", result.get(0).getSender());
         assertEquals("USER", result.get(0).getRole());
     }
 }
