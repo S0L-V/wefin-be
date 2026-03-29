@@ -24,6 +24,16 @@ public class MarketSnapshotService {
     private final MarketSnapshotRepository marketSnapshotRepository;
 
     /**
+     * 저장된 모든 시장 지표 스냅샷을 조회한다.
+     *
+     * @return 전체 스냅샷 목록
+     */
+    @Transactional(readOnly = true)
+    public List<MarketSnapshot> getAllSnapshots() {
+        return marketSnapshotRepository.findAll();
+    }
+
+    /**
      * 모든 수집기에서 데이터를 수집하고 DB에 upsert한다.
      */
     @Transactional
