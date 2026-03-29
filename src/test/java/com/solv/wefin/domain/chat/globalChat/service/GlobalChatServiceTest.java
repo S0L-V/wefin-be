@@ -3,6 +3,7 @@ package com.solv.wefin.domain.chat.globalChat.service;
 import com.solv.wefin.domain.chat.globalChat.entity.ChatRole;
 import com.solv.wefin.domain.chat.globalChat.entity.GlobalChatMessage;
 import com.solv.wefin.domain.chat.globalChat.entity.Users;
+import com.solv.wefin.domain.chat.globalChat.event.GlobalChatMessageCreatedEvent;
 import com.solv.wefin.domain.chat.globalChat.repository.GlobalChatMessageRepository;
 import com.solv.wefin.domain.chat.globalChat.repository.UsersRepository;
 import com.solv.wefin.global.error.BusinessException;
@@ -11,6 +12,7 @@ import com.solv.wefin.web.chat.globalChat.dto.request.GlobalChatSendRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -27,19 +29,19 @@ import static org.mockito.Mockito.*;
 
 public class GlobalChatServiceTest {
 
-    private SimpMessagingTemplate messagingTemplate;
+    private ApplicationEventPublisher eventPublisher;
     private GlobalChatMessageRepository globalChatMessageRepository;
     private UsersRepository usersRepository;
     private GlobalChatService globalChatService;
 
     @BeforeEach
     void setUp() {
-        messagingTemplate = mock(SimpMessagingTemplate.class);
+        eventPublisher = mock(ApplicationEventPublisher.class);
         globalChatMessageRepository = mock(GlobalChatMessageRepository.class);
         usersRepository = mock(UsersRepository.class);
 
         globalChatService = new GlobalChatService(
-                messagingTemplate,
+                eventPublisher,
                 globalChatMessageRepository,
                 usersRepository
         );
@@ -77,8 +79,8 @@ public class GlobalChatServiceTest {
 
         verify(usersRepository, times(1)).findById(userId);
         verify(globalChatMessageRepository, times(1)).save(any(GlobalChatMessage.class));
-        verify(messagingTemplate, times(1))
-                .convertAndSend(eq("/topic/chat/global"), any(GlobalChatMessageResponse.class));
+        verify(eventPublisher, times(1))
+                .publishEvent(any(GlobalChatMessageCreatedEvent.class));
 
     }
 
@@ -124,7 +126,7 @@ public class GlobalChatServiceTest {
                 () -> globalChatService.sendMessage(request, userId));
 
         verify(globalChatMessageRepository, never()).save(any());
-        verify(messagingTemplate, never()).convertAndSend(anyString(), any(GlobalChatMessageResponse.class));
+        verify(eventPublisher, never()).publishEvent(any(GlobalChatMessageCreatedEvent.class));
     }
 
     @Test
@@ -152,7 +154,7 @@ public class GlobalChatServiceTest {
         when(globalChatMessageRepository.findRecentMessages(any()))
                 .thenReturn(List.of(message));
 
-        var result = globalChatService.getRecentMessages();
+        var result = globalChatService.getRecentMessages(1);
 
         assertEquals(1, result.size());
         assertEquals("testUser1", result.get(0).getSender());
