@@ -33,8 +33,8 @@ public class StockRepositoryImpl implements StockRepositoryCustom {
 
     private BooleanExpression keywordContains(String keyword) {
         if (!StringUtils.hasText(keyword)) return null;
-        return stock.stockName.contains(keyword)
-                .or(stock.stockCode.contains(keyword));
+        return stock.stockName.containsIgnoreCase(keyword)
+                .or(stock.stockCode.containsIgnoreCase(keyword));
     }
 
     private BooleanExpression marketEq(String market) {
