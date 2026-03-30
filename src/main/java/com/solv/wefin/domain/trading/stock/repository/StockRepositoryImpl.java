@@ -2,7 +2,6 @@ package com.solv.wefin.domain.trading.stock.repository;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import com.solv.wefin.domain.trading.stock.entity.QStock;
 import com.solv.wefin.domain.trading.stock.entity.Stock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.StringUtils;
@@ -18,8 +17,6 @@ public class StockRepositoryImpl implements StockRepositoryCustom {
 
     @Override
     public List<Stock> search(String keyword, String market) {
-        QStock stock = QStock.stock;
-
         return queryFactory
                 .selectFrom(stock)
                 .where(
