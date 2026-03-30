@@ -87,4 +87,10 @@ public class Order extends BaseEntity {
 		this.fee = fee;
 		this.tax = tax;
 	}
+
+	// == 비즈니스 메서드 ==
+	public void fill(Integer filledQuantity) {
+		this.status = OrderStatus.FILLED;
+		this.filledQuantity = filledQuantity;
+	}
 }
