@@ -1,5 +1,6 @@
 package com.solv.wefin.domain.game.room.service;
 
+import com.solv.wefin.domain.game.participant.entity.GameParticipant;
 import com.solv.wefin.domain.game.participant.entity.ParticipantStatus;
 import com.solv.wefin.domain.game.participant.repository.GameParticipantRepository;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
@@ -9,6 +10,7 @@ import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.game.room.dto.request.CreateRoomRequest;
 import com.solv.wefin.web.game.room.dto.response.CreateRoomResponse;
+import com.solv.wefin.web.game.room.dto.response.JoinRoomResponse;
 import com.solv.wefin.web.game.room.dto.response.RoomListResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -164,6 +166,146 @@ class GameRoomServiceTest {
         verify(gameParticipantRepository, never()).findByGameRoomOrderByJoinedAtAsc(any());
     }
 
+
+    // === API 4: 게임방 참가 테스트 ===
+
+    private static final UUID OTHER_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000002");
+
+    @Test
+    @DisplayName("게임방 참가 성공 — WAITING 방에 참가")
+    void joinRoom_success_waiting() {
+        // Given — WAITING 방이 존재, 중복 참가 아님, 인원 여유 있음
+        GameRoom gameRoom = createGameRoom(); // status = WAITING
+        UUID roomId = gameRoom.getRoomId();
+
+        given(gameRoomRepository.findByIdForUpdate(roomId))
+                .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.existsByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
+                .willReturn(false);
+        given(gameParticipantRepository.countByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE))
+                .willReturn(1); // 방장 1명만 있음
+
+        // When
+        JoinRoomResponse response = gameRoomService.joinRoom(roomId, OTHER_USER_ID);
+
+        // Then
+        assertThat(response.getRoomId()).isEqualTo(roomId);
+        assertThat(response.getRoomStatus()).isEqualTo(RoomStatus.WAITING);
+        verify(gameParticipantRepository).save(any(GameParticipant.class));
+    }
+
+    @Test
+    @DisplayName("게임방 참가 성공 — IN_PROGRESS 방에도 참가 가능")
+    void joinRoom_success_inProgress() {
+        // Given — IN_PROGRESS 방
+        GameRoom gameRoom = createGameRoom();
+        gameRoom.start(); // WAITING → IN_PROGRESS
+        UUID roomId = gameRoom.getRoomId();
+
+        given(gameRoomRepository.findByIdForUpdate(roomId))
+                .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.existsByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
+                .willReturn(false);
+        given(gameParticipantRepository.countByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE))
+                .willReturn(3);
+
+        // When
+        JoinRoomResponse response = gameRoomService.joinRoom(roomId, OTHER_USER_ID);
+
+        // Then — IN_PROGRESS 상태로 응답 (프론트에서 게임 화면으로 라우팅)
+        assertThat(response.getRoomStatus()).isEqualTo(RoomStatus.IN_PROGRESS);
+        verify(gameParticipantRepository).save(any(GameParticipant.class));
+    }
+
+    @Test
+    @DisplayName("게임방 참가 실패 — 존재하지 않는 방")
+    void joinRoom_notFound() {
+        // Given
+        UUID fakeRoomId = UUID.fromString("00000000-0000-4000-a000-999999999999");
+        given(gameRoomRepository.findByIdForUpdate(fakeRoomId))
+                .willReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> gameRoomService.joinRoom(fakeRoomId, OTHER_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.ROOM_NOT_FOUND);
+                });
+
+        verify(gameParticipantRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("게임방 참가 실패 — 종료된 방")
+    void joinRoom_finished() {
+        // Given — FINISHED 방
+        GameRoom gameRoom = createGameRoom();
+        gameRoom.start();
+        gameRoom.finish(); // → FINISHED
+        UUID roomId = gameRoom.getRoomId();
+
+        given(gameRoomRepository.findByIdForUpdate(roomId))
+                .willReturn(Optional.of(gameRoom));
+
+        // When & Then
+        assertThatThrownBy(() -> gameRoomService.joinRoom(roomId, OTHER_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.ROOM_FINISHED);
+                });
+
+        verify(gameParticipantRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("게임방 참가 실패 — 이미 참가 중")
+    void joinRoom_alreadyJoined() {
+        // Given — 이미 참가한 유저
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+
+        given(gameRoomRepository.findByIdForUpdate(roomId))
+                .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.existsByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
+                .willReturn(true); // 이미 참가함
+
+        // When & Then
+        assertThatThrownBy(() -> gameRoomService.joinRoom(roomId, OTHER_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.ROOM_ALREADY_JOINED);
+                });
+
+        verify(gameParticipantRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("게임방 참가 실패 — 인원 초과 (최대 6명)")
+    void joinRoom_full() {
+        // Given — 이미 6명
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+
+        given(gameRoomRepository.findByIdForUpdate(roomId))
+                .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.existsByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
+                .willReturn(false);
+        given(gameParticipantRepository.countByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE))
+                .willReturn(6); // 꽉 참
+
+        // When & Then
+        assertThatThrownBy(() -> gameRoomService.joinRoom(roomId, OTHER_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.ROOM_FULL);
+                });
+
+        verify(gameParticipantRepository, never()).save(any());
+    }
 
     // === 헬퍼 메서드 ===
 
