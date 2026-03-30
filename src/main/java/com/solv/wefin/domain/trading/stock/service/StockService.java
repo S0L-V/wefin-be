@@ -23,7 +23,8 @@ public class StockService implements StockInfoProvider {
 
     @Override
     public Stock getStock(Long stockId) {
-        return stockRepository.getReferenceById(stockId);
+        return stockRepository.findById(stockId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MARKET_STOCK_NOT_FOUND));
     }
 
     @Override
