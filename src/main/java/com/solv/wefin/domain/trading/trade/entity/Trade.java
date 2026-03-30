@@ -1,7 +1,7 @@
 package com.solv.wefin.domain.trading.trade.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import org.springframework.data.annotation.CreatedDate;
@@ -75,7 +75,7 @@ public class Trade {
 
 	@CreatedDate
 	@Column(nullable = false, columnDefinition = "TIMESTAMPTZ")
-	private LocalDateTime createdAt;
+	private OffsetDateTime createdAt;
 
 	public Trade(Long orderId, Long virtualAccountId, Long stockId, OrderSide side, Integer quantity, BigDecimal price,
 				 BigDecimal totalAmount, BigDecimal fee, BigDecimal tax, BigDecimal realizedProfit, Currency currency,

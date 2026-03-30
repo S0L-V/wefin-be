@@ -1,7 +1,7 @@
 package com.solv.wefin.domain.trading.order.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import com.solv.wefin.domain.trading.portfolio.entity.Currency;
@@ -70,7 +70,7 @@ public class Order extends BaseEntity {
 	@Column(nullable = false)
 	private BigDecimal tax;
 
-	private LocalDateTime cancelledAt;
+	private OffsetDateTime cancelledAt;
 
 	public Order(Long virtualAccountId, Long stockId, OrderType orderType, OrderSide side, Integer quantity,
 				 BigDecimal requestPrice, Currency currency,

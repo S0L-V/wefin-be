@@ -1,7 +1,7 @@
 package com.solv.wefin.domain.trading.account.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import org.springframework.data.annotation.LastModifiedDate;
@@ -44,7 +44,7 @@ public class VirtualAccount {
 
 	@LastModifiedDate
 	@Column(nullable = false, columnDefinition = "TIMESTAMPTZ")
-	private LocalDateTime updatedAt;
+	private OffsetDateTime updatedAt;
 
 	public VirtualAccount(UUID userId) {
 		this.userId = userId;
