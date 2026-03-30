@@ -3,7 +3,7 @@ package com.solv.wefin.domain.chat.globalChat.event;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Getter
@@ -14,5 +14,5 @@ public class GlobalChatMessageCreatedEvent {
     private final String role;
     private final String sender;
     private final String content;
-    private final LocalDateTime createdAt;
+    private final OffsetDateTime createdAt;
 }

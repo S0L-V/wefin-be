@@ -1,6 +1,6 @@
 package com.solv.wefin.global.config;
 
-import com.solv.wefin.domain.chat.globalChat.repository.UsersRepository;
+import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
-    private final UsersRepository usersRepository;
+    private final UserRepository userRepository;
 
     // 메시지가 채널로 보내지기 직전 호출 -> 조건에 안맞으면 차단(지금은 안함), 사용자 정보 넣기
     @Override
@@ -50,7 +50,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
                 throw new BusinessException(ErrorCode.INVALID_INPUT);
             }
 
-            boolean exists = usersRepository.existsById(userId);
+            boolean exists = userRepository.existsById(userId);
 
             if (!exists) {
                 throw new BusinessException(ErrorCode.USER_NOT_FOUND);

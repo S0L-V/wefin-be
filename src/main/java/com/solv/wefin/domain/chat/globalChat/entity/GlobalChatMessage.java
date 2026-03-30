@@ -1,12 +1,13 @@
 package com.solv.wefin.domain.chat.globalChat.entity;
 
+import com.solv.wefin.domain.auth.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "global_chat_message")
@@ -21,7 +22,7 @@ public class GlobalChatMessage {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    private Users user;
+    private User user;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
@@ -31,22 +32,22 @@ public class GlobalChatMessage {
     private String content;
 
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
     @Builder
-    public GlobalChatMessage(Users user, ChatRole role, String content, LocalDateTime createdAt) {
+    public GlobalChatMessage(User user, ChatRole role, String content, OffsetDateTime createdAt) {
         this.user = user;
         this.role = role;
         this.content = content;
         this.createdAt = createdAt;
     }
 
-    public static GlobalChatMessage createUserMessage(Users user, String content) {
+    public static GlobalChatMessage createUserMessage(User user, String content) {
         return GlobalChatMessage.builder()
                 .user(user)
                 .role(ChatRole.USER)
                 .content(content)
-                .createdAt(LocalDateTime.now())
+                .createdAt(OffsetDateTime.now())
                 .build();
     }
 
@@ -55,7 +56,7 @@ public class GlobalChatMessage {
                 .user(null)
                 .role(ChatRole.SYSTEM)
                 .content(content)
-                .createdAt(LocalDateTime.now())
+                .createdAt(OffsetDateTime.now())
                 .build();
     }
 }

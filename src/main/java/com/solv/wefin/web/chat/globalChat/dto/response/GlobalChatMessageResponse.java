@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Getter
@@ -18,5 +18,5 @@ public class GlobalChatMessageResponse {
     private String role;
     private String sender;
     private String content;
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 }

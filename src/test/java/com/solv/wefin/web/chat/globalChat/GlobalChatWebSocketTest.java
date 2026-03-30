@@ -3,8 +3,8 @@ package com.solv.wefin.web.chat.globalChat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.solv.wefin.common.WebSocketIntegrationTestBase;
-import com.solv.wefin.domain.chat.globalChat.entity.Users;
-import com.solv.wefin.domain.chat.globalChat.repository.UsersRepository;
+import com.solv.wefin.domain.auth.entity.User;
+import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.web.chat.globalChat.dto.response.GlobalChatMessageResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class GlobalChatWebSocketTest extends WebSocketIntegrationTestBase {
 
     @Autowired
-    private UsersRepository usersRepository;
+    private UserRepository userRepository;
 
     @Autowired
     private PlatformTransactionManager transactionManager;
@@ -49,23 +49,24 @@ class GlobalChatWebSocketTest extends WebSocketIntegrationTestBase {
     @DisplayName("SockJS 기반 전체 채팅 송수신 테스트")
     void globalChat_sockJs_sendAndReceive() throws Exception {
 
-        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
-
         // 별도 트랜젝션으로 사용자 저장
         TransactionTemplate requiresNewTx = new TransactionTemplate(transactionManager);
         requiresNewTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
 
+        AtomicReference<UUID> savedUserIdRef = new AtomicReference<>();
+
         requiresNewTx.executeWithoutResult(status -> {
-            if (!usersRepository.existsById(userId)) {
-                Users user = Users.builder()
-                        .id(userId)
-                        .email("test1@test.com")
-                        .nickname("testUser")
-                        .password("password1")
-                        .build();
-                usersRepository.saveAndFlush(user); // 즉시 DB 반영
-            }
+            User user = User.builder()
+                    .email("test1@test.com")
+                    .nickname("testUser")
+                    .password("password1")
+                    .build();
+            userRepository.saveAndFlush(user);
+
+            savedUserIdRef.set(user.getUserId());
         });
+
+        UUID userId = savedUserIdRef.get();
 
         // SockJS + WebSocket 기반 STOMP 클라이언트 생성
         List<Transport> transports = List.of(
@@ -75,7 +76,7 @@ class GlobalChatWebSocketTest extends WebSocketIntegrationTestBase {
 
         WebSocketStompClient stompClient = new WebSocketStompClient(sockJsClient);
 
-        // LocalDateTime 직렬화를 위한 Jackson 설정
+        // OffsetDateTime 직렬화를 위한 Jackson 설정
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
 

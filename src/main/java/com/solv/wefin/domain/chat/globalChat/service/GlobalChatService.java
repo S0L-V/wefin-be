@@ -1,11 +1,11 @@
 package com.solv.wefin.domain.chat.globalChat.service;
 
+import com.solv.wefin.domain.auth.entity.User;
+import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.chat.globalChat.entity.ChatRole;
 import com.solv.wefin.domain.chat.globalChat.entity.GlobalChatMessage;
-import com.solv.wefin.domain.chat.globalChat.entity.Users;
 import com.solv.wefin.domain.chat.globalChat.event.GlobalChatMessageCreatedEvent;
 import com.solv.wefin.domain.chat.globalChat.repository.GlobalChatMessageRepository;
-import com.solv.wefin.domain.chat.globalChat.repository.UsersRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.chat.globalChat.dto.response.GlobalChatMessageResponse;
@@ -17,7 +17,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -29,14 +28,14 @@ public class GlobalChatService {
 
     private final ApplicationEventPublisher eventPublisher;
     private final GlobalChatMessageRepository globalChatMessageRepository;
-    private final UsersRepository usersRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public void sendMessage(GlobalChatSendRequest request, UUID userId) {
 
         validateMessage(request.getContent());
 
-        Users user = usersRepository.findById(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         GlobalChatMessage savedMessage = globalChatMessageRepository.save(
@@ -59,13 +58,13 @@ public class GlobalChatService {
     }
 
     private GlobalChatMessageResponse toResponse(GlobalChatMessage message) {
-        Users user = message.getUser();
+        User user = message.getUser();
 
         String sender = (message.getRole() == ChatRole.SYSTEM || user == null)
                 ? "시스템"
                 : user.getNickname();
 
-        UUID userId = user != null ? user.getId() : null;
+        UUID userId = user != null ? user.getUserId() : null;
 
         return GlobalChatMessageResponse.builder()
                 .messageId(message.getId())
@@ -78,7 +77,7 @@ public class GlobalChatService {
     }
 
     private GlobalChatMessageCreatedEvent toEvent(GlobalChatMessage message) {
-        Users user = message.getUser();
+        User user = message.getUser();
 
         String sender = (message.getRole() == ChatRole.SYSTEM || user == null)
                 ? "시스템"
@@ -86,7 +85,7 @@ public class GlobalChatService {
 
         return new GlobalChatMessageCreatedEvent(
                 message.getId(),
-                user != null ? user.getId() : null,
+                user != null ? user.getUserId() : null,
                 message.getRole().name(),
                 sender,
                 message.getContent(),

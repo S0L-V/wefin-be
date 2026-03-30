@@ -1,22 +1,19 @@
 package com.solv.wefin.domain.chat.globalChat.service;
 
+import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.chat.globalChat.entity.ChatRole;
 import com.solv.wefin.domain.chat.globalChat.entity.GlobalChatMessage;
-import com.solv.wefin.domain.chat.globalChat.entity.Users;
 import com.solv.wefin.domain.chat.globalChat.event.GlobalChatMessageCreatedEvent;
 import com.solv.wefin.domain.chat.globalChat.repository.GlobalChatMessageRepository;
-import com.solv.wefin.domain.chat.globalChat.repository.UsersRepository;
+import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.global.error.BusinessException;
-import com.solv.wefin.web.chat.globalChat.dto.response.GlobalChatMessageResponse;
 import com.solv.wefin.web.chat.globalChat.dto.request.GlobalChatSendRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -24,26 +21,25 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 public class GlobalChatServiceTest {
 
     private ApplicationEventPublisher eventPublisher;
     private GlobalChatMessageRepository globalChatMessageRepository;
-    private UsersRepository usersRepository;
+    private UserRepository userRepository;
     private GlobalChatService globalChatService;
 
     @BeforeEach
     void setUp() {
         eventPublisher = mock(ApplicationEventPublisher.class);
         globalChatMessageRepository = mock(GlobalChatMessageRepository.class);
-        usersRepository = mock(UsersRepository.class);
+        userRepository = mock(UserRepository.class);
 
         globalChatService = new GlobalChatService(
                 eventPublisher,
                 globalChatMessageRepository,
-                usersRepository
+                userRepository
         );
     }
 
@@ -56,28 +52,28 @@ public class GlobalChatServiceTest {
         GlobalChatSendRequest request = new GlobalChatSendRequest();
         ReflectionTestUtils.setField(request, "content", "안녕하세요");
 
-        Users user = Users.builder()
-                .id(userId)
+        User user = User.builder()
                 .email("test1@test.com")
                 .nickname("testUser")
                 .password("password1")
                 .build();
+        ReflectionTestUtils.setField(user, "userId", userId);
 
         GlobalChatMessage savedMessage = GlobalChatMessage.builder()
                 .user(user)
                 .role(ChatRole.USER)
                 .content("안녕하세요")
-                .createdAt(LocalDateTime.now())
+                .createdAt(OffsetDateTime.now())
                 .build();
 
         ReflectionTestUtils.setField(savedMessage, "id", 1L);
 
-        when(usersRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(globalChatMessageRepository.save(any(GlobalChatMessage.class))).thenReturn(savedMessage);
 
         globalChatService.sendMessage(request, userId);
 
-        verify(usersRepository, times(1)).findById(userId);
+        verify(userRepository, times(1)).findById(userId);
         verify(globalChatMessageRepository, times(1)).save(any(GlobalChatMessage.class));
         verify(eventPublisher, times(1))
                 .publishEvent(any(GlobalChatMessageCreatedEvent.class));
@@ -120,7 +116,7 @@ public class GlobalChatServiceTest {
         GlobalChatSendRequest request = new GlobalChatSendRequest();
         ReflectionTestUtils.setField(request, "content", "안녕하세요");
 
-        when(usersRepository.findById(userId)).thenReturn(Optional.empty());
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
         BusinessException exception = assertThrows(BusinessException.class,
                 () -> globalChatService.sendMessage(request, userId));
@@ -135,18 +131,18 @@ public class GlobalChatServiceTest {
 
         UUID userId = UUID.randomUUID();
 
-        Users user = Users.builder()
-                .id(userId)
+        User user = User.builder()
                 .email("test1@test.com")
                 .nickname("testUser1")
                 .password("password1")
                 .build();
+        ReflectionTestUtils.setField(user, "userId", userId);
 
         GlobalChatMessage message = GlobalChatMessage.builder()
                 .user(user)
                 .role(ChatRole.USER)
                 .content("최근 메시지")
-                .createdAt(LocalDateTime.now())
+                .createdAt(OffsetDateTime.now())
                 .build();
 
         ReflectionTestUtils.setField(message, "id", 10L);
