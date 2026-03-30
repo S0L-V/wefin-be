@@ -3,7 +3,6 @@ package com.solv.wefin.web.trading.market;
 import com.solv.wefin.domain.trading.market.dto.OrderbookResponse;
 import com.solv.wefin.domain.trading.market.dto.PriceResponse;
 import com.solv.wefin.domain.trading.market.service.MarketService;
-import com.solv.wefin.domain.trading.stock.service.StockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
