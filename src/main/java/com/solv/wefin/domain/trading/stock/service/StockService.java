@@ -4,6 +4,8 @@ import com.solv.wefin.domain.trading.common.StockInfoProvider;
 import com.solv.wefin.domain.trading.stock.dto.StockSearchResponse;
 import com.solv.wefin.domain.trading.stock.entity.Stock;
 import com.solv.wefin.domain.trading.stock.repository.StockRepository;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -26,27 +28,23 @@ public class StockService implements StockInfoProvider {
 
     @Override
     public String getStockName(String stockCode) {
-        return stockRepository.findByStockCode(stockCode)
-                .orElseThrow(() -> new RuntimeException("종목 없음"))
-                .getStockName();
+        return findByCodeOrThrow(stockCode).getStockName();
     }
 
     @Override
     public String getMarket(String stockCode) {
-        return stockRepository.findByStockCode(stockCode)
-                .orElseThrow(() -> new RuntimeException("종목 없음"))
-                .getMarket();
+        return findByCodeOrThrow(stockCode).getMarket();
     }
 
     public List<StockSearchResponse> search(String keyword, String market) {
         return stockRepository.search(keyword, market).stream()
-                .map(stock -> new StockSearchResponse(
-                        stock.getStockCode(),
-                        stock.getStockName(),
-                        stock.getMarket(),
-                        stock.getSector()
-                ))
+                .map(StockSearchResponse::from)
                 .toList();
+    }
+
+    private Stock findByCodeOrThrow(String stockCode) {
+        return stockRepository.findByStockCode(stockCode)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MARKET_STOCK_NOT_FOUND));
     }
 
 }
