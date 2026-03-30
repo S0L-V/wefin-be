@@ -10,6 +10,8 @@ import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.game.room.dto.request.CreateRoomRequest;
 import com.solv.wefin.web.game.room.dto.response.CreateRoomResponse;
+import com.solv.wefin.web.game.room.dto.response.ParticipantDetailDto;
+import com.solv.wefin.web.game.room.dto.response.RoomDetailResponse;
 import com.solv.wefin.web.game.room.dto.response.RoomListResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -96,6 +98,21 @@ public class GameRoomService {
                 .collect(Collectors.toList());
     }
 
+    //방 상세 정보
+    public RoomDetailResponse getRoomDetail(UUID roomId) {
+
+        // 방 조회
+        GameRoom gameRoom= gameRoomRepository.findById(roomId).orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_FOUND));
+
+        //참가자 상세
+        List<ParticipantDetailDto> participants = gameParticipantRepository
+                .findByGameRoomOrderByJoinedAtAsc(gameRoom)
+                .stream()
+                .map(p->ParticipantDetailDto.from(p,"유저묵데이터"))
+                .collect(Collectors.toList());
+        //참가자 상세 + 방 상세 저보
+        return RoomDetailResponse.from(gameRoom, participants);
+    }
 
 
 }
@@ -124,6 +141,10 @@ gameParticipant.builder()
  progress , wating / finished
 
  과거 게임 이력 = finished + 유저아이디 ( 내 Id)
+
+ 방정보 + 참가자 목록
+ RoomDetailResponse
+ 참가자 정보 -> participantDetailDto로 변환
 
  */
 /**cancel room
