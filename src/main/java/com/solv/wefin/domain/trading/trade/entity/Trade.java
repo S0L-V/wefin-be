@@ -34,8 +34,8 @@ public class Trade {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long tradeId;
 
-	@Column(unique = true, nullable = false)
-	private UUID tradeNo = UUID.randomUUID();
+	@Column(unique = true, nullable = false, updatable = false)
+	private UUID tradeNo;
 
 	@Column(nullable = false)
 	private Long orderId;
@@ -74,12 +74,13 @@ public class Trade {
 	private BigDecimal exchangeRate;
 
 	@CreatedDate
-	@Column(nullable = false, columnDefinition = "TIMESTAMPTZ")
+	@Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMPTZ")
 	private OffsetDateTime createdAt;
 
 	public Trade(Long orderId, Long virtualAccountId, Long stockId, OrderSide side, Integer quantity, BigDecimal price,
 				 BigDecimal totalAmount, BigDecimal fee, BigDecimal tax, BigDecimal realizedProfit, Currency currency,
 				 BigDecimal exchangeRate) {
+		this.tradeNo = UUID.randomUUID();
 		this.orderId = orderId;
 		this.virtualAccountId = virtualAccountId;
 		this.stockId = stockId;

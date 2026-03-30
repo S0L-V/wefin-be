@@ -30,7 +30,7 @@ public class Order extends BaseEntity {
 	private Long orderId;
 
 	@Column(unique = true, nullable = false)
-	private UUID orderNo = UUID.randomUUID();
+	private UUID orderNo;
 
 	@Column(nullable = false)
 	private Long virtualAccountId;
@@ -75,6 +75,7 @@ public class Order extends BaseEntity {
 	public Order(Long virtualAccountId, Long stockId, OrderType orderType, OrderSide side, Integer quantity,
 				 BigDecimal requestPrice, Currency currency,
 				 BigDecimal exchangeRate, BigDecimal fee, BigDecimal tax) {
+		this.orderNo = UUID.randomUUID();
 		this.virtualAccountId = virtualAccountId;
 		this.stockId = stockId;
 		this.orderType = orderType;
