@@ -7,7 +7,6 @@ import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.auth.dto.SignupResponse;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.exception.ConstraintViolationException;
-import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -68,9 +67,9 @@ public class AuthService {
                     .build();
 
         } catch (DataIntegrityViolationException e) {
-            Throwable root = NestedExceptionUtils.getMostSpecificCause(e);
+            Throwable cause = e.getCause();
 
-            if (root instanceof ConstraintViolationException cve) {
+            if (cause instanceof ConstraintViolationException cve) {
                 String constraint = cve.getConstraintName();
 
                 if (UK_USERS_EMAIL.equals(constraint)) {
