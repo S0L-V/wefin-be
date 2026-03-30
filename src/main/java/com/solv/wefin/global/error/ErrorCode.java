@@ -19,8 +19,10 @@ public enum ErrorCode {
     DUPLICATE_RESOURCE(409,"중복된 리소스입니다."),
     INTERNAL_SERVER_ERROR(500, "서버 내부 오류가 발생했습니다."),
 
-    // Auth
-    EMAIL_DUPLICATED(409, "이미 사용 중인 이메일입니다."),
+    // Auth - SIGNUP
+    AUTH_EMAIL_DUPLICATED(409, "이미 사용 중인 이메일입니다."),
+    AUTH_NICKNAME_DUPLICATED(409, "이미 사용 중인 닉네임입니다."),
+    AUTH_VALIDATION_FAILED(400, "잘못된 입력입니다."),
 
     // Order - BUY
     ORDER_INSUFFICIENT_BALANCE(400, "예수금이 부족합니다."),
