@@ -24,6 +24,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class GlobalChatService {
 
     private final ApplicationEventPublisher eventPublisher;
@@ -39,15 +40,10 @@ public class GlobalChatService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         GlobalChatMessage savedMessage = globalChatMessageRepository.save(
-                GlobalChatMessage.builder()
-                        .user(user)
-                        .role(ChatRole.USER)
-                        .content(request.getContent())
-                        .createdAt(LocalDateTime.now())
-                        .build()
+                GlobalChatMessage.createUserMessage(user, request.getContent())
         );
 
-        eventPublisher.publishEvent(new GlobalChatMessageCreatedEvent(toResponse(savedMessage)));
+        eventPublisher.publishEvent(toEvent(savedMessage));
     }
 
     @Transactional
@@ -56,15 +52,10 @@ public class GlobalChatService {
         validateMessage(content);
 
         GlobalChatMessage savedMessage = globalChatMessageRepository.save(
-                GlobalChatMessage.builder()
-                        .user(null)
-                        .role(ChatRole.SYSTEM)
-                        .content(content)
-                        .createdAt(LocalDateTime.now())
-                        .build()
+                GlobalChatMessage.createSystemMessage(content)
         );
 
-        eventPublisher.publishEvent(new GlobalChatMessageCreatedEvent(toResponse(savedMessage)));
+        eventPublisher.publishEvent(toEvent(savedMessage));
     }
 
     private GlobalChatMessageResponse toResponse(GlobalChatMessage message) {
@@ -86,6 +77,23 @@ public class GlobalChatService {
                 .build();
     }
 
+    private GlobalChatMessageCreatedEvent toEvent(GlobalChatMessage message) {
+        Users user = message.getUser();
+
+        String sender = (message.getRole() == ChatRole.SYSTEM || user == null)
+                ? "시스템"
+                : user.getNickname();
+
+        return new GlobalChatMessageCreatedEvent(
+                message.getId(),
+                user != null ? user.getId() : null,
+                message.getRole().name(),
+                sender,
+                message.getContent(),
+                message.getCreatedAt()
+        );
+    }
+
     private void validateMessage(String content) {
         if (content == null || content.isBlank()) {
             throw new BusinessException(ErrorCode.CHAT_MESSAGE_EMPTY);
@@ -96,7 +104,6 @@ public class GlobalChatService {
         }
     }
 
-    @Transactional(readOnly = true)
     public List<GlobalChatMessageResponse> getRecentMessages(int limit) {
 
         int size = Math.min(Math.max(limit, 1), 100);
