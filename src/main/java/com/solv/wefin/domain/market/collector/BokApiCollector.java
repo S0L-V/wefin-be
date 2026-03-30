@@ -129,13 +129,4 @@ public class BokApiCollector implements MarketDataCollector {
         return SOURCE_NAME;
     }
 
-    /**
-     * 변동값의 부호에 따라 방향을 결정한다.
-     */
-    private ChangeDirection resolveDirection(BigDecimal changeValue) {
-        int cmp = changeValue.compareTo(BigDecimal.ZERO);
-        if (cmp > 0) return ChangeDirection.UP;
-        if (cmp < 0) return ChangeDirection.DOWN;
-        return ChangeDirection.FLAT;
-    }
 }

@@ -154,10 +154,4 @@ public class YahooFinanceCollector implements MarketDataCollector {
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
-    private ChangeDirection resolveDirection(BigDecimal changeValue) {
-        int cmp = changeValue.compareTo(BigDecimal.ZERO);
-        if (cmp > 0) return ChangeDirection.UP;
-        if (cmp < 0) return ChangeDirection.DOWN;
-        return ChangeDirection.FLAT;
-    }
 }

@@ -1,7 +1,9 @@
 package com.solv.wefin.domain.market.collector;
 
 import com.solv.wefin.domain.market.dto.CollectedMarketData;
+import com.solv.wefin.domain.market.entity.MarketSnapshot.ChangeDirection;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -22,4 +24,17 @@ public interface MarketDataCollector {
      * @return 소스 이름 (ex. YahooFinance, BOK)
      */
     String getSourceName();
+
+    /**
+     * 변동 값으로 변동 방향을 판단한다.
+     *
+     * @param changeValue 변동 값
+     * @return UP, DOWN, FLAT
+     */
+    default ChangeDirection resolveDirection(BigDecimal changeValue) {
+        int cmp = changeValue.compareTo(BigDecimal.ZERO);
+        if (cmp > 0) return ChangeDirection.UP;
+        if (cmp < 0) return ChangeDirection.DOWN;
+        return ChangeDirection.FLAT;
+    }
 }
