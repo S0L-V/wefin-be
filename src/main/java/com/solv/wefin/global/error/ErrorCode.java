@@ -16,6 +16,9 @@ public enum ErrorCode {
     DUPLICATE_RESOURCE(409,"중복된 리소스입니다."),
     INTERNAL_SERVER_ERROR(500, "서버 내부 오류가 발생했습니다."),
 
+    // Auth
+    EMAIL_DUPLICATED(409, "이미 사용 중인 이메일입니다."),
+
     // Order - BUY
     ORDER_INSUFFICIENT_BALANCE(400, "예수금이 부족합니다."),
     ORDER_INVALID_QUANTITY(400, "주문 수량은 1 이상이어야 합니다."),

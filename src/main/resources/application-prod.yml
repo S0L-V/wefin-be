@@ -32,6 +32,13 @@ news:
 server:
   forward-headers-strategy: native
 
+market:
+  bok:
+    api-key: ${BOK_API_KEY:}
+    base-url: ${BOK_BASE_URL:https://ecos.bok.or.kr/api}
+  collect:
+    cron: "0 */5 * * * *"
+
 websocket:
   allowed-origins:
     - https://wefin.ai.kr

@@ -25,7 +25,7 @@ ai:
     url: ${AI_SERVER_URL:http://localhost:8000}
 
 jwt:
-  secret: ${JWT_SECRET:local-secret-key-change-me}
+  secret: ${JWT_SECRET}
 
 news:
   naver:
@@ -35,6 +35,13 @@ news:
     base-url: ${NAVER_NEWS_BASE_URL:https://openapi.naver.com/v1/search/news.json}
   collect:
     cron: "0 0 */2 * * *"
+
+market:
+  bok:
+    api-key: ${BOK_API_KEY:}
+    base-url: ${BOK_BASE_URL:https://ecos.bok.or.kr/api}
+  collect:
+    cron: "0 */5 * * * *"
 
 websocket:
   allowed-origins:
