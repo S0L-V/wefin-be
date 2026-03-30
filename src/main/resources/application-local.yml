@@ -25,7 +25,7 @@ ai:
     url: ${AI_SERVER_URL:http://localhost:8000}
 
 jwt:
-  secret: ${JWT_SECRET:local-secret-key-change-me}
+  secret: ${JWT_SECRET}
 
 news:
   naver:
