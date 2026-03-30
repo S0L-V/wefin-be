@@ -38,7 +38,12 @@ public enum ErrorCode {
     ACCOUNT_ALREADY_EXISTS(400, "이미 계좌가 존재합니다."),
 
     // Market
-    MARKET_001(404, "종목을 찾을 수 없습니다."),
+    MARKET_STOCK_NOT_FOUND(404, "종목을 찾을 수 없습니다."),
+    MARKET_API_FAILED(503, "한투 API 호출에 실패했습니다."),
+
+    // Interest
+    INTEREST_ALREADY_EXISTS(400, "이미 등록된 관심종목입니다."),
+    INTEREST_LIMIT_EXCEEDED(400, "관심종목은 최대 10개까지 등록할 수 있습니다."),
 
     // GameRoom
     ROOM_NOT_FOUND(404,"게임장을 찾을 수 없습니다."),

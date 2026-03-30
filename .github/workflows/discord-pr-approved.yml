@@ -12,6 +12,7 @@ jobs:
     steps:
       - name: Check approval count and notify
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           PR_NUM: ${{ github.event.pull_request.number }}
           TITLE: ${{ github.event.pull_request.title }}
@@ -22,6 +23,7 @@ jobs:
           # 현재 PR의 approved 리뷰 수 카운트
           APPROVAL_COUNT=$(curl -sS \
             -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/$REPO/pulls/$PR_NUM/reviews" \
             | jq '[.[] | select(.state == "APPROVED")] | length')
 

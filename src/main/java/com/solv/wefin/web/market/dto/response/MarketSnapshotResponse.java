@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Getter
 @Builder
@@ -18,8 +18,8 @@ public class MarketSnapshotResponse {
     private final BigDecimal changeValue;
     private final String unit;
     private final String changeDirection;
-    private final LocalDateTime createdAt;
-    private final LocalDateTime updatedAt;
+    private final OffsetDateTime createdAt;
+    private final OffsetDateTime updatedAt;
 
     public static MarketSnapshotResponse from(MarketSnapshot snapshot) {
         return MarketSnapshotResponse.builder()
