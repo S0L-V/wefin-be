@@ -21,6 +21,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -142,6 +143,27 @@ class GameRoomServiceTest {
         // Then — 빈 리스트 (에러 아님)
         assertThat(result).isEmpty();
     }
+
+    @Test
+    @DisplayName("게임방 상세 조회 실패 — 존재하지 않는 방이면 ROOM_NOT_FOUND")
+    void getRoomDetail_notFound() {
+        // Given — 존재하지 않는 roomId
+        UUID fakeRoomId = UUID.fromString("00000000-0000-4000-a000-999999999999");
+        given(gameRoomRepository.findById(fakeRoomId))
+                .willReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> gameRoomService.getRoomDetail(fakeRoomId))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.ROOM_NOT_FOUND);
+                });
+
+        // 방을 못 찾았으니 참가자 조회는 호출되면 안 된다
+        verify(gameParticipantRepository, never()).findByGameRoomOrderByJoinedAtAsc(any());
+    }
+
 
     // === 헬퍼 메서드 ===
 
