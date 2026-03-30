@@ -4,6 +4,7 @@ import com.solv.wefin.domain.game.room.service.GameRoomService;
 import com.solv.wefin.global.common.ApiResponse;
 import com.solv.wefin.web.game.room.dto.request.CreateRoomRequest;
 import com.solv.wefin.web.game.room.dto.response.CreateRoomResponse;
+import com.solv.wefin.web.game.room.dto.response.JoinRoomResponse;
 import com.solv.wefin.web.game.room.dto.response.RoomDetailResponse;
 import com.solv.wefin.web.game.room.dto.response.RoomListResponse;
 import jakarta.validation.Valid;
@@ -51,6 +52,15 @@ public class GameRoomController {
     @GetMapping("/{roomId}")
     public ResponseEntity<ApiResponse<RoomDetailResponse>> getRoomDetail(@PathVariable UUID roomId){
         RoomDetailResponse response = gameRoomService.getRoomDetail(roomId);
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    // 게임방 입장
+    @PostMapping("/{roomId}/join")
+    public ResponseEntity<ApiResponse<JoinRoomResponse>> joinRoom(@PathVariable UUID roomId) {
+
+        JoinRoomResponse response = gameRoomService.joinRoom(roomId, TEMP_USER_ID);
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }
