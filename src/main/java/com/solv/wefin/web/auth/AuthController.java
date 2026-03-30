@@ -19,7 +19,11 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ApiResponse<SignupResponse> signup(@RequestBody @Valid SignupRequest request) {
-        SignupResponse response = authService.signup(request);
+        SignupResponse response = authService.signup(
+                request.getEmail(),
+                request.getNickname(),
+                request.getPassword()
+        );
         return ApiResponse.success(response);
     }
 }

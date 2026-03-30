@@ -14,21 +14,22 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class AuthService {
         private final UserRepository userRepository;
         private final PasswordEncoder passwordEncoder;
 
-    public SignupResponse signup(SignupRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+    @Transactional
+    public SignupResponse signup(String email, String nickname, String password) {
+        if (userRepository.existsByEmail(email)) {
             throw new BusinessException(ErrorCode.EMAIL_DUPLICATED);
         }
 
         try {
             User user = User.builder()
-                    .email(request.getEmail())
-                    .nickname(request.getNickname())
-                    .password(passwordEncoder.encode(request.getPassword()))
+                    .email(email)
+                    .nickname(nickname)
+                    .password(passwordEncoder.encode(password))
                     .build();
 
             User savedUser = userRepository.save(user);
