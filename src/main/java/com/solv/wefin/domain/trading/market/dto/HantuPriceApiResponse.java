@@ -1,7 +1,5 @@
 package com.solv.wefin.domain.trading.market.dto;
 
-import org.hibernate.result.Output;
-
 public record HantuPriceApiResponse(
         Output output
 ) {
