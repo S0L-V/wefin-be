@@ -50,7 +50,9 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
                 throw new BusinessException(ErrorCode.INVALID_INPUT);
             }
 
-            if (!usersRepository.existsById(userId)) {
+            boolean exists = usersRepository.existsById(userId);
+
+            if (!exists) {
                 throw new BusinessException(ErrorCode.USER_NOT_FOUND);
             }
 
@@ -62,7 +64,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             accessor.getSessionAttributes().put("userId", userId);
 
             log.info("CONNECT userIdHeader={}", userIdHeader);
-            log.info("existsById={}", usersRepository.existsById(userId));
+            log.info("existsById={}", exists);
             log.info("WebSocket CONNECT user={}", userId);
         }
 
