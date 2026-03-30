@@ -32,7 +32,7 @@ public class Trade {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+	private Long tradeId;
 
 	@Column(unique = true, nullable = false)
 	private UUID tradeNo = UUID.randomUUID();

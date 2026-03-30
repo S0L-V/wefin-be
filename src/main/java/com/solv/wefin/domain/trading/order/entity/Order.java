@@ -27,7 +27,7 @@ public class Order extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+	private Long orderId;
 
 	@Column(unique = true, nullable = false)
 	private UUID orderNo = UUID.randomUUID();
