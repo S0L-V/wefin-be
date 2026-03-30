@@ -1,7 +1,7 @@
 package com.solv.wefin.domain.trading.account.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import org.springframework.data.annotation.LastModifiedDate;
@@ -17,6 +17,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -24,7 +25,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "virtual_account")
 @Getter
 @EntityListeners(AuditingEntityListener.class)
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class VirtualAccount {
 
 	@Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,7 +44,7 @@ public class VirtualAccount {
 
 	@LastModifiedDate
 	@Column(nullable = false, columnDefinition = "TIMESTAMPTZ")
-	private LocalDateTime updatedAt;
+	private OffsetDateTime updatedAt;
 
 	public VirtualAccount(UUID userId) {
 		this.userId = userId;
