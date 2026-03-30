@@ -28,11 +28,11 @@ public class HantuTokenManager {
     private LocalDateTime tokenExpiresAt;
 
     /**
-     * 토큰을 반환합니다. (만료됐으면 자동 갱신)
+     * 토큰을 반환합니다. (만료됐거나 만료 5분 이내이면 자동 갱신)
      * @return 액세스 토큰 문자열
      */
     public String getAccessToken() {
-        if (accessToken == null || tokenExpiresAt == null || tokenExpiresAt.isBefore(LocalDateTime.now())) {
+        if (accessToken == null || tokenExpiresAt == null || tokenExpiresAt.isBefore(LocalDateTime.now().plusMinutes(5))) {
             fetchToken();
         }
 
