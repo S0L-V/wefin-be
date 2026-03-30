@@ -95,6 +95,9 @@ public class Order extends BaseEntity {
 		if (this.status != OrderStatus.PENDING) {
 			throw new BusinessException(ErrorCode.ORDER_ALREADY_FILLED);
 		}
+		if (filledQuantity == null || filledQuantity <= 0 || filledQuantity > this.quantity) {
+			throw new BusinessException(ErrorCode.ORDER_INVALID_QUANTITY);
+		}
 		this.status = OrderStatus.FILLED;
 		this.filledQuantity = filledQuantity;
 	}
