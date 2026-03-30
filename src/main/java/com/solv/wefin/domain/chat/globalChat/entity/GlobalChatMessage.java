@@ -1,6 +1,5 @@
 package com.solv.wefin.domain.chat.globalChat.entity;
 
-import com.solv.wefin.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -40,5 +39,23 @@ public class GlobalChatMessage {
         this.role = role;
         this.content = content;
         this.createdAt = createdAt;
+    }
+
+    public static GlobalChatMessage createUserMessage(Users user, String content) {
+        return GlobalChatMessage.builder()
+                .user(user)
+                .role(ChatRole.USER)
+                .content(content)
+                .createdAt(LocalDateTime.now())
+                .build();
+    }
+
+    public static GlobalChatMessage createSystemMessage(String content) {
+        return GlobalChatMessage.builder()
+                .user(null)
+                .role(ChatRole.SYSTEM)
+                .content(content)
+                .createdAt(LocalDateTime.now())
+                .build();
     }
 }
