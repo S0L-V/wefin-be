@@ -25,7 +25,7 @@ public class RoomDetailResponse {
     private RoomStatus status;
     private List<ParticipantDetailDto> participants;
 
-    public static RoomDetailResponse from (GameRoom room, List<ParticipantDetailDto> participants) {
+    public static RoomDetailResponse from(GameRoom room, List<ParticipantDetailDto> participants) {
         return new RoomDetailResponse(
                 room.getRoomId(),
                 room.getUserId(),
