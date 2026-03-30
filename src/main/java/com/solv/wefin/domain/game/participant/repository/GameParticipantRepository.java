@@ -15,6 +15,7 @@ public interface GameParticipantRepository extends JpaRepository<GameParticipant
 
     List<GameParticipant> findByGameRoomOrderByJoinedAtAsc(GameRoom gameRoom);
 
-
+    //게임 참가
+    Boolean existsByGameRoomAndUserId(GameRoom gameRoom, UUID userId);
 
 }

@@ -9,10 +9,7 @@ import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.game.room.dto.request.CreateRoomRequest;
-import com.solv.wefin.web.game.room.dto.response.CreateRoomResponse;
-import com.solv.wefin.web.game.room.dto.response.ParticipantDetailDto;
-import com.solv.wefin.web.game.room.dto.response.RoomDetailResponse;
-import com.solv.wefin.web.game.room.dto.response.RoomListResponse;
+import com.solv.wefin.web.game.room.dto.response.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -114,6 +111,41 @@ public class GameRoomService {
         return RoomDetailResponse.from(gameRoom, participants);
     }
 
+    /**
+     게임 입장
+     비관적 락으로 동시 입장 동시성 제어
+     *
+     */
+    @Transactional
+    public JoinRoomResponse joinRoom(UUID roomId, UUID userId) {
+
+        // 방 조회 + 락 시작
+        GameRoom gameRoom = gameRoomRepository.findByIdForUpdate(roomId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_FOUND));
+
+        // 종료된 방인지 확인
+        if (gameRoom.getStatus() == RoomStatus.FINISHED) {
+            throw new BusinessException(ErrorCode.ROOM_FINISHED);
+        }
+
+        // 이미 참가한 유저인지 확인
+        if (gameParticipantRepository.existsByGameRoomAndUserId(gameRoom, userId)) {
+            throw new BusinessException(ErrorCode.ROOM_ALREADY_JOINED);
+        }
+
+        // 인원 초과 검사 (최대 6명)
+        int currentPlayers = gameParticipantRepository.countByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
+        if (currentPlayers >= 6) {
+            throw new BusinessException(ErrorCode.ROOM_FULL);
+        }
+
+        // 5. 참가자 저장
+        GameParticipant member = GameParticipant.createMember(gameRoom, userId);
+        gameParticipantRepository.save(member);
+
+        return JoinRoomResponse.from(member);
+    }
+
 
 }
 
@@ -128,24 +160,28 @@ public class GameRoomService {
 
 
 */
-/**participant로 처음 create 방 생성한 사람 = 방장
+/**
+  1.participant로 처음 create 방 생성한 사람 = 방장
  방 생성과 방장 지정 동시에 이루어지게 트랜잭션
 gameParticipant.builder()
 
  return 응답dto = createRoomResponse
 
- jpa 코드로 생성된 방 있으면 추가 생성 + 방장 방 동시 생성 차단
+ 2. jpa 코드로 생성된 방 있으면 추가 생성 + 방장 방 동시 생성 차단
  유니크로 2차 차단그 아
 
- 방 목록 조회 그룹아이디 + status
+ 3. 방 목록 조회 그룹아이디 + status
  progress , wating / finished
 
- 과거 게임 이력 = finished + 유저아이디 ( 내 Id)
+ 4. 과거 게임 이력 = finished + 유저아이디 ( 내 Id)
 
- 방정보 + 참가자 목록
+ 5. 방정보 + 참가자 목록
  RoomDetailResponse
  참가자 정보 -> participantDetailDto로 변환
 
+
+ 6. 게임 입장
+ 조회 -> 방 상태 체크 -> 참가 여부 체크 -> 인원체 -> 입장
  */
 /**cancel room
  *

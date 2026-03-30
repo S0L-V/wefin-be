@@ -70,6 +70,14 @@ public class GameParticipant {
                 .build();
     }
 
+    public static GameParticipant createMember(GameRoom gameRoom, UUID userId) {
+        return GameParticipant.builder()
+                .gameRoom(gameRoom)
+                .userId(userId)
+                .isLeader(false)
+                .build();
+    }
+
     public void assignSeed(Long seed) {
         this.seed = seed;
     }
