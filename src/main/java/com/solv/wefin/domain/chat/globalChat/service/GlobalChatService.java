@@ -33,6 +33,10 @@ public class GlobalChatService {
     @Transactional
     public void sendMessage(GlobalChatSendRequest request, UUID userId) {
 
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
         validateMessage(request.getContent());
 
         User user = userRepository.findById(userId)
