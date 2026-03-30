@@ -1,0 +1,1 @@
+ALTER TABLE "trade" ALTER COLUMN "quantity" TYPE INTEGER USING quantity::INTEGER;
