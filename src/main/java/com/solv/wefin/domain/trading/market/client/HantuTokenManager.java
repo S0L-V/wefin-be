@@ -44,7 +44,7 @@ public class HantuTokenManager {
      * 실패 시 최대 3회 재시도.
      */
     private void fetchToken() {
-        HantuTokenResponse response = null;
+        HantuTokenResponse response;
 
         for (int tries = 1; tries <= 3; tries++) {
             try {
@@ -59,7 +59,7 @@ public class HantuTokenManager {
                 this.tokenExpiresAt = LocalDateTime.parse(response.access_token_token_expired(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
                 return;
             } catch (Exception e) {
-                log.error("한투 토큰 발급 실패 ({}/3)", tries);
+                log.error("한투 토큰 발급 실패 ({}/3)", tries, e);
                 if (tries == 3) throw e;
                 try {
                     Thread.sleep(1000);
