@@ -6,6 +6,8 @@ import java.util.UUID;
 
 import com.solv.wefin.domain.trading.portfolio.entity.Currency;
 import com.solv.wefin.global.common.BaseEntity;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -90,6 +92,9 @@ public class Order extends BaseEntity {
 
 	// == 비즈니스 메서드 ==
 	public void fill(Integer filledQuantity) {
+		if (this.status != OrderStatus.PENDING) {
+			throw new BusinessException(ErrorCode.ORDER_ALREADY_FILLED);
+		}
 		this.status = OrderStatus.FILLED;
 		this.filledQuantity = filledQuantity;
 	}
