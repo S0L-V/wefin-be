@@ -49,29 +49,35 @@ public class GlobalChatService {
         String blockKey = ChatScope.GLOBAL + ":" + userId;
         Object lock = chatLocks.computeIfAbsent(blockKey, key -> new Object());
 
-        /**
-         * 같은 유저가 동시에 두 요청을 보내면 둘 다 같은 count를 보고 통과할 수 있음
-         *  -> synchronized를 통해 blockKey 단위로 직렬화
-         *  단일 서버 기준 최소 방어
+        /*
+          같은 유저가 동시에 두 요청을 보내면 둘 다 같은 count를 보고 통과할 수 있음
+           -> synchronized를 통해 blockKey 단위로 직렬화
+           단일 서버 기준 최소 방어
           */
 
-        synchronized (lock) {
-            long recentCount = globalChatMessageRepository.countByUser_UserIdAndCreatedAtAfter(
-                    userId,
-                    now.minusSeconds(3)
-            );
+        try {
+            synchronized (lock) {
+                long recentCount = globalChatMessageRepository.countByUser_UserIdAndCreatedAtAfter(
+                        userId,
+                        now.minusSeconds(3)
+                );
 
-            // 도배 체크
-            chatSpamGuard.validate(blockKey, recentCount, now);
+                // 도배 체크
+                chatSpamGuard.validate(blockKey, recentCount, now);
 
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+                User user = userRepository.findById(userId)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-            GlobalChatMessage savedMessage = globalChatMessageRepository.save(
-                    GlobalChatMessage.createUserMessage(user, content)
-            );
+                GlobalChatMessage savedMessage = globalChatMessageRepository.save(
+                        GlobalChatMessage.createUserMessage(user, content)
+                );
 
-            eventPublisher.publishEvent(toEvent(savedMessage));
+                eventPublisher.publishEvent(toEvent(savedMessage));
+            }
+        } finally {
+            if (chatSpamGuard.getRemainingSeconds(blockKey, OffsetDateTime.now()) == 0L) {
+                chatLocks.remove(blockKey, lock);
+            }
         }
     }
 
