@@ -50,6 +50,9 @@ public enum ErrorCode {
     INTEREST_ALREADY_EXISTS(400, "이미 등록된 관심종목입니다."),
     INTEREST_LIMIT_EXCEEDED(400, "관심종목은 최대 10개까지 등록할 수 있습니다."),
 
+    // Embedding
+    EMBEDDING_ARTICLE_NOT_FOUND(500, "임베딩 대상 기사를 찾을 수 없습니다."),
+
     // GameRoom
     ROOM_NOT_FOUND(404,"게임장을 찾을 수 없습니다."),
     ROOM_ALREADY_EXISTS(409, "이미 진행 중이거나 대기 중인 게임방이 있습니다."),

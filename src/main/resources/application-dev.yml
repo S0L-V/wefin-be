@@ -42,6 +42,10 @@ market:
   collect:
     cron: "0 */5 * * * *"
 
+embedding:
+  collect:
+    cron: "0 */30 * * * *"
+
 websocket:
   allowed-origins:
     - https://dev.wefin.ai.kr
