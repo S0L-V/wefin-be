@@ -70,23 +70,28 @@ public class AuthService {
                     .build();
 
         } catch (DataIntegrityViolationException e) {
-            Throwable cause = e;
-
-            while (cause != null) {
-                if (cause instanceof ConstraintViolationException cve) {
-                    String constraint = cve.getConstraintName();
-
-                    if (UK_USERS_EMAIL.equals(constraint)) {
-                        throw new BusinessException(ErrorCode.AUTH_EMAIL_DUPLICATED);
-                    }
-                    if (UK_USERS_NICKNAME.equals(constraint)) {
-                        throw new BusinessException(ErrorCode.AUTH_NICKNAME_DUPLICATED);
-                    }
-                }
-                cause = cause.getCause();
-            }
-
-            throw new BusinessException(ErrorCode.DUPLICATE_RESOURCE);
+            throw mapConstraintViolation(e);
         }
+    }
+
+    // unique 제약 위반 예외를 도메인 에러 코드로 변환
+    private BusinessException mapConstraintViolation(DataIntegrityViolationException e) {
+        Throwable cause = e;
+
+        while (cause != null) {
+            if (cause instanceof ConstraintViolationException cve) {
+                String constraint = cve.getConstraintName();
+
+                if (UK_USERS_EMAIL.equals(constraint)) {
+                    return new BusinessException(ErrorCode.AUTH_EMAIL_DUPLICATED);
+                }
+                if (UK_USERS_NICKNAME.equals(constraint)) {
+                    return new BusinessException(ErrorCode.AUTH_NICKNAME_DUPLICATED);
+                }
+            }
+            cause = cause.getCause();
+        }
+
+        return new BusinessException(ErrorCode.DUPLICATE_RESOURCE);
     }
 }
