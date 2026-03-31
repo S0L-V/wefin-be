@@ -73,6 +73,19 @@ public class NewsArticle extends BaseEntity {
     @Column(name = "crawl_error_message")
     private String crawlErrorMessage;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "embedding_status", nullable = false, length = 30)
+    private EmbeddingStatus embeddingStatus = EmbeddingStatus.PENDING;
+
+    @Column(name = "embedding_retry_count", nullable = false)
+    private int embeddingRetryCount = 0;
+
+    @Column(name = "embedding_attempted_at")
+    private LocalDateTime embeddingAttemptedAt;
+
+    @Column(name = "embedding_error_message")
+    private String embeddingErrorMessage;
+
     @Builder
     private NewsArticle(Long rawNewsArticleId, String publisherName, String title,
                         String summary, String content, String originalUrl,
@@ -95,12 +108,19 @@ public class NewsArticle extends BaseEntity {
         this.crawlStatus = CrawlStatus.PENDING;
     }
 
+    public enum CrawlStatus {
+        PENDING, SUCCESS, FAILED, SKIPPED
+    }
+
+    public enum EmbeddingStatus {
+        PENDING, PROCESSING, SUCCESS, FAILED
+    }
+
     /**
      * 크롤링 성공 시 본문과 썸네일을 업데이트한다.
      *
-     * <p>본문은 항상 최신 크롤링 결과로 덮어쓴다 (재크롤링 시 최신 본문 반영).
      * 썸네일은 최초 1회만 저장하고 이후 덮어쓰지 않는다
-     * (원본 사이트의 og:image가 광고/기본 이미지로 변경되는 경우 방지).</p>
+     * (원본 사이트의 og:image가 광고/기본 이미지로 변경되는 경우 방지).
      *
      * @param crawledContent 크롤링된 본문 텍스트
      * @param thumbnailUrl og:image 썸네일 URL (없으면 null)
@@ -117,7 +137,8 @@ public class NewsArticle extends BaseEntity {
     }
 
     /**
-     * 크롤링 실패를 기록한다. retryCount를 증가시키고 상태를 FAILED로 변경한다.
+     * 크롤링 실패를 기록한다.
+     * retryCount를 증가시키고 상태를 FAILED로 변경한다.
      *
      * @param errorMessage 실패 원인 메시지 (최대 500자)
      */
@@ -128,15 +149,46 @@ public class NewsArticle extends BaseEntity {
         this.crawlErrorMessage = errorMessage;
     }
 
-    /** 크롤링 대상에서 제외한다. 상태를 SKIPPED로 변경한다. */
+    /**
+     * 크롤링 대상에서 제외한다.
+     * 상태를 SKIPPED로 변경한다.
+     */
     public void markCrawlSkipped() {
         this.crawlStatus = CrawlStatus.SKIPPED;
         this.crawlAttemptedAt = LocalDateTime.now();
         this.crawlErrorMessage = null;
     }
 
-    public enum CrawlStatus {
-        PENDING, SUCCESS, FAILED, SKIPPED
+    /**
+     * 임베딩 처리 시작을 기록한다.
+     * 상태를 PROCESSING으로 변경한다.
+     */
+    public void markEmbeddingProcessing() {
+        this.embeddingStatus = EmbeddingStatus.PROCESSING;
+        this.embeddingAttemptedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 임베딩 생성 성공을 기록한다.
+     * 상태를 SUCCESS로 변경하고 에러 메시지를 초기화한다.
+     */
+    public void markEmbeddingSuccess() {
+        this.embeddingStatus = EmbeddingStatus.SUCCESS;
+        this.embeddingAttemptedAt = LocalDateTime.now();
+        this.embeddingErrorMessage = null;
+    }
+
+    /**
+     * 임베딩 생성 실패를 기록한다.
+     * retryCount를 증가시키고 상태를 FAILED로 변경한다.
+     *
+     * @param errorMessage 실패 원인 메시지
+     */
+    public void markEmbeddingFailed(String errorMessage) {
+        this.embeddingRetryCount++;
+        this.embeddingStatus = EmbeddingStatus.FAILED;
+        this.embeddingAttemptedAt = LocalDateTime.now();
+        this.embeddingErrorMessage = errorMessage;
     }
 
     public static NewsArticle of(RawNewsArticle rawArticle, CollectedNewsDto dto,
