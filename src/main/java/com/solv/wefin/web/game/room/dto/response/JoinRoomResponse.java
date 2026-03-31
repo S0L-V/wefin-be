@@ -1,7 +1,6 @@
 package com.solv.wefin.web.game.room.dto.response;
 
 import com.solv.wefin.domain.game.participant.entity.GameParticipant;
-import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.room.entity.RoomStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

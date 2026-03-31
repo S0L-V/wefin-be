@@ -9,7 +9,11 @@ import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.game.room.dto.request.CreateRoomRequest;
-import com.solv.wefin.web.game.room.dto.response.*;
+import com.solv.wefin.web.game.room.dto.response.CreateRoomResponse;
+import com.solv.wefin.web.game.room.dto.response.JoinRoomResponse;
+import com.solv.wefin.web.game.room.dto.response.ParticipantDetailDto;
+import com.solv.wefin.web.game.room.dto.response.RoomDetailResponse;
+import com.solv.wefin.web.game.room.dto.response.RoomListResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +34,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class GameRoomService {
+
+    private static final int MAX_PLAYERS = 6;
 
     private final GameRoomRepository gameRoomRepository;
     private final GameParticipantRepository gameParticipantRepository;
@@ -113,9 +119,8 @@ public class GameRoomService {
     }
 
     /**
-     게임 입장
-     비관적 락으로 동시 입장 동시성 제어
-     *
+     * 게임 입장
+     * 비관적 락으로 동시 입장 동시성 제어
      */
     @Transactional
     public JoinRoomResponse joinRoom(UUID roomId, UUID userId) {
@@ -134,25 +139,24 @@ public class GameRoomService {
         if (existing.isPresent()) {
             GameParticipant participant = existing.get();
 
-            if(participant.getStatus() == ParticipantStatus.ACTIVE){
+            if (participant.getStatus() == ParticipantStatus.ACTIVE) {
                 throw new BusinessException(ErrorCode.ROOM_ALREADY_JOINED);
             }
             int currentPlayers = gameParticipantRepository.countByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
-            if (currentPlayers >= 6) {
+            if (currentPlayers >= MAX_PLAYERS) {
                 throw new BusinessException(ErrorCode.ROOM_FULL);
             }
             participant.rejoin();
             return JoinRoomResponse.from(participant);
         }
 
-
         // 인원 초과 검사 (신규만, 최대 6명)
         int currentPlayers = gameParticipantRepository.countByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
-        if (currentPlayers >= 6) {
+        if (currentPlayers >= MAX_PLAYERS) {
             throw new BusinessException(ErrorCode.ROOM_FULL);
         }
 
-        // 5. 참가자 저장
+        // 참가자 저장
         GameParticipant member = GameParticipant.createMember(gameRoom, userId);
         gameParticipantRepository.save(member);
 
@@ -202,5 +206,4 @@ gameParticipant.builder()
 /**cancel room
  *
  */
-
 
