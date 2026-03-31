@@ -96,9 +96,17 @@ public class Trade {
 	}
 
 	public static Trade createBuyTrade(Long orderId, Long virtualAccountId, Long stockId,
-									   Integer quantity, BigDecimal price, BigDecimal totalAmount, BigDecimal fee,
-									   Currency currency, BigDecimal exchangeRate) {
-		return new Trade(orderId, virtualAccountId, stockId, OrderSide.BUY, quantity, price, totalAmount, fee,
-			BigDecimal.ZERO, null, currency, exchangeRate);
+									   Integer quantity, BigDecimal price, BigDecimal totalAmount,
+									   BigDecimal fee, Currency currency, BigDecimal exchangeRate) {
+		return new Trade(orderId, virtualAccountId, stockId, OrderSide.BUY, quantity, price, totalAmount,
+			fee, BigDecimal.ZERO, null, currency, exchangeRate);
+	}
+
+	public static Trade createSellTrade(Long orderId, Long virtualAccountId, Long stockId,
+										Integer quantity, BigDecimal price, BigDecimal totalAmount,
+										BigDecimal fee, BigDecimal tax, BigDecimal realizedProfit,
+										Currency currency, BigDecimal exchangeRate) {
+		return new Trade(orderId, virtualAccountId, stockId, OrderSide.SELL, quantity, price, totalAmount,
+			fee, tax, realizedProfit, currency, exchangeRate);
 	}
 }
