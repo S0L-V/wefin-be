@@ -47,6 +47,11 @@ public class PortfolioService {
 		}
 	}
 
+	public Portfolio getPortfolio(Long virtualAccountId, Long stockId) {
+		return portfolioRepository.findByVirtualAccountIdAndStockId(virtualAccountId, stockId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.ORDER_STOCK_NOT_HELD));
+	}
+
 	public List<Portfolio> getPortfolios(Long virtualAccountId) {
 		return portfolioRepository.findByVirtualAccountId(virtualAccountId);
 	}
