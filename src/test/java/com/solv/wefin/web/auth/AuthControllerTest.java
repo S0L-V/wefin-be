@@ -1,8 +1,8 @@
 package com.solv.wefin.web.auth;
 
+import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
-import com.solv.wefin.web.auth.dto.SignupResponse;
 import com.solv.wefin.domain.auth.service.AuthService;
 
 import org.junit.jupiter.api.DisplayName;
@@ -13,6 +13,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
@@ -54,17 +55,19 @@ class AuthControllerTest {
         void signup_success() throws Exception {
             UUID userId = UUID.randomUUID();
 
-            SignupResponse response = SignupResponse.builder()
-                    .userId(userId)
+            User savedUser  = User.builder()
                     .email("test@example.com")
                     .nickname("testuser")
+                    .password("encoded-password")
                     .build();
+
+            ReflectionTestUtils.setField(savedUser, "userId", userId);
 
             when(authService.signup(
                     eq("test@example.com"),
                     eq("testuser"),
                     eq("pass1234")
-            )).thenReturn(response);
+            )).thenReturn(savedUser);
 
             String requestBody = signupRequest("test@example.com", "pass1234", "testuser");
 

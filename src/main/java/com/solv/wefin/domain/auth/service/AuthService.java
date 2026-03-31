@@ -4,7 +4,6 @@ import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
-import com.solv.wefin.web.auth.dto.SignupResponse;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -26,7 +25,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public SignupResponse signup(String email, String nickname, String password) {
+    public User signup(String email, String nickname, String password) {
         // null 처리
         if (email == null || nickname == null || password == null) {
             throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
@@ -61,13 +60,7 @@ public class AuthService {
                     .password(passwordEncoder.encode(password))
                     .build();
 
-            User savedUser = userRepository.save(user);
-
-            return SignupResponse.builder()
-                    .userId(savedUser.getUserId())
-                    .email(savedUser.getEmail())
-                    .nickname(savedUser.getNickname())
-                    .build();
+            return userRepository.save(user);
 
         } catch (DataIntegrityViolationException e) {
             throw mapConstraintViolation(e);

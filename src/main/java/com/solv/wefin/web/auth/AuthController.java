@@ -1,5 +1,6 @@
 package com.solv.wefin.web.auth;
 
+import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.service.AuthService;
 import com.solv.wefin.global.common.ApiResponse;
 import com.solv.wefin.web.auth.dto.SignupRequest;
@@ -19,11 +20,18 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ApiResponse<SignupResponse> signup(@RequestBody @Valid SignupRequest request) {
-        SignupResponse response = authService.signup(
+        User savedUser = authService.signup(
                 request.getEmail(),
                 request.getNickname(),
                 request.getPassword()
         );
+
+        SignupResponse response = SignupResponse.builder()
+                .userId(savedUser.getUserId())
+                .email(savedUser.getEmail())
+                .nickname(savedUser.getNickname())
+                .build();
+
         return ApiResponse.success(response);
     }
 }

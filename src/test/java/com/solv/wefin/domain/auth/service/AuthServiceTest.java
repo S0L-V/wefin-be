@@ -68,7 +68,7 @@ class AuthServiceTest {
             when(userRepository.save(any(User.class))).thenReturn(savedUser);
 
             // when
-            SignupResponse response = authService.signup(rawEmail, rawNickname, rawPassword);
+            User response = authService.signup(rawEmail, rawNickname, rawPassword);
 
             // then
             ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
