@@ -57,7 +57,10 @@ public enum ErrorCode {
     ROOM_NOT_FOUND(404,"게임장을 찾을 수 없습니다."),
     ROOM_ALREADY_EXISTS(409, "이미 진행 중이거나 대기 중인 게임방이 있습니다."),
     ROOM_HOST_ALREADY_EXISTS(409, "이미 방장으로 참여 중인 게임방이 있습니다."),
-    ROOM_HOST_DAILY_LIMIT(409, "하루 방 생성 가능 횟수 초과");
+    ROOM_HOST_DAILY_LIMIT(409, "하루 방 생성 가능 횟수 초과"),
+    ROOM_ALREADY_JOINED(409, "이미 참가 중인 방입니다."),
+    ROOM_FULL(400, "인원 초과"),
+    ROOM_FINISHED(400, "종료된 방입니다.");
 
     private final int status;
     private final String message;

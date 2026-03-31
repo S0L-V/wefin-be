@@ -1,11 +1,14 @@
 package com.solv.wefin.web.game.room;
 
+import com.solv.wefin.domain.game.participant.entity.GameParticipant;
+import com.solv.wefin.domain.game.room.dto.CreateRoomCommand;
+import com.solv.wefin.domain.game.room.dto.RoomDetailInfo;
+import com.solv.wefin.domain.game.room.dto.RoomListInfo;
+import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.room.service.GameRoomService;
 import com.solv.wefin.global.common.ApiResponse;
 import com.solv.wefin.web.game.room.dto.request.CreateRoomRequest;
-import com.solv.wefin.web.game.room.dto.response.CreateRoomResponse;
-import com.solv.wefin.web.game.room.dto.response.RoomDetailResponse;
-import com.solv.wefin.web.game.room.dto.response.RoomListResponse;
+import com.solv.wefin.web.game.room.dto.response.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -14,6 +17,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/rooms")
@@ -30,7 +35,10 @@ public class GameRoomController {
     public ResponseEntity<ApiResponse<CreateRoomResponse>> createRoom(
             @Valid @RequestBody CreateRoomRequest request) {
 
-        CreateRoomResponse response = gameRoomService.createRoom(TEMP_USER_ID, TEMP_GROUP_ID, request);
+        CreateRoomCommand command = new CreateRoomCommand(
+                request.getSeedMoney(), request.getPeriodMonths(), request.getMoveDays());
+        GameRoom gameRoom = gameRoomService.createRoom(TEMP_USER_ID, TEMP_GROUP_ID, command);
+        CreateRoomResponse response = CreateRoomResponse.from(gameRoom);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(201, response));
 
@@ -44,13 +52,31 @@ public class GameRoomController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<RoomListResponse>>> getRooms() {
 
-        List<RoomListResponse> response = gameRoomService.getRooms(TEMP_GROUP_ID, TEMP_USER_ID);
+        List<RoomListInfo> rooms = gameRoomService.getRooms(TEMP_GROUP_ID, TEMP_USER_ID);
+        List<RoomListResponse> response = rooms.stream().map(
+                r -> RoomListResponse.from(r.room(), r.playerCount())).collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/{roomId}")
     public ResponseEntity<ApiResponse<RoomDetailResponse>> getRoomDetail(@PathVariable UUID roomId){
-        RoomDetailResponse response = gameRoomService.getRoomDetail(roomId);
+
+        RoomDetailInfo detail = gameRoomService.getRoomDetail(roomId);
+
+        List<ParticipantDetailDto> participantDtos = detail.participants().stream().map(
+                p -> ParticipantDetailDto.from(p, "묵데이터유저")
+        ).collect(Collectors.toList());
+
+        RoomDetailResponse response = RoomDetailResponse.from(detail.room(), participantDtos);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    // 게임방 입장
+    @PostMapping("/{roomId}/join")
+    public ResponseEntity<ApiResponse<JoinRoomResponse>> joinRoom(@PathVariable UUID roomId) {
+
+        GameParticipant participant = gameRoomService.joinRoom(roomId, TEMP_USER_ID);
+        JoinRoomResponse response = JoinRoomResponse.from(participant);
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }

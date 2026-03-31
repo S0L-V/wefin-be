@@ -29,20 +29,20 @@ public class GameParticipant {
     @JoinColumn(name = "room_id", nullable = false)
     private GameRoom gameRoom;
 
-    @Column(name="user_id", nullable = false)
+    @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @Column(name="is_leader", nullable = false)
+    @Column(name = "is_leader", nullable = false)
     private Boolean isLeader;
 
-    @Column(name="seed")
+    @Column(name = "seed")
     private Long seed;
 
     @Enumerated(EnumType.STRING)
-    @Column(name="status", nullable = false)
+    @Column(name = "status", nullable = false)
     private ParticipantStatus status;
 
-    @Column(name="joined_at", nullable = false, updatable = false)
+    @Column(name = "joined_at", nullable = false, updatable = false)
     private OffsetDateTime joinedAt;
 
     @PrePersist
@@ -51,10 +51,11 @@ public class GameParticipant {
         if (this.status == null) {
             this.status = ACTIVE;
         }
-        if(this.isLeader == null) {
+        if (this.isLeader == null) {
             this.isLeader = false;
         }
     }
+
     @Builder
     public GameParticipant(GameRoom gameRoom, UUID userId, Boolean isLeader) {
         this.gameRoom = gameRoom;
@@ -62,6 +63,7 @@ public class GameParticipant {
         this.isLeader = isLeader != null ? isLeader : false;
         this.status = ACTIVE;
     }
+
     public static GameParticipant createLeader(GameRoom gameRoom, UUID userId) {
         return GameParticipant.builder()
                 .gameRoom(gameRoom)
@@ -70,12 +72,26 @@ public class GameParticipant {
                 .build();
     }
 
+    public static GameParticipant createMember(GameRoom gameRoom, UUID userId) {
+        return GameParticipant.builder()
+                .gameRoom(gameRoom)
+                .userId(userId)
+                .isLeader(false)
+                .build();
+    }
+
     public void assignSeed(Long seed) {
+
         this.seed = seed;
     }
 
     public void leave() {
+
         this.status = LEFT;
     }
 
+    public void rejoin() {
+        this.status = ACTIVE;
+    }
 }
+

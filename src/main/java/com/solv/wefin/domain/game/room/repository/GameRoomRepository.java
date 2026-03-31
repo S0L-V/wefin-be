@@ -2,13 +2,16 @@ package com.solv.wefin.domain.game.room.repository;
 
 import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.room.entity.RoomStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface GameRoomRepository extends JpaRepository<GameRoom, UUID> {
@@ -28,5 +31,11 @@ public interface GameRoomRepository extends JpaRepository<GameRoom, UUID> {
             + "ORDER BY r.createdAt DESC")
     List<GameRoom> findFinishedRoomsByGroupIdAndUserId(
             @Param("groupId") Long groupId, @Param("userId") UUID userId);
+
+    //게임방 조회, 비관적 락 -> 동시성 제어
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM GameRoom r WHERE r.roomId = :roomId")
+    Optional<GameRoom> findByIdForUpdate(@Param("roomId") UUID roomId);
+
 
 }
