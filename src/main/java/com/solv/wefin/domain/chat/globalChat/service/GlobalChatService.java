@@ -21,7 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +35,7 @@ public class GlobalChatService {
     private final UserRepository userRepository;
     private final ChatSpamGuard chatSpamGuard;
 
+    private final Map<String, Object> chatLocks = new ConcurrentHashMap<>();
     @Transactional
     public void sendMessage(String content, UUID userId) {
 
@@ -44,23 +47,32 @@ public class GlobalChatService {
 
         OffsetDateTime now = OffsetDateTime.now();
         String blockKey = ChatScope.GLOBAL + ":" + userId;
+        Object lock = chatLocks.computeIfAbsent(blockKey, key -> new Object());
 
-        long recentCount = globalChatMessageRepository.countByUser_UserIdAndCreatedAtAfter(
-                userId,
-                now.minusSeconds(3)
-        );
+        /**
+         * 같은 유저가 동시에 두 요청을 보내면 둘 다 같은 count를 보고 통과할 수 있음
+         *  -> synchronized를 통해 blockKey 단위로 직렬화
+         *  단일 서버 기준 최소 방어
+          */
 
-        // 도배 체크
-        chatSpamGuard.validate(blockKey, recentCount, now);
+        synchronized (lock) {
+            long recentCount = globalChatMessageRepository.countByUser_UserIdAndCreatedAtAfter(
+                    userId,
+                    now.minusSeconds(3)
+            );
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+            // 도배 체크
+            chatSpamGuard.validate(blockKey, recentCount, now);
 
-        GlobalChatMessage savedMessage = globalChatMessageRepository.save(
-                GlobalChatMessage.createUserMessage(user, content)
-        );
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        eventPublisher.publishEvent(toEvent(savedMessage));
+            GlobalChatMessage savedMessage = globalChatMessageRepository.save(
+                    GlobalChatMessage.createUserMessage(user, content)
+            );
+
+            eventPublisher.publishEvent(toEvent(savedMessage));
+        }
     }
 
     @Transactional

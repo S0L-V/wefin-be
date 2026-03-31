@@ -25,7 +25,10 @@ public class GlobalChatController {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        UUID userId = (UUID) sessionAttributes.get("userId");
+        Object userIdValue = sessionAttributes.get("userId");
+        if (!(userIdValue instanceof UUID userId)) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
         globalChatService.sendMessage(request.getContent(), userId);
     }
 }
