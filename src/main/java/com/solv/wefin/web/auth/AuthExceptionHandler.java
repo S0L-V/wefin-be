@@ -24,7 +24,7 @@ public class AuthExceptionHandler {
         Map<String, String> errors = new LinkedHashMap<>();
 
         e.getBindingResult().getFieldErrors().forEach(error -> {
-            errors.put(error.getField(), error.getDefaultMessage());
+            errors.putIfAbsent(error.getField(), error.getDefaultMessage());
         });
 
         ApiResponse<Map<String, String>> response = new ApiResponse<>(

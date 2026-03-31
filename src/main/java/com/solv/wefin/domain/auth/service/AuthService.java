@@ -35,11 +35,14 @@ public class AuthService {
         // 입력값 정규화
         email = email.trim().toLowerCase(Locale.ROOT);
         nickname = nickname.trim();
-        // 비밀번호 앞뒤 공백은 허용하지 않으므로 trim 처리
-        password = password.trim();
 
         // 빈 값 처리
         if (email.isBlank() || nickname.isBlank() || password.isBlank()) {
+            throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
+        }
+
+        // 비밀번호 앞뒤 공백 비허용
+        if (!password.equals(password.trim())) {
             throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
         }
 
