@@ -59,6 +59,11 @@ public class OpenAiEmbeddingClient {
             throw new IllegalStateException("OpenAI Embedding API 응답이 비어있습니다");
         }
 
+        if (response.getData().size() != texts.size()) {
+            throw new IllegalStateException(
+                    "OpenAI Embedding API 응답 개수 불일치: 요청=" + texts.size() + ", 응답=" + response.getData().size());
+        }
+
         return response.getData().stream()
                 .sorted((a, b) -> Integer.compare(a.getIndex(), b.getIndex()))
                 .map(EmbeddingData::getEmbedding)
