@@ -165,7 +165,7 @@ class EmbeddingServiceTest {
         given(newsArticleRepository.findEmbeddingTargets(
                         eq(CrawlStatus.SUCCESS),
                         eq(List.of(EmbeddingStatus.PENDING, EmbeddingStatus.FAILED)),
-                        eq(3), any()))
+                        eq(3), any(), any()))
                 .willReturn(articles);
     }
 
