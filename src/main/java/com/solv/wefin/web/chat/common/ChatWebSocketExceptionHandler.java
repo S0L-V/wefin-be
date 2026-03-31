@@ -6,6 +6,7 @@ import com.solv.wefin.domain.chat.common.constant.ChatScope;
 import com.solv.wefin.domain.chat.common.service.ChatSpamGuard;
 import com.solv.wefin.web.chat.common.dto.response.ChatSpamResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -16,6 +17,7 @@ import java.util.UUID;
 
 @ControllerAdvice
 @RequiredArgsConstructor
+@ConditionalOnBean(SimpMessagingTemplate.class)
 public class ChatWebSocketExceptionHandler {
 
     private final SimpMessagingTemplate messagingTemplate;
