@@ -70,17 +70,20 @@ public class AuthService {
                     .build();
 
         } catch (DataIntegrityViolationException e) {
-            Throwable cause = e.getCause();
+            Throwable cause = e;
 
-            if (cause instanceof ConstraintViolationException cve) {
-                String constraint = cve.getConstraintName();
+            while (cause != null) {
+                if (cause instanceof ConstraintViolationException cve) {
+                    String constraint = cve.getConstraintName();
 
-                if (UK_USERS_EMAIL.equals(constraint)) {
-                    throw new BusinessException(ErrorCode.AUTH_EMAIL_DUPLICATED);
+                    if (UK_USERS_EMAIL.equals(constraint)) {
+                        throw new BusinessException(ErrorCode.AUTH_EMAIL_DUPLICATED);
+                    }
+                    if (UK_USERS_NICKNAME.equals(constraint)) {
+                        throw new BusinessException(ErrorCode.AUTH_NICKNAME_DUPLICATED);
+                    }
                 }
-                if (UK_USERS_NICKNAME.equals(constraint)) {
-                    throw new BusinessException(ErrorCode.AUTH_NICKNAME_DUPLICATED);
-                }
+                cause = cause.getCause();
             }
 
             throw new BusinessException(ErrorCode.DUPLICATE_RESOURCE);
