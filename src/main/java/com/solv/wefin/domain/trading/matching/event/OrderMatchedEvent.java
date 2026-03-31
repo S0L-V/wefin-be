@@ -23,7 +23,7 @@ public record OrderMatchedEvent(
 										  String stockName, Integer quantity,
 										  BigDecimal price, BigDecimal fee, BigDecimal balance) {
 		return new OrderMatchedEvent(OrderType.MARKET, orderNo, stockCode, stockName,
-			OrderSide.BUY, quantity, price, fee, BigDecimal.ZERO, null, balance);
+			OrderSide.BUY, quantity, price, fee, BigDecimal.ZERO, BigDecimal.ZERO, balance);
 	}
 
 	public static OrderMatchedEvent ofSell(UUID orderNo, String stockCode,
