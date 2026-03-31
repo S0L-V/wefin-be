@@ -1,9 +1,11 @@
 package com.solv.wefin.domain.news.crawl;
 
-import com.solv.wefin.domain.news.crawl.extractor.ArticleContentExtractor;
-import com.solv.wefin.domain.news.entity.NewsArticle;
-import com.solv.wefin.domain.news.entity.NewsArticle.CrawlStatus;
-import com.solv.wefin.domain.news.repository.NewsArticleRepository;
+import com.solv.wefin.domain.news.ingestion.service.ArticleCrawlPersistenceService;
+import com.solv.wefin.domain.news.ingestion.service.ArticleCrawlService;
+import com.solv.wefin.domain.news.ingestion.crawler.ArticleContentExtractor;
+import com.solv.wefin.domain.news.article.entity.NewsArticle;
+import com.solv.wefin.domain.news.article.entity.NewsArticle.CrawlStatus;
+import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
 import org.jsoup.nodes.Document;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

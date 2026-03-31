@@ -1,5 +1,6 @@
 package com.solv.wefin.domain.news.embedding.service;
 
+import com.solv.wefin.domain.news.embedding.chunk.ArticleChunker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -2,8 +2,8 @@ package com.solv.wefin.domain.news.embedding.service;
 
 import com.solv.wefin.domain.news.embedding.entity.ArticleEmbedding;
 import com.solv.wefin.domain.news.embedding.repository.ArticleEmbeddingRepository;
-import com.solv.wefin.domain.news.entity.NewsArticle;
-import com.solv.wefin.domain.news.repository.NewsArticleRepository;
+import com.solv.wefin.domain.news.article.entity.NewsArticle;
+import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;

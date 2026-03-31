@@ -1,10 +1,11 @@
 package com.solv.wefin.domain.news.service;
 
-import com.solv.wefin.domain.news.dto.CollectedNewsDto;
-import com.solv.wefin.domain.news.entity.NewsCollectBatch;
-import com.solv.wefin.domain.news.entity.NewsSource;
-import com.solv.wefin.domain.news.repository.NewsArticleRepository;
-import com.solv.wefin.domain.news.repository.RawNewsArticleRepository;
+import com.solv.wefin.domain.news.ingestion.client.dto.CollectedNewsApiResponse;
+import com.solv.wefin.domain.news.ingestion.entity.NewsCollectBatch;
+import com.solv.wefin.domain.news.source.entity.NewsSource;
+import com.solv.wefin.domain.news.ingestion.service.ArticlePersistenceService;
+import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
+import com.solv.wefin.domain.news.ingestion.repository.RawNewsArticleRepository;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,7 +37,7 @@ class ArticlePersistenceServiceTest {
 
     @Test
     void processSingleArticle_checksDuplicateByOriginalUrlOnly() {
-        CollectedNewsDto dto = sampleDto();
+        CollectedNewsApiResponse dto = sampleDto();
 
         when(rawNewsArticleRepository.existsByOriginalUrl(dto.getOriginalUrl())).thenReturn(true);
 
@@ -48,7 +49,7 @@ class ArticlePersistenceServiceTest {
 
     @Test
     void processSingleArticle_skipsOnlyOriginalUrlUniqueConstraintViolations() {
-        CollectedNewsDto dto = sampleDto();
+        CollectedNewsApiResponse dto = sampleDto();
         SQLException sqlException = new SQLException(
                 "duplicate key value violates unique constraint \"uk_raw_news_article_original_url\"");
         DataIntegrityViolationException exception = new DataIntegrityViolationException(
@@ -67,7 +68,7 @@ class ArticlePersistenceServiceTest {
 
     @Test
     void processSingleArticle_rethrowsNonDuplicateConstraintViolations() {
-        CollectedNewsDto dto = sampleDto();
+        CollectedNewsApiResponse dto = sampleDto();
         SQLException sqlException = new SQLException(
                 "insert or update on table \"raw_news_article\" violates foreign key constraint \"FK_news_collect_batch_TO_raw_news_article_1\"");
         DataIntegrityViolationException exception = new DataIntegrityViolationException(
@@ -84,8 +85,8 @@ class ArticlePersistenceServiceTest {
                 articlePersistenceService.processSingleArticle(dto, sampleSource(), sampleBatch()));
     }
 
-    private CollectedNewsDto sampleDto() {
-        return CollectedNewsDto.builder()
+    private CollectedNewsApiResponse sampleDto() {
+        return CollectedNewsApiResponse.builder()
                 .externalArticleId("naver:123")
                 .originalUrl("https://example.com/news/123")
                 .originalTitle("sample title")
