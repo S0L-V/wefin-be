@@ -25,6 +25,6 @@ public class EmbeddingAdminController {
         if (executed) {
             return ApiResponse.success("임베딩 생성 완료");
         }
-        return ApiResponse.success("임베딩 생성이 이미 실행 중입니다");
+        return ApiResponse.success("임베딩 생성을 건너뜁니다 (이미 실행 중이거나 오류 발생)");
     }
 }

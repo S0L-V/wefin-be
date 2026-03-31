@@ -166,6 +166,7 @@ public class NewsArticle extends BaseEntity {
     public void markEmbeddingProcessing() {
         this.embeddingStatus = EmbeddingStatus.PROCESSING;
         this.embeddingAttemptedAt = LocalDateTime.now();
+        this.embeddingErrorMessage = null;
     }
 
     /**
