@@ -3,12 +3,15 @@ package com.solv.wefin.domain.trading.order.service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.solv.wefin.domain.trading.account.entity.VirtualAccount;
 import com.solv.wefin.domain.trading.account.service.VirtualAccountService;
 import com.solv.wefin.domain.trading.common.MarketPriceProvider;
 import com.solv.wefin.domain.trading.common.StockInfoProvider;
+import com.solv.wefin.domain.trading.matching.event.OrderMatchedEvent;
 import com.solv.wefin.domain.trading.order.entity.Order;
 import com.solv.wefin.domain.trading.order.entity.OrderSide;
 import com.solv.wefin.domain.trading.order.entity.OrderType;
@@ -37,6 +40,7 @@ public class OrderService {
 	private final MarketPriceProvider marketPriceProvider;
 	private final StockInfoProvider stockInfoProvider;
 	private final TradeService tradeService;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional
 	public Order buyMarket(Long virtualAccountId, Long stockId, Integer quantity) {
@@ -49,7 +53,7 @@ public class OrderService {
 		Stock stock = stockInfoProvider.getStock(stockId);
 		BigDecimal currentPrice = marketPriceProvider.getCurrentPrice(stock.getStockCode());
 		if (currentPrice == null || currentPrice.compareTo(BigDecimal.ZERO) <= 0) {
-			throw new BusinessException(ErrorCode.ORDER_STOCK_NOT_FOUND);
+			throw new BusinessException(ErrorCode.MARKET_API_FAILED);
 		}
 
 		// 3. 금액 계산
@@ -59,7 +63,7 @@ public class OrderService {
 		BigDecimal fee = totalAmount.multiply(FEE_RATE).setScale(0, RoundingMode.DOWN);
 
 		// 5. 예수금 차감 (totalAmount + fee)
-		virtualAccountService.deductBalance(virtualAccountId, totalAmount.add(fee));
+		VirtualAccount account = virtualAccountService.deductBalance(virtualAccountId, totalAmount.add(fee));
 
 		// 6. Order 생성 + 저장
 		Order order = orderRepository.save(new Order(virtualAccountId, stockId, OrderType.MARKET, OrderSide.BUY, quantity,
@@ -73,7 +77,12 @@ public class OrderService {
 		// 8. 포트폴리오 갱신
 		portfolioService.addHolding(virtualAccountId, stockId, quantity, currentPrice, Currency.KRW);
 
-		// 9. 반환
+		// 9. 이벤트 발행
+		eventPublisher.publishEvent(OrderMatchedEvent.ofBuy(
+			order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
+			quantity, currentPrice, fee, account.getBalance()
+		));
+
 		return order;
 	}
 
@@ -90,7 +99,7 @@ public class OrderService {
 		// 3. 현재가 조회
 		BigDecimal currentPrice = marketPriceProvider.getCurrentPrice(stock.getStockCode());
 		if (currentPrice == null || currentPrice.compareTo(BigDecimal.ZERO) <= 0) {
-			throw new BusinessException(ErrorCode.ORDER_STOCK_NOT_FOUND);
+			throw new BusinessException(ErrorCode.MARKET_API_FAILED);
 		}
 
 		// 4. 보유 종목 확인
@@ -128,10 +137,17 @@ public class OrderService {
 		portfolioService.deductQuantity(virtualAccountId, stockId, quantity);
 
 		// 13. 예수금 입금
-		virtualAccountService.depositBalance(virtualAccountId, totalAmount.subtract(fee).subtract(tax));
+		VirtualAccount account = virtualAccountService.depositBalance(virtualAccountId,
+			totalAmount.subtract(fee).subtract(tax));
 
 		// 14. 실현손익 누적
 		virtualAccountService.addRealizedProfit(virtualAccountId, realizedAmount);
+
+		// 15. 이벤트 발행
+		eventPublisher.publishEvent(OrderMatchedEvent.ofSell(
+			order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
+			quantity, currentPrice, fee, tax, realizedAmount, account.getBalance()
+		));
 
 		return order;
 	}
