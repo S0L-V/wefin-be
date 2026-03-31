@@ -1,5 +1,7 @@
 package com.solv.wefin.domain.trading.market.dto;
 
+import com.solv.wefin.domain.trading.market.client.dto.HantuOrderbookApiResponse;
+
 import java.util.List;
 
 public record OrderbookResponse(

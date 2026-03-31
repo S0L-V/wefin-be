@@ -1,4 +1,4 @@
-package com.solv.wefin.domain.trading.market.dto;
+package com.solv.wefin.domain.trading.market.client.dto;
 
 public record HantuOrderbookApiResponse(
         Output1 output1

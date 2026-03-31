@@ -1,7 +1,7 @@
 package com.solv.wefin.domain.trading.market.client;
 
-import com.solv.wefin.domain.trading.market.dto.HantuOrderbookApiResponse;
-import com.solv.wefin.domain.trading.market.dto.HantuPriceApiResponse;
+import com.solv.wefin.domain.trading.market.client.dto.HantuOrderbookApiResponse;
+import com.solv.wefin.domain.trading.market.client.dto.HantuPriceApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
