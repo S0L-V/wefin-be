@@ -172,18 +172,18 @@ class GameRoomServiceTest {
     private static final UUID OTHER_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000002");
 
     @Test
-    @DisplayName("게임방 참가 성공 — WAITING 방에 참가")
+    @DisplayName("게임방 참가 성공 — WAITING 방에 신규 참가")
     void joinRoom_success_waiting() {
-        // Given — WAITING 방이 존재, 중복 참가 아님, 인원 여유 있음
-        GameRoom gameRoom = createGameRoom(); // status = WAITING
+        // Given — WAITING 방, 참가 이력 없음, 인원 여유 있음
+        GameRoom gameRoom = createGameRoom();
         UUID roomId = gameRoom.getRoomId();
 
         given(gameRoomRepository.findByIdForUpdate(roomId))
                 .willReturn(Optional.of(gameRoom));
-        given(gameParticipantRepository.existsByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
-                .willReturn(false);
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
+                .willReturn(Optional.empty()); // 이력 없음
         given(gameParticipantRepository.countByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE))
-                .willReturn(1); // 방장 1명만 있음
+                .willReturn(1);
 
         // When
         JoinRoomResponse response = gameRoomService.joinRoom(roomId, OTHER_USER_ID);
@@ -197,24 +197,49 @@ class GameRoomServiceTest {
     @Test
     @DisplayName("게임방 참가 성공 — IN_PROGRESS 방에도 참가 가능")
     void joinRoom_success_inProgress() {
-        // Given — IN_PROGRESS 방
+        // Given — IN_PROGRESS 방, 참가 이력 없음
         GameRoom gameRoom = createGameRoom();
-        gameRoom.start(); // WAITING → IN_PROGRESS
+        gameRoom.start();
         UUID roomId = gameRoom.getRoomId();
 
         given(gameRoomRepository.findByIdForUpdate(roomId))
                 .willReturn(Optional.of(gameRoom));
-        given(gameParticipantRepository.existsByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
-                .willReturn(false);
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
+                .willReturn(Optional.empty());
         given(gameParticipantRepository.countByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE))
                 .willReturn(3);
 
         // When
         JoinRoomResponse response = gameRoomService.joinRoom(roomId, OTHER_USER_ID);
 
-        // Then — IN_PROGRESS 상태로 응답 (프론트에서 게임 화면으로 라우팅)
+        // Then
         assertThat(response.getRoomStatus()).isEqualTo(RoomStatus.IN_PROGRESS);
         verify(gameParticipantRepository).save(any(GameParticipant.class));
+    }
+
+    @Test
+    @DisplayName("게임방 참가 성공 — 퇴장 후 재참가 (LEFT → ACTIVE)")
+    void joinRoom_success_rejoin() {
+        // Given — LEFT 상태의 기존 참가 이력
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        GameParticipant leftParticipant = GameParticipant.createMember(gameRoom, OTHER_USER_ID);
+        leftParticipant.leave(); // ACTIVE → LEFT
+
+        given(gameRoomRepository.findByIdForUpdate(roomId))
+                .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
+                .willReturn(Optional.of(leftParticipant)); // LEFT 상태로 존재
+        given(gameParticipantRepository.countByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE))
+                .willReturn(3);
+
+        // When
+        JoinRoomResponse response = gameRoomService.joinRoom(roomId, OTHER_USER_ID);
+
+        // Then — 기존 레코드 재활용, save() 호출 안 함 (더티 체킹)
+        assertThat(response.getRoomStatus()).isEqualTo(RoomStatus.WAITING);
+        assertThat(leftParticipant.getStatus()).isEqualTo(ParticipantStatus.ACTIVE); // LEFT → ACTIVE
+        verify(gameParticipantRepository, never()).save(any()); // 더티 체킹이니까 save 안 부름
     }
 
     @Test
@@ -260,16 +285,17 @@ class GameRoomServiceTest {
     }
 
     @Test
-    @DisplayName("게임방 참가 실패 — 이미 참가 중")
+    @DisplayName("게임방 참가 실패 — 이미 ACTIVE 상태로 참가 중")
     void joinRoom_alreadyJoined() {
-        // Given — 이미 참가한 유저
+        // Given — ACTIVE 상태의 기존 참가자
         GameRoom gameRoom = createGameRoom();
         UUID roomId = gameRoom.getRoomId();
+        GameParticipant activeParticipant = GameParticipant.createMember(gameRoom, OTHER_USER_ID);
 
         given(gameRoomRepository.findByIdForUpdate(roomId))
                 .willReturn(Optional.of(gameRoom));
-        given(gameParticipantRepository.existsByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
-                .willReturn(true); // 이미 참가함
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
+                .willReturn(Optional.of(activeParticipant)); // ACTIVE 상태로 존재
 
         // When & Then
         assertThatThrownBy(() -> gameRoomService.joinRoom(roomId, OTHER_USER_ID))
@@ -285,14 +311,14 @@ class GameRoomServiceTest {
     @Test
     @DisplayName("게임방 참가 실패 — 인원 초과 (최대 6명)")
     void joinRoom_full() {
-        // Given — 이미 6명
+        // Given — 이력 없는 신규 유저, 이미 6명
         GameRoom gameRoom = createGameRoom();
         UUID roomId = gameRoom.getRoomId();
 
         given(gameRoomRepository.findByIdForUpdate(roomId))
                 .willReturn(Optional.of(gameRoom));
-        given(gameParticipantRepository.existsByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
-                .willReturn(false);
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
+                .willReturn(Optional.empty()); // 이력 없음
         given(gameParticipantRepository.countByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE))
                 .willReturn(6); // 꽉 참
 

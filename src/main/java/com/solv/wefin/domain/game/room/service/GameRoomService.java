@@ -21,6 +21,7 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -129,11 +130,23 @@ public class GameRoomService {
         }
 
         // 이미 참가한 유저인지 확인
-        if (gameParticipantRepository.existsByGameRoomAndUserId(gameRoom, userId)) {
-            throw new BusinessException(ErrorCode.ROOM_ALREADY_JOINED);
+        Optional<GameParticipant> existing = gameParticipantRepository.findByGameRoomAndUserId(gameRoom, userId);
+        if (existing.isPresent()) {
+            GameParticipant participant = existing.get();
+
+            if(participant.getStatus() == ParticipantStatus.ACTIVE){
+                throw new BusinessException(ErrorCode.ROOM_ALREADY_JOINED);
+            }
+            int currentPlayers = gameParticipantRepository.countByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
+            if (currentPlayers >= 6) {
+                throw new BusinessException(ErrorCode.ROOM_FULL);
+            }
+            participant.rejoin();
+            return JoinRoomResponse.from(participant);
         }
 
-        // 인원 초과 검사 (최대 6명)
+
+        // 인원 초과 검사 (신규만, 최대 6명)
         int currentPlayers = gameParticipantRepository.countByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
         if (currentPlayers >= 6) {
             throw new BusinessException(ErrorCode.ROOM_FULL);
@@ -182,6 +195,9 @@ gameParticipant.builder()
 
  6. 게임 입장
  조회 -> 방 상태 체크 -> 참가 여부 체크 -> 인원체 -> 입장
+
+ 재참가로 로직 변경
+ 조회 - 방 상태 체크 - 참가 기록 확인 (기록 있으면 인워 수 체크 후 재참가 로직 )- 인원체크 입장
  */
 /**cancel room
  *
