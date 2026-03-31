@@ -2,14 +2,15 @@ package com.solv.wefin.domain.chat.globalChat.service;
 
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
+import com.solv.wefin.domain.chat.common.constant.ChatScope;
+import com.solv.wefin.domain.chat.common.service.ChatSpamGuard;
+import com.solv.wefin.domain.chat.globalChat.dto.GlobalChatMessageInfo;
 import com.solv.wefin.domain.chat.globalChat.entity.ChatRole;
 import com.solv.wefin.domain.chat.globalChat.entity.GlobalChatMessage;
 import com.solv.wefin.domain.chat.globalChat.event.GlobalChatMessageCreatedEvent;
 import com.solv.wefin.domain.chat.globalChat.repository.GlobalChatMessageRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
-import com.solv.wefin.web.chat.globalChat.dto.response.GlobalChatMessageResponse;
-import com.solv.wefin.web.chat.globalChat.dto.request.GlobalChatSendRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -29,21 +31,33 @@ public class GlobalChatService {
     private final ApplicationEventPublisher eventPublisher;
     private final GlobalChatMessageRepository globalChatMessageRepository;
     private final UserRepository userRepository;
+    private final ChatSpamGuard chatSpamGuard;
 
     @Transactional
-    public void sendMessage(GlobalChatSendRequest request, UUID userId) {
+    public void sendMessage(String content, UUID userId) {
 
         if (userId == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        validateMessage(request.getContent());
+        validateMessage(content);
+
+        OffsetDateTime now = OffsetDateTime.now();
+        String blockKey = ChatScope.GLOBAL + ":" + userId;
+
+        long recentCount = globalChatMessageRepository.countByUser_UserIdAndCreatedAtAfter(
+                userId,
+                now.minusSeconds(3)
+        );
+
+        // 도배 체크
+        chatSpamGuard.validate(blockKey, recentCount, now);
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         GlobalChatMessage savedMessage = globalChatMessageRepository.save(
-                GlobalChatMessage.createUserMessage(user, request.getContent())
+                GlobalChatMessage.createUserMessage(user, content)
         );
 
         eventPublisher.publishEvent(toEvent(savedMessage));
@@ -61,7 +75,7 @@ public class GlobalChatService {
         eventPublisher.publishEvent(toEvent(savedMessage));
     }
 
-    private GlobalChatMessageResponse toResponse(GlobalChatMessage message) {
+    private GlobalChatMessageInfo toInfo(GlobalChatMessage message) {
         User user = message.getUser();
 
         String sender = (message.getRole() == ChatRole.SYSTEM || user == null)
@@ -70,14 +84,14 @@ public class GlobalChatService {
 
         UUID userId = user != null ? user.getUserId() : null;
 
-        return GlobalChatMessageResponse.builder()
-                .messageId(message.getId())
-                .userId(userId)
-                .role(message.getRole().name())
-                .sender(sender)
-                .content(message.getContent())
-                .createdAt(message.getCreatedAt())
-                .build();
+        return new GlobalChatMessageInfo(
+                message.getId(),
+                userId,
+                message.getRole().name(),
+                sender,
+                message.getContent(),
+                message.getCreatedAt()
+        );
     }
 
     private GlobalChatMessageCreatedEvent toEvent(GlobalChatMessage message) {
@@ -107,7 +121,7 @@ public class GlobalChatService {
         }
     }
 
-    public List<GlobalChatMessageResponse> getRecentMessages(int limit) {
+    public List<GlobalChatMessageInfo> getRecentMessages(int limit) {
 
         int size = Math.min(Math.max(limit, 1), 100);
         Pageable pageable = PageRequest.of(0, size);
@@ -116,7 +130,7 @@ public class GlobalChatService {
 
         return messages.stream()
                 .sorted(Comparator.comparing(GlobalChatMessage::getId))
-                .map(this::toResponse)
+                .map(this::toInfo)
                 .toList();
     }
 }
