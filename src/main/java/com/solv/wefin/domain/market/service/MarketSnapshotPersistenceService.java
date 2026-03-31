@@ -1,7 +1,6 @@
 package com.solv.wefin.domain.market.service;
 
 import com.solv.wefin.domain.market.dto.CollectedMarketData;
-import com.solv.wefin.domain.market.entity.MarketSnapshot;
 import com.solv.wefin.domain.market.repository.MarketSnapshotRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,39 +23,22 @@ public class MarketSnapshotPersistenceService {
 
     /**
      * 수집된 시장 지표를 DB에 upsert한다.
+     * PostgreSQL ON CONFLICT를 사용하여 동시 호출 시에도 안전하게 처리한다.
      *
      * @param allData 수집된 시장 지표 목록
      */
     @Transactional
     public void saveSnapshots(List<CollectedMarketData> allData) {
         for (CollectedMarketData data : allData) {
-            upsertSnapshot(data);
-        }
-        log.info("시장 지표 upsert 완료: {}건", allData.size());
-    }
-
-    private void upsertSnapshot(CollectedMarketData data) {
-        MarketSnapshot snapshot = marketSnapshotRepository
-                .findByMetricType(data.getMetricType())
-                .orElse(null);
-
-        if (snapshot != null) {
-            snapshot.updateValues(
+            marketSnapshotRepository.upsert(
+                    data.getMetricType().name(),
+                    data.getLabel(),
                     data.getValue(),
                     data.getChangeRate(),
                     data.getChangeValue(),
-                    data.getChangeDirection());
-        } else {
-            snapshot = MarketSnapshot.builder()
-                    .metricType(data.getMetricType())
-                    .label(data.getLabel())
-                    .value(data.getValue())
-                    .changeRate(data.getChangeRate())
-                    .changeValue(data.getChangeValue())
-                    .unit(data.getUnit())
-                    .changeDirection(data.getChangeDirection())
-                    .build();
-            marketSnapshotRepository.save(snapshot);
+                    data.getUnit().name(),
+                    data.getChangeDirection().name());
         }
+        log.info("시장 지표 upsert 완료: {}건", allData.size());
     }
 }
