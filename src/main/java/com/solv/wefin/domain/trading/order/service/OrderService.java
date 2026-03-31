@@ -94,7 +94,7 @@ public class OrderService {
 		}
 
 		// 4. 보유 종목 확인
-		Portfolio portfolio = portfolioService.getPortfolio(virtualAccountId, stockId);
+		Portfolio portfolio = portfolioService.getPortfolioForUpdate(virtualAccountId, stockId);
 		if (portfolio.getQuantity() < quantity) {
 			throw new BusinessException(ErrorCode.ORDER_INSUFFICIENT_HOLDINGS);
 		}

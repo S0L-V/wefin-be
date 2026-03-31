@@ -24,7 +24,7 @@ public class PortfolioService {
 
 	@Transactional
 	public void addHolding(Long virtualAccountId, Long stockId, Integer quantity, BigDecimal price, Currency currency) {
-		Optional<Portfolio> portfolio = getPortfolioForUpdate(virtualAccountId, stockId);
+		Optional<Portfolio> portfolio = findPortfolioForUpdate(virtualAccountId, stockId);
 
 		if (portfolio.isPresent()) {
 			portfolio.get().addQuantity(quantity, price);
@@ -35,7 +35,7 @@ public class PortfolioService {
 
 	@Transactional
 	public void deductQuantity(Long virtualAccountId, Long stockId, Integer quantity) {
-		Optional<Portfolio> portfolio = getPortfolioForUpdate(virtualAccountId, stockId);
+		Optional<Portfolio> portfolio = findPortfolioForUpdate(virtualAccountId, stockId);
 
 		if (portfolio.isEmpty()) {
 			throw new BusinessException(ErrorCode.ORDER_STOCK_NOT_HELD);
@@ -57,9 +57,17 @@ public class PortfolioService {
 	}
 
 	/**
-	 * 비관적 락으로 포트폴리오 조회
+	 * 비관적 락으로 포트폴리오 조회 - 없으면 예외
 	 */
-	private Optional<Portfolio> getPortfolioForUpdate(Long virtualAccountId, Long stockId) {
+	public Portfolio getPortfolioForUpdate(Long virtualAccountId, Long stockId) {
+		return portfolioRepository.findByVirtualAccountIdAndStockIdForUpdate(virtualAccountId, stockId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.ORDER_STOCK_NOT_HELD));
+	}
+
+	/**
+	 * 비관적 락으로 포트폴리오 조회 - Optional 반환
+	 */
+	private Optional<Portfolio> findPortfolioForUpdate(Long virtualAccountId, Long stockId) {
 		return portfolioRepository.findByVirtualAccountIdAndStockIdForUpdate(virtualAccountId, stockId);
 	}
 }

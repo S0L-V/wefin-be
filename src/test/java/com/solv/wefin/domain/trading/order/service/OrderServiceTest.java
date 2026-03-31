@@ -101,7 +101,7 @@ class OrderServiceTest {
 		Portfolio mockPortfolio = mock(Portfolio.class);
 		given(mockPortfolio.getAvgPrice()).willReturn(new BigDecimal("170000"));
 		given(mockPortfolio.getQuantity()).willReturn(20);
-		given(portfolioService.getPortfolio(1L, 1L))
+		given(portfolioService.getPortfolioForUpdate(1L, 1L))
 			.willReturn(mockPortfolio);
 
 		given(orderRepository.save(any()))
@@ -126,7 +126,7 @@ class OrderServiceTest {
 		given(mockStock.getStockCode()).willReturn("005930");
 		given(marketPriceProvider.getCurrentPrice("005930"))
 			.willReturn(new BigDecimal("178000"));
-		given(portfolioService.getPortfolio(1L, 1L))
+		given(portfolioService.getPortfolioForUpdate(1L, 1L))
 			.willThrow(new BusinessException(ErrorCode.ORDER_STOCK_NOT_HELD));
 
 		// when & then
@@ -145,7 +145,7 @@ class OrderServiceTest {
 
 		Portfolio mockPortfolio = mock(Portfolio.class);
 		given(mockPortfolio.getQuantity()).willReturn(20);
-		given(portfolioService.getPortfolio(1L, 1L))
+		given(portfolioService.getPortfolioForUpdate(1L, 1L))
 			.willReturn(mockPortfolio);
 
 		// when & then
