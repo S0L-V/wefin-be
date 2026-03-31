@@ -48,7 +48,7 @@ class AuthServiceTest {
             // given
             String rawEmail = "  TEST@Example.com  ";
             String rawNickname = "  testuser  ";
-            String rawPassword = "  pass1234  ";
+            String rawPassword = "pass1234";
 
             UUID userId = UUID.randomUUID();
 

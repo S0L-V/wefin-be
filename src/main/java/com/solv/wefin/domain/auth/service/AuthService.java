@@ -82,7 +82,6 @@ public class AuthService {
                     if (UK_USERS_NICKNAME.equals(constraint)) {
                         throw new BusinessException(ErrorCode.AUTH_NICKNAME_DUPLICATED);
                     }
-                }
                 cause = cause.getCause();
             }
 
