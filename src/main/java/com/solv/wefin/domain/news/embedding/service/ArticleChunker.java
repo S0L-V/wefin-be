@@ -87,8 +87,14 @@ public class ArticleChunker {
                 currentTokens = 0;
             }
 
-            currentChunk.append(sentence);
-            currentTokens += sentenceTokens;
+            if (sentenceTokens > TARGET_CHUNK_TOKENS) {
+                chunkIndex = hardSplit(sentence, chunks, currentChunk, currentTokens, chunkIndex);
+                currentChunk = new StringBuilder();
+                currentTokens = 0;
+            } else {
+                currentChunk.append(sentence);
+                currentTokens += sentenceTokens;
+            }
         }
 
         if (currentTokens > 0) {
@@ -156,6 +162,40 @@ public class ArticleChunker {
         return block == Character.UnicodeBlock.HANGUL_SYLLABLES
                 || block == Character.UnicodeBlock.HANGUL_JAMO
                 || block == Character.UnicodeBlock.HANGUL_COMPATIBILITY_JAMO;
+    }
+
+    /**
+     * 단일 문장이 TARGET_CHUNK_TOKENS를 초과할 때 문자 단위로 강제 분할한다.
+     * 앞에 쌓인 currentChunk가 있으면 먼저 flush한 뒤, 긴 문장을 토큰 한도 내로 잘라 청크를 생성한다.
+     *
+     * @return 갱신된 chunkIndex
+     */
+    private int hardSplit(String sentence, List<Chunk> chunks, StringBuilder currentChunk,
+                          int currentTokens, int chunkIndex) {
+        if (currentTokens > 0) {
+            chunks.add(createChunk(chunkIndex++, currentChunk.toString(), currentTokens));
+        }
+
+        int estimatedCharsPerToken = 3;
+        int charsPerChunk = TARGET_CHUNK_TOKENS * estimatedCharsPerToken;
+        int start = 0;
+
+        while (start < sentence.length()) {
+            int end = Math.min(start + charsPerChunk, sentence.length());
+            String part = sentence.substring(start, end);
+            int partTokens = estimateTokenCount(part);
+
+            while (partTokens > TARGET_CHUNK_TOKENS && end > start + 1) {
+                end--;
+                part = sentence.substring(start, end);
+                partTokens = estimateTokenCount(part);
+            }
+
+            chunks.add(createChunk(chunkIndex++, part, partTokens));
+            start = end;
+        }
+
+        return chunkIndex;
     }
 
     /** 청크 객체를 생성한다. strip() 처리를 한 곳에서 담당한다. */
