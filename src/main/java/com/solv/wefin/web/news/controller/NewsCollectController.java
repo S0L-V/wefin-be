@@ -1,7 +1,7 @@
 package com.solv.wefin.web.news.controller;
 
-import com.solv.wefin.domain.news.crawl.ArticleCrawlService;
-import com.solv.wefin.domain.news.service.NewsCollectService;
+import com.solv.wefin.domain.news.ingestion.service.ArticleCrawlService;
+import com.solv.wefin.domain.news.ingestion.service.NewsCollectService;
 import com.solv.wefin.global.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;

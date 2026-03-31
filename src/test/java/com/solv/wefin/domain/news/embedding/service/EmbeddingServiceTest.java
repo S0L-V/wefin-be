@@ -1,11 +1,12 @@
 package com.solv.wefin.domain.news.embedding.service;
 
+import com.solv.wefin.domain.news.embedding.chunk.ArticleChunker;
 import com.solv.wefin.domain.news.embedding.client.OpenAiEmbeddingClient;
 import com.solv.wefin.domain.news.embedding.entity.ArticleEmbedding;
-import com.solv.wefin.domain.news.entity.NewsArticle;
-import com.solv.wefin.domain.news.entity.NewsArticle.CrawlStatus;
-import com.solv.wefin.domain.news.entity.NewsArticle.EmbeddingStatus;
-import com.solv.wefin.domain.news.repository.NewsArticleRepository;
+import com.solv.wefin.domain.news.article.entity.NewsArticle;
+import com.solv.wefin.domain.news.article.entity.NewsArticle.CrawlStatus;
+import com.solv.wefin.domain.news.article.entity.NewsArticle.EmbeddingStatus;
+import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
