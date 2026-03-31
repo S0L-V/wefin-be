@@ -1,7 +1,10 @@
 package com.solv.wefin.domain.auth.service;
 
+import com.solv.wefin.domain.auth.dto.SignupCommand;
+import com.solv.wefin.domain.auth.dto.SignupResult;
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
+import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -23,9 +26,14 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final GroupService groupService;
 
     @Transactional
-    public User signup(String email, String nickname, String password) {
+    public SignupResult signup(SignupCommand command) {
+        String email = command.email();
+        String nickname = command.nickname();
+        String password = command.password();
+
         // null 처리
         if (email == null || nickname == null || password == null) {
             throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
@@ -60,7 +68,14 @@ public class AuthService {
                     .password(passwordEncoder.encode(password))
                     .build();
 
-            return userRepository.save(user);
+            User savedUser = userRepository.save(user);
+            groupService.createDefaultGroup(savedUser);
+
+            return new SignupResult(
+                    savedUser.getUserId(),
+                    savedUser.getEmail(),
+                    savedUser.getNickname()
+            );
 
         } catch (DataIntegrityViolationException e) {
             throw mapConstraintViolation(e);

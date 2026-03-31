@@ -1,10 +1,12 @@
 package com.solv.wefin.domain.auth.service;
 
+import com.solv.wefin.domain.auth.dto.SignupCommand;
+import com.solv.wefin.domain.auth.dto.SignupResult;
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
+import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
-import com.solv.wefin.web.auth.dto.SignupResponse;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -25,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,6 +38,9 @@ class AuthServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private GroupService groupService;
 
     @InjectMocks
     private AuthService authService;
@@ -68,20 +74,24 @@ class AuthServiceTest {
             when(userRepository.save(any(User.class))).thenReturn(savedUser);
 
             // when
-            User response = authService.signup(rawEmail, rawNickname, rawPassword);
+            SignupResult response = authService.signup(
+                    new SignupCommand(rawEmail, rawNickname, rawPassword)
+            );
 
             // then
             ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
             verify(userRepository).save(captor.capture());
+            verify(groupService).createDefaultGroup(savedUser);
+
             User user = captor.getValue();
 
             assertAll(
                     () -> assertThat(user.getEmail()).isEqualTo("test@example.com"),
                     () -> assertThat(user.getNickname()).isEqualTo("testuser"),
                     () -> assertThat(user.getPassword()).isEqualTo("encoded-password"),
-                    () -> assertThat(response.getUserId()).isEqualTo(userId),
-                    () -> assertThat(response.getEmail()).isEqualTo("test@example.com"),
-                    () -> assertThat(response.getNickname()).isEqualTo("testuser")
+                    () -> assertThat(response.userId()).isEqualTo(userId),
+                    () -> assertThat(response.email()).isEqualTo("test@example.com"),
+                    () -> assertThat(response.nickname()).isEqualTo("testuser")
             );
         }
 
@@ -94,13 +104,16 @@ class AuthServiceTest {
             // when
             BusinessException exception = assertThrows(
                     BusinessException.class,
-                    () -> authService.signup("test@example.com", "nickname", "pass1234")
+                    () -> authService.signup(
+                            new SignupCommand("test@example.com", "nickname", "pass1234")
+                    )
             );
 
             // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_EMAIL_DUPLICATED);
             verify(userRepository, never()).existsByNickname(anyString());
             verify(userRepository, never()).save(any(User.class));
+            verify(groupService, never()).createDefaultGroup(any(User.class));
         }
 
         @Test
@@ -113,12 +126,15 @@ class AuthServiceTest {
             // when
             BusinessException exception = assertThrows(
                     BusinessException.class,
-                    () -> authService.signup("test@example.com", "nickname", "pass1234")
+                    () -> authService.signup(
+                            new SignupCommand("test@example.com", "nickname", "pass1234")
+                    )
             );
 
             // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_NICKNAME_DUPLICATED);
             verify(userRepository, never()).save(any(User.class));
+            verify(groupService, never()).createDefaultGroup(any(User.class));
         }
 
         @Test
@@ -126,12 +142,16 @@ class AuthServiceTest {
         void signup_fail_when_input_invalid() {
             BusinessException nullException = assertThrows(
                     BusinessException.class,
-                    () -> authService.signup(null, "nickname", "pass1234")
+                    () -> authService.signup(
+                            new SignupCommand(null, "nickname", "pass1234")
+                    )
             );
 
             BusinessException blankException = assertThrows(
                     BusinessException.class,
-                    () -> authService.signup("   ", "nickname", "pass1234")
+                    () -> authService.signup(
+                            new SignupCommand("   ", "nickname", "pass1234")
+                    )
             );
 
             assertAll(
@@ -140,6 +160,7 @@ class AuthServiceTest {
             );
 
             verify(userRepository, never()).save(any(User.class));
+            verify(groupService, never()).createDefaultGroup(any(User.class));
         }
 
         @Test
@@ -159,11 +180,14 @@ class AuthServiceTest {
             // when
             BusinessException exception = assertThrows(
                     BusinessException.class,
-                    () -> authService.signup("test@example.com", "nickname", "pass1234")
+                    () -> authService.signup(
+                            new SignupCommand("test@example.com", "nickname", "pass1234")
+                    )
             );
 
             // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_EMAIL_DUPLICATED);
+            verify(groupService, never()).createDefaultGroup(any(User.class));
         }
 
         @Test
@@ -183,11 +207,14 @@ class AuthServiceTest {
             // when
             BusinessException exception = assertThrows(
                     BusinessException.class,
-                    () -> authService.signup("test@example.com", "nickname", "pass1234")
+                    () -> authService.signup(
+                            new SignupCommand("test@example.com", "nickname", "pass1234")
+                    )
             );
 
             // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_NICKNAME_DUPLICATED);
+            verify(groupService, never()).createDefaultGroup(any(User.class));
         }
     }
 }
