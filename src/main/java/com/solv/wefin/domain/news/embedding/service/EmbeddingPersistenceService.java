@@ -4,6 +4,8 @@ import com.solv.wefin.domain.news.embedding.entity.ArticleEmbedding;
 import com.solv.wefin.domain.news.embedding.repository.ArticleEmbeddingRepository;
 import com.solv.wefin.domain.news.entity.NewsArticle;
 import com.solv.wefin.domain.news.repository.NewsArticleRepository;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -61,7 +63,7 @@ public class EmbeddingPersistenceService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markFailed(Long articleId, String errorMessage) {
         NewsArticle article = newsArticleRepository.findById(articleId)
-                .orElseThrow(() -> new IllegalStateException("기사를 찾을 수 없습니다: " + articleId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.EMBEDDING_ARTICLE_NOT_FOUND));
         article.markEmbeddingFailed(truncate(errorMessage, 500));
     }
 
