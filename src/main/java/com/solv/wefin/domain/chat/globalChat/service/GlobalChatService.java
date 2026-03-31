@@ -45,7 +45,6 @@ public class GlobalChatService {
 
         validateMessage(content);
 
-        OffsetDateTime now = OffsetDateTime.now();
         String blockKey = ChatScope.GLOBAL + ":" + userId;
         Object lock = chatLocks.computeIfAbsent(blockKey, key -> new Object());
 
@@ -55,29 +54,25 @@ public class GlobalChatService {
            단일 서버 기준 최소 방어
           */
 
-        try {
-            synchronized (lock) {
-                long recentCount = globalChatMessageRepository.countByUser_UserIdAndCreatedAtAfter(
-                        userId,
-                        now.minusSeconds(3)
-                );
+        synchronized (lock) {
+            OffsetDateTime now = OffsetDateTime.now();
 
-                // 도배 체크
-                chatSpamGuard.validate(blockKey, recentCount, now);
+            long recentCount = globalChatMessageRepository.countByUser_UserIdAndCreatedAtAfter(
+                    userId,
+                    now.minusSeconds(3)
+            );
 
-                User user = userRepository.findById(userId)
-                        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+            // 도배 체크
+            chatSpamGuard.validate(blockKey, recentCount, now);
 
-                GlobalChatMessage savedMessage = globalChatMessageRepository.save(
-                        GlobalChatMessage.createUserMessage(user, content)
-                );
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-                eventPublisher.publishEvent(toEvent(savedMessage));
-            }
-        } finally {
-            if (chatSpamGuard.getRemainingSeconds(blockKey, OffsetDateTime.now()) == 0L) {
-                chatLocks.remove(blockKey, lock);
-            }
+            GlobalChatMessage savedMessage = globalChatMessageRepository.save(
+                    GlobalChatMessage.createUserMessage(user, content)
+            );
+
+            eventPublisher.publishEvent(toEvent(savedMessage));
         }
     }
 
