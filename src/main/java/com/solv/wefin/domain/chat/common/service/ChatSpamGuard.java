@@ -1,6 +1,6 @@
 package com.solv.wefin.domain.chat.common.service;
 
-import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.domain.chat.common.exception.ChatSpamException;
 import com.solv.wefin.global.error.ErrorCode;
 import org.springframework.stereotype.Service;
 
@@ -31,23 +31,25 @@ public class ChatSpamGuard {
             if(now.isBefore(blockedUntil)) {
                 // 아직 차단 시간 안지났으면 바로 차단
                 long remainingSeconds = getRemainingSeconds(blockKey, now);
-                throw new BusinessException(
+                throw new ChatSpamException(
                         ErrorCode.CHAT_SPAM_DETECTED,
-                        "도배가 감지되었습니다. " + remainingSeconds + "초 후에 다시 시도해주세요."
+                        "도배가 감지되었습니다. " + remainingSeconds + "초 후에 다시 시도해주세요.",
+                        blockKey
                 );
             }
 
             // 차단 시간 지났으면 해제
-            blockedUsers.remove(blockKey);
+            blockedUsers.remove(blockKey, blockedUntil  );
 
         }
 
         // 최근 메시지 개수 기준 차단
         if(recentCount >= 5) {
             blockedUsers.put(blockKey, now.plusSeconds(BLOCK_SECONDS));
-            throw new BusinessException(
+            throw new ChatSpamException(
                     ErrorCode.CHAT_SPAM_DETECTED,
-                    "도배가 감지되었습니다. " + BLOCK_SECONDS + "초 후에 다시 시도해주세요."
+                    "도배가 감지되었습니다. " + BLOCK_SECONDS + "초 후에 다시 시도해주세요.",
+                    blockKey
             );
         }
 
@@ -58,7 +60,12 @@ public class ChatSpamGuard {
 
         OffsetDateTime blockedUntil = blockedUsers.get(blockKey);
 
-        if (blockedUntil == null || !now.isBefore(blockedUntil)) {
+        if (blockedUntil == null) {
+            return 0L;
+        }
+
+        if (!now.isBefore(blockedUntil)) {
+            blockedUsers.remove(blockKey, blockedUntil);
             return 0L;
         }
 

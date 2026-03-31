@@ -63,9 +63,9 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             }
 
             accessor.getSessionAttributes().put("userId", userId);
-            accessor.setUser(new StompPrincipal(userIdHeader));
+            accessor.setUser(new StompPrincipal(userId.toString()));
 
-            log.info("CONNECT userIdHeader={}", userIdHeader);
+            log.info("CONNECT userIdHeader={}", userId.toString());
             log.info("existsById={}", exists);
             log.info("WebSocket CONNECT user={}", userId);
         }
