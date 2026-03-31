@@ -34,6 +34,7 @@ public class EmbeddingPersistenceService {
         for (NewsArticle article : articles) {
             article.markEmbeddingProcessing();
         }
+        newsArticleRepository.saveAll(articles);
     }
 
     /**
@@ -48,6 +49,7 @@ public class EmbeddingPersistenceService {
         for (NewsArticle article : articles) {
             article.markEmbeddingSuccess();
         }
+        newsArticleRepository.saveAll(articles);
     }
 
     /**
