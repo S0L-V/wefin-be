@@ -1,17 +1,17 @@
 package com.solv.wefin.domain.game.room.service;
 
 import com.solv.wefin.domain.game.participant.entity.GameParticipant;
+import com.solv.wefin.domain.game.participant.entity.GameParticipant;
 import com.solv.wefin.domain.game.participant.entity.ParticipantStatus;
 import com.solv.wefin.domain.game.participant.repository.GameParticipantRepository;
+import com.solv.wefin.domain.game.room.dto.RoomDetailInfo;
+import com.solv.wefin.domain.game.room.dto.RoomListInfo;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.room.entity.RoomStatus;
 import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
-import com.solv.wefin.web.game.room.dto.request.CreateRoomRequest;
-import com.solv.wefin.web.game.room.dto.response.CreateRoomResponse;
-import com.solv.wefin.web.game.room.dto.response.JoinRoomResponse;
-import com.solv.wefin.web.game.room.dto.response.RoomListResponse;
+import com.solv.wefin.domain.game.room.dto.CreateRoomCommand;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,6 +50,8 @@ class GameRoomServiceTest {
     private static final UUID TEST_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000001");
     private static final Long TEST_GROUP_ID = 1L;
 
+    // === API 1: 게임방 생성 테스트 ===
+
     @Test
     @DisplayName("게임방 생성 성공 — 정상적으로 방과 참가자가 저장된다")
     void createRoom_success() {
@@ -62,13 +64,13 @@ class GameRoomServiceTest {
                 any(UUID.class), any(OffsetDateTime.class), any(OffsetDateTime.class)))
                 .willReturn(false);
 
-        CreateRoomRequest request = createRequest();
+        CreateRoomCommand request = createCommand();
 
         // When — 방 생성 호출
-        CreateRoomResponse response = gameRoomService.createRoom(TEST_USER_ID, TEST_GROUP_ID, request);
+        GameRoom result = gameRoomService.createRoom(TEST_USER_ID, TEST_GROUP_ID, request);
 
         // Then — 결과 검증
-        assertThat(response.getStatus()).isEqualTo(RoomStatus.WAITING);
+        assertThat(result.getStatus()).isEqualTo(RoomStatus.WAITING);
 
         // GameRoom이 저장됐는지 확인
         verify(gameRoomRepository).save(any(GameRoom.class));
@@ -89,7 +91,7 @@ class GameRoomServiceTest {
                 any(UUID.class), any(OffsetDateTime.class), any(OffsetDateTime.class)))
                 .willReturn(true);
 
-        CreateRoomRequest request = createRequest();
+        CreateRoomCommand request = createCommand();
 
         // When & Then — BusinessException이 발생해야 한다
         assertThatThrownBy(() ->
@@ -121,10 +123,12 @@ class GameRoomServiceTest {
                 .willReturn(1);
 
         // When
-        List<RoomListResponse> result = gameRoomService.getRooms(TEST_GROUP_ID, TEST_USER_ID);
+        List<RoomListInfo> result = gameRoomService.getRooms(TEST_GROUP_ID, TEST_USER_ID);
 
         // Then — 2개 반환 (활성 1 + 완료 1)
         assertThat(result).hasSize(2);
+        assertThat(result.get(0).room()).isEqualTo(activeRoom);
+        assertThat(result.get(0).playerCount()).isEqualTo(1);
 
         verify(gameRoomRepository).findByGroupIdAndStatusIn(eq(TEST_GROUP_ID), anyList());
         verify(gameRoomRepository).findFinishedRoomsByGroupIdAndUserId(TEST_GROUP_ID, TEST_USER_ID);
@@ -140,10 +144,42 @@ class GameRoomServiceTest {
                 .willReturn(Collections.emptyList());
 
         // When
-        List<RoomListResponse> result = gameRoomService.getRooms(TEST_GROUP_ID, TEST_USER_ID);
+        List<RoomListInfo> result = gameRoomService.getRooms(TEST_GROUP_ID, TEST_USER_ID);
 
         // Then — 빈 리스트 (에러 아님)
         assertThat(result).isEmpty();
+    }
+
+    // === API 3: 게임방 상세 조회 테스트 ===
+
+    @Test
+    @DisplayName("게임방 상세 조회 성공 — 방 정보 + 참가자 목록 반환")
+    void getRoomDetail_success() {
+        // Given — 방이 존재하고 참가자 1명(방장)이 있다
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        GameParticipant leader = GameParticipant.createLeader(gameRoom, TEST_USER_ID);
+
+        given(gameRoomRepository.findById(roomId))
+                .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomOrderByJoinedAtAsc(gameRoom))
+                .willReturn(List.of(leader));
+
+        // When
+        RoomDetailInfo result = gameRoomService.getRoomDetail(roomId);
+
+        // Then — 방 정보 검증
+        assertThat(result.room().getRoomId()).isEqualTo(roomId);
+        assertThat(result.room().getStatus()).isEqualTo(RoomStatus.WAITING);
+        assertThat(result.room().getSeed()).isEqualTo(10000000L);
+
+        // Then — 참가자 목록 검증
+        assertThat(result.participants()).hasSize(1);
+        assertThat(result.participants().get(0).getIsLeader()).isTrue();
+        assertThat(result.participants().get(0).getUserId()).isEqualTo(TEST_USER_ID);
+
+        verify(gameRoomRepository).findById(roomId);
+        verify(gameParticipantRepository).findByGameRoomOrderByJoinedAtAsc(gameRoom);
     }
 
     @Test
@@ -166,7 +202,6 @@ class GameRoomServiceTest {
         verify(gameParticipantRepository, never()).findByGameRoomOrderByJoinedAtAsc(any());
     }
 
-
     // === API 4: 게임방 참가 테스트 ===
 
     private static final UUID OTHER_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000002");
@@ -186,11 +221,11 @@ class GameRoomServiceTest {
                 .willReturn(1);
 
         // When
-        JoinRoomResponse response = gameRoomService.joinRoom(roomId, OTHER_USER_ID);
+        GameParticipant result = gameRoomService.joinRoom(roomId, OTHER_USER_ID);
 
         // Then
-        assertThat(response.getRoomId()).isEqualTo(roomId);
-        assertThat(response.getRoomStatus()).isEqualTo(RoomStatus.WAITING);
+        assertThat(result.getGameRoom().getRoomId()).isEqualTo(roomId);
+        assertThat(result.getGameRoom().getStatus()).isEqualTo(RoomStatus.WAITING);
         verify(gameParticipantRepository).save(any(GameParticipant.class));
     }
 
@@ -210,10 +245,10 @@ class GameRoomServiceTest {
                 .willReturn(3);
 
         // When
-        JoinRoomResponse response = gameRoomService.joinRoom(roomId, OTHER_USER_ID);
+        GameParticipant result = gameRoomService.joinRoom(roomId, OTHER_USER_ID);
 
         // Then
-        assertThat(response.getRoomStatus()).isEqualTo(RoomStatus.IN_PROGRESS);
+        assertThat(result.getGameRoom().getStatus()).isEqualTo(RoomStatus.IN_PROGRESS);
         verify(gameParticipantRepository).save(any(GameParticipant.class));
     }
 
@@ -234,11 +269,11 @@ class GameRoomServiceTest {
                 .willReturn(3);
 
         // When
-        JoinRoomResponse response = gameRoomService.joinRoom(roomId, OTHER_USER_ID);
+        GameParticipant result = gameRoomService.joinRoom(roomId, OTHER_USER_ID);
 
         // Then — 기존 레코드 재활용, save() 호출 안 함 (더티 체킹)
-        assertThat(response.getRoomStatus()).isEqualTo(RoomStatus.WAITING);
-        assertThat(leftParticipant.getStatus()).isEqualTo(ParticipantStatus.ACTIVE); // LEFT → ACTIVE
+        assertThat(result.getGameRoom().getStatus()).isEqualTo(RoomStatus.WAITING);
+        assertThat(result.getStatus()).isEqualTo(ParticipantStatus.ACTIVE); // LEFT → ACTIVE
         verify(gameParticipantRepository, never()).save(any()); // 더티 체킹이니까 save 안 부름
     }
 
@@ -335,9 +370,10 @@ class GameRoomServiceTest {
 
     // === 헬퍼 메서드 ===
 
-    private CreateRoomRequest createRequest() {
-        return new CreateRoomRequest(10000000L, 6, 7);
+    private CreateRoomCommand createCommand() {
+        return new CreateRoomCommand(10000000L, 6, 7);
     }
+
 
     private GameRoom createGameRoom() {
         return GameRoom.create(TEST_GROUP_ID, TEST_USER_ID, 10000000L,

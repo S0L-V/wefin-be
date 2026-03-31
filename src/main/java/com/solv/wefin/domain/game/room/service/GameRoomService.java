@@ -2,6 +2,9 @@ package com.solv.wefin.domain.game.room.service;
 
 import com.solv.wefin.domain.game.participant.entity.GameParticipant;
 import com.solv.wefin.domain.game.participant.entity.ParticipantStatus;
+import com.solv.wefin.domain.game.room.dto.CreateRoomCommand;
+import com.solv.wefin.domain.game.room.dto.RoomDetailInfo;
+import com.solv.wefin.domain.game.room.dto.RoomListInfo;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.participant.repository.GameParticipantRepository;
 import com.solv.wefin.domain.game.room.entity.RoomStatus;
@@ -15,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -36,7 +38,7 @@ public class GameRoomService {
 
     //게임방 생성
     @Transactional //트랜잭션으로 방생성과 방장유저 지정 동시에 이루어짐
-    public CreateRoomResponse createRoom(UUID userId, Long groupId, CreateRoomRequest request) {
+    public GameRoom createRoom(UUID userId, Long groupId, CreateRoomCommand command) {
         //그룹 게임방 있으면 차단
         List<RoomStatus> activeStatuses = List.of(RoomStatus.WAITING, RoomStatus.IN_PROGRESS);
         if (gameRoomRepository.existsByGroupIdAndStatusIn(groupId, activeStatuses)) {
@@ -57,15 +59,15 @@ public class GameRoomService {
 
         //endDate 계산
         LocalDate rangeStart = LocalDate.of(2020,1,1);
-        LocalDate rangeEnd = LocalDate.of(2024, 12, 31).minusMonths(request.getPeriodMonths());
+        LocalDate rangeEnd = LocalDate.of(2024, 12, 31).minusMonths(command.periodMonths());
         long daysBetween = ChronoUnit.DAYS.between(rangeStart, rangeEnd);
         long randomDays = ThreadLocalRandom.current().nextLong(daysBetween + 1);
         LocalDate startDate = rangeStart.plusDays(randomDays);
-        LocalDate endDate = startDate.plusMonths(request.getPeriodMonths());
+        LocalDate endDate = startDate.plusMonths(command.periodMonths());
 
         //게임룸 저장
-        GameRoom gameRoom = GameRoom.create(groupId, userId, request.getSeedMoney(), request.getPeriodMonths(),
-                request.getMoveDays(), startDate, endDate);
+        GameRoom gameRoom = GameRoom.create(groupId, userId, command.seedMoney(), command.periodMonths(),
+                command.moveDays(), startDate, endDate);
         gameRoomRepository.save(gameRoom);
 
         //첫 번째 참가자 = 방장
@@ -73,10 +75,10 @@ public class GameRoomService {
 
         gameParticipantRepository.save(host);
 
-        return CreateRoomResponse.from(gameRoom);
+        return gameRoom;
     }
 
-    public List<RoomListResponse> getRooms(Long groupId, UUID userId) {
+    public List<RoomListInfo> getRooms(Long groupId, UUID userId) {
         //그룹 활성화된 방
         List<RoomStatus> activeStatuses = List.of(RoomStatus.WAITING, RoomStatus.IN_PROGRESS);
         List<GameRoom> activeRooms = gameRoomRepository.findByGroupIdAndStatusIn(groupId, activeStatuses);
@@ -91,25 +93,22 @@ public class GameRoomService {
         //참가자 수 count
         return rooms.stream().map(room -> {
                     int playerCount = gameParticipantRepository.countByGameRoomAndStatus(room, ParticipantStatus.ACTIVE);
-                    return RoomListResponse.from(room, playerCount);
+                    return new RoomListInfo(room, playerCount);
                 })
                 .collect(Collectors.toList());
     }
 
     //방 상세 정보
-    public RoomDetailResponse getRoomDetail(UUID roomId) {
+    public RoomDetailInfo getRoomDetail(UUID roomId) {
 
         // 방 조회
         GameRoom gameRoom= gameRoomRepository.findById(roomId).orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_FOUND));
 
         //참가자 상세
-        List<ParticipantDetailDto> participants = gameParticipantRepository
-                .findByGameRoomOrderByJoinedAtAsc(gameRoom)
-                .stream()
-                .map(p->ParticipantDetailDto.from(p,"유저묵데이터"))
-                .collect(Collectors.toList());
+        List<GameParticipant> participants = gameParticipantRepository.findByGameRoomOrderByJoinedAtAsc(gameRoom);
+
         //참가자 상세 + 방 상세 저보
-        return RoomDetailResponse.from(gameRoom, participants);
+        return new RoomDetailInfo(gameRoom, participants);
     }
 
     /**
@@ -118,7 +117,7 @@ public class GameRoomService {
      *
      */
     @Transactional
-    public JoinRoomResponse joinRoom(UUID roomId, UUID userId) {
+    public GameParticipant joinRoom(UUID roomId, UUID userId) {
 
         // 방 조회 + 락 시작
         GameRoom gameRoom = gameRoomRepository.findByIdForUpdate(roomId)
@@ -142,11 +141,11 @@ public class GameRoomService {
                 throw new BusinessException(ErrorCode.ROOM_FULL);
             }
             participant.rejoin();
-            return JoinRoomResponse.from(participant);
+            return participant;
         }
 
 
-        // 인원 초과 검사 (신규만, 최대 6명)
+        // 인원 초과 검사 (신규만, 근데 지금 최대 6명)
         int currentPlayers = gameParticipantRepository.countByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
         if (currentPlayers >= 6) {
             throw new BusinessException(ErrorCode.ROOM_FULL);
@@ -156,7 +155,7 @@ public class GameRoomService {
         GameParticipant member = GameParticipant.createMember(gameRoom, userId);
         gameParticipantRepository.save(member);
 
-        return JoinRoomResponse.from(member);
+        return member;
     }
 
 
