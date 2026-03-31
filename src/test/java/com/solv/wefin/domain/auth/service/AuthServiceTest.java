@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.sql.SQLException;
 import java.util.UUID;
@@ -62,7 +63,7 @@ class AuthServiceTest {
                     .password("encoded-password")
                     .build();
 
-            setUserId(savedUser, userId);
+            ReflectionTestUtils.setField(savedUser, "userId", userId);
 
             when(userRepository.save(any(User.class))).thenReturn(savedUser);
 
@@ -187,16 +188,6 @@ class AuthServiceTest {
 
             // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_NICKNAME_DUPLICATED);
-        }
-    }
-
-    private void setUserId(User user, UUID userId) {
-        try {
-            var field = User.class.getDeclaredField("userId");
-            field.setAccessible(true);
-            field.set(user, userId);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         }
     }
 }
