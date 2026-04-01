@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -76,10 +76,11 @@ public class EmbeddingService {
     }
 
     private List<NewsArticle> findEmbeddingTargets() {
-        LocalDateTime staleBefore = LocalDateTime.now().minusMinutes(STALE_PROCESSING_MINUTES);
+        OffsetDateTime staleBefore = OffsetDateTime.now().minusMinutes(STALE_PROCESSING_MINUTES);
         return newsArticleRepository.findEmbeddingTargets(
                 CrawlStatus.SUCCESS,
                 List.of(EmbeddingStatus.PENDING, EmbeddingStatus.FAILED),
+                EmbeddingStatus.PROCESSING,
                 MAX_RETRY,
                 staleBefore,
                 PageRequest.of(0, BATCH_SIZE));

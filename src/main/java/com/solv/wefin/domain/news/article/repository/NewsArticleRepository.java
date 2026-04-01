@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> {
@@ -18,18 +18,19 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
 
     /**
      * 임베딩 대상 기사를 조회한다.
-     * PENDING/FAILED 상태이거나, PROCESSING 상태에서 staleBefore 이전에 시도된 기사(크래시로 방치된 건)를 포함한다.
+     * PENDING/FAILED 상태이거나, PROCESSING 상태에서 staleBefore 이전에 시도된 기사를 포함한다.
      */
     @Query("SELECT a FROM NewsArticle a " +
             "WHERE a.crawlStatus = :crawlStatus " +
             "AND a.embeddingRetryCount < :maxRetryCount " +
             "AND (a.embeddingStatus IN :embeddingStatuses " +
-            "     OR (a.embeddingStatus = 'PROCESSING' AND a.embeddingAttemptedAt < :staleBefore)) " +
+            "     OR (a.embeddingStatus = :processingStatus AND a.embeddingAttemptedAt < :staleBefore)) " +
             "ORDER BY a.collectedAt DESC")
     List<NewsArticle> findEmbeddingTargets(
             @Param("crawlStatus") NewsArticle.CrawlStatus crawlStatus,
             @Param("embeddingStatuses") List<NewsArticle.EmbeddingStatus> embeddingStatuses,
+            @Param("processingStatus") NewsArticle.EmbeddingStatus processingStatus,
             @Param("maxRetryCount") int maxRetryCount,
-            @Param("staleBefore") LocalDateTime staleBefore,
+            @Param("staleBefore") OffsetDateTime staleBefore,
             Pageable pageable);
 }

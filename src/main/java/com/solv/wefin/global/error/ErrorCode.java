@@ -54,6 +54,9 @@ public enum ErrorCode {
     // Embedding
     EMBEDDING_ARTICLE_NOT_FOUND(500, "임베딩 대상 기사를 찾을 수 없습니다."),
 
+    // Tagging
+    TAGGING_ARTICLE_NOT_FOUND(500, "태깅 대상 기사를 찾을 수 없습니다."),
+
     // GameRoom
     ROOM_NOT_FOUND(404,"게임장을 찾을 수 없습니다."),
     ROOM_ALREADY_EXISTS(409, "이미 진행 중이거나 대기 중인 게임방이 있습니다."),
