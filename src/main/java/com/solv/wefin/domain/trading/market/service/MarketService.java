@@ -53,6 +53,7 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
                 }
                 throw new BusinessException(ErrorCode.MARKET_API_FAILED);
             } catch (TimeoutException | InterruptedException e) {
+                Thread.currentThread().interrupt();
                 throw new BusinessException(ErrorCode.MARKET_API_FAILED);
             }
         }
