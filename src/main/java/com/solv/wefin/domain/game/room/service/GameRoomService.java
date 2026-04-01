@@ -163,7 +163,7 @@ public class GameRoomService {
      동시 퇴장 시 방장 위임 충돌 미리 방지 - 비관적 락
      */
     @Transactional
-    public void LeaveRoom(UUID roomId, UUID userId) {
+    public void leaveRoom(UUID roomId, UUID userId) {
 
         //게임방 조회
         GameRoom gameRoom = gameRoomRepository.findByIdForUpdate(roomId)
@@ -175,7 +175,7 @@ public class GameRoomService {
         //참가자 조회
         GameParticipant participant = gameParticipantRepository.findByGameRoomAndUserId(gameRoom, userId)
                 .filter(p->p.getStatus() == ParticipantStatus.ACTIVE)
-                .orElseThrow(()->new BusinessException(ErrorCode.ROOM_NOT_FOUND));
+                .orElseThrow(()->new BusinessException(ErrorCode.ROOM_NOT_PARTICIPANT));
 
         // 방장 여부 기록
         Boolean wasLeader = participant.getIsLeader();
@@ -188,7 +188,7 @@ public class GameRoomService {
 
         //남은 ACTIVE 유저 조회
         List<GameParticipant> remainingActive = gameParticipantRepository.findByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
-        // 아무도 없으면 방 종료다음
+        // 아무도 없으면 방 종료
         if (remainingActive.isEmpty()) {
             gameRoom.finish();
             return;
@@ -196,8 +196,8 @@ public class GameRoomService {
         // 방장 위임
         if (wasLeader) {
             int randomIndex = ThreadLocalRandom.current().nextInt(remainingActive.size());
-            GameParticipant newleader = remainingActive.get(randomIndex);
-            newleader.assignLeader();
+            GameParticipant newLeader = remainingActive.get(randomIndex);
+            newLeader.assignLeader();
         }
 
 

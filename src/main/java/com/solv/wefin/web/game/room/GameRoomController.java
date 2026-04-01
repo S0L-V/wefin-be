@@ -86,7 +86,7 @@ public class GameRoomController {
     @DeleteMapping("/{roomId}/leave")
     public ResponseEntity<ApiResponse<LeaveRoomResponse>> leaveRoom(@PathVariable UUID roomId) {
 
-        gameRoomService.LeaveRoom(roomId, TEMP_USER_ID);
+        gameRoomService.leaveRoom(roomId, TEMP_USER_ID);
         LeaveRoomResponse response = LeaveRoomResponse.success();
 
         return ResponseEntity.ok(ApiResponse.success(response));

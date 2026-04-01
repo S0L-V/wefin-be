@@ -368,6 +368,171 @@ class GameRoomServiceTest {
         verify(gameParticipantRepository, never()).save(any());
     }
 
+    // === API 5: 게임방 퇴장 테스트 ===
+
+    @Test
+    @DisplayName("게임방 퇴장 성공 — 일반 참가자가 퇴장하면 LEFT 상태로 변경")
+    void leaveRoom_success_member() {
+        // Given — WAITING 방, ACTIVE 일반 참가자
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        GameParticipant member = GameParticipant.createMember(gameRoom, OTHER_USER_ID);
+
+        given(gameRoomRepository.findByIdForUpdate(roomId))
+                .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
+                .willReturn(Optional.of(member));
+        // 퇴장 후 남은 참가자 1명 (방장)
+        GameParticipant leader = GameParticipant.createLeader(gameRoom, TEST_USER_ID);
+        given(gameParticipantRepository.findByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE))
+                .willReturn(List.of(leader));
+
+        // When
+        gameRoomService.leaveRoom(roomId, OTHER_USER_ID);
+
+        // Then — 참가자 상태가 LEFT로 변경
+        assertThat(member.getStatus()).isEqualTo(ParticipantStatus.LEFT);
+        // 방장은 변경되지 않음
+        assertThat(leader.getIsLeader()).isTrue();
+        // 방은 종료되지 않음
+        assertThat(gameRoom.getStatus()).isEqualTo(RoomStatus.WAITING);
+    }
+
+    @Test
+    @DisplayName("게임방 퇴장 성공 — 방장이 나가면 남은 참가자에게 방장 위임")
+    void leaveRoom_success_leaderDelegation() {
+        // Given — 방장 + 일반 참가자 1명
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        GameParticipant leader = GameParticipant.createLeader(gameRoom, TEST_USER_ID);
+        GameParticipant member = GameParticipant.createMember(gameRoom, OTHER_USER_ID);
+
+        given(gameRoomRepository.findByIdForUpdate(roomId))
+                .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, TEST_USER_ID))
+                .willReturn(Optional.of(leader));
+        // 퇴장 후 남은 ACTIVE 참가자: member 1명
+        given(gameParticipantRepository.findByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE))
+                .willReturn(List.of(member));
+
+        // When
+        gameRoomService.leaveRoom(roomId, TEST_USER_ID);
+
+        // Then — 기존 방장은 LEFT + 방장 해제
+        assertThat(leader.getStatus()).isEqualTo(ParticipantStatus.LEFT);
+        assertThat(leader.getIsLeader()).isFalse();
+        // 남은 참가자가 새 방장이 됨
+        assertThat(member.getIsLeader()).isTrue();
+        // 방은 종료되지 않음
+        assertThat(gameRoom.getStatus()).isEqualTo(RoomStatus.WAITING);
+    }
+
+    @Test
+    @DisplayName("게임방 퇴장 성공 — 마지막 사람이 나가면 방 종료")
+    void leaveRoom_success_lastPersonFinishesRoom() {
+        // Given — 참가자 1명만 있는 방
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        GameParticipant leader = GameParticipant.createLeader(gameRoom, TEST_USER_ID);
+
+        given(gameRoomRepository.findByIdForUpdate(roomId))
+                .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, TEST_USER_ID))
+                .willReturn(Optional.of(leader));
+        // 퇴장 후 남은 ACTIVE 참가자 없음
+        given(gameParticipantRepository.findByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE))
+                .willReturn(Collections.emptyList());
+
+        // When
+        gameRoomService.leaveRoom(roomId, TEST_USER_ID);
+
+        // Then — 방이 FINISHED로 변경
+        assertThat(gameRoom.getStatus()).isEqualTo(RoomStatus.FINISHED);
+        assertThat(leader.getStatus()).isEqualTo(ParticipantStatus.LEFT);
+    }
+
+    @Test
+    @DisplayName("게임방 퇴장 실패 — 존재하지 않는 방")
+    void leaveRoom_notFound() {
+        // Given
+        UUID fakeRoomId = UUID.fromString("00000000-0000-4000-a000-999999999999");
+        given(gameRoomRepository.findByIdForUpdate(fakeRoomId))
+                .willReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> gameRoomService.leaveRoom(fakeRoomId, TEST_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.ROOM_NOT_FOUND);
+                });
+    }
+
+    @Test
+    @DisplayName("게임방 퇴장 실패 — 종료된 방")
+    void leaveRoom_finished() {
+        // Given — FINISHED 방
+        GameRoom gameRoom = createGameRoom();
+        gameRoom.start();
+        gameRoom.finish();
+        UUID roomId = gameRoom.getRoomId();
+
+        given(gameRoomRepository.findByIdForUpdate(roomId))
+                .willReturn(Optional.of(gameRoom));
+
+        // When & Then
+        assertThatThrownBy(() -> gameRoomService.leaveRoom(roomId, TEST_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.ROOM_FINISHED);
+                });
+    }
+
+    @Test
+    @DisplayName("게임방 퇴장 실패 — 참가자가 아닌 경우 (이력 없음)")
+    void leaveRoom_notParticipant() {
+        // Given — 참가 이력 자체가 없는 유저
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+
+        given(gameRoomRepository.findByIdForUpdate(roomId))
+                .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
+                .willReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> gameRoomService.leaveRoom(roomId, OTHER_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.ROOM_NOT_PARTICIPANT);
+                });
+    }
+
+    @Test
+    @DisplayName("게임방 퇴장 실패 — 이미 퇴장한 참가자 (LEFT 상태)")
+    void leaveRoom_alreadyLeft() {
+        // Given — LEFT 상태의 참가자가 다시 퇴장 요청
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        GameParticipant leftParticipant = GameParticipant.createMember(gameRoom, OTHER_USER_ID);
+        leftParticipant.leave(); // ACTIVE → LEFT
+
+        given(gameRoomRepository.findByIdForUpdate(roomId))
+                .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
+                .willReturn(Optional.of(leftParticipant)); // LEFT 상태로 존재
+
+        // When & Then — filter에서 걸러져서 ROOM_NOT_PARTICIPANT
+        assertThatThrownBy(() -> gameRoomService.leaveRoom(roomId, OTHER_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.ROOM_NOT_PARTICIPANT);
+                });
+    }
+
     // === 헬퍼 메서드 ===
 
     private CreateRoomCommand createCommand() {
