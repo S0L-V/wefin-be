@@ -61,7 +61,8 @@ public enum ErrorCode {
     ROOM_HOST_DAILY_LIMIT(409, "하루 방 생성 가능 횟수 초과"),
     ROOM_ALREADY_JOINED(409, "이미 참가 중인 방입니다."),
     ROOM_FULL(400, "인원 초과"),
-    ROOM_FINISHED(400, "종료된 방입니다.");
+    ROOM_FINISHED(400, "종료된 방입니다."),
+    ROOM_NOT_PARTICIPANT(403, "참가자가 아닙니다.");
 
     private final int status;
     private final String message;

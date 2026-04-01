@@ -7,6 +7,7 @@ import com.solv.wefin.domain.game.room.dto.RoomListInfo;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.room.service.GameRoomService;
 import com.solv.wefin.global.common.ApiResponse;
+import com.solv.wefin.web.game.room.dto.LeaveRoomResponse;
 import com.solv.wefin.web.game.room.dto.request.CreateRoomRequest;
 import com.solv.wefin.web.game.room.dto.response.*;
 import jakarta.validation.Valid;
@@ -77,6 +78,16 @@ public class GameRoomController {
 
         GameParticipant participant = gameRoomService.joinRoom(roomId, TEMP_USER_ID);
         JoinRoomResponse response = JoinRoomResponse.from(participant);
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    //게임방 퇴장
+    @DeleteMapping("/{roomId}/leave")
+    public ResponseEntity<ApiResponse<LeaveRoomResponse>> leaveRoom(@PathVariable UUID roomId) {
+
+        gameRoomService.LeaveRoom(roomId, TEMP_USER_ID);
+        LeaveRoomResponse response = LeaveRoomResponse.success();
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }

@@ -90,7 +90,17 @@ public class GameParticipant {
         this.status = LEFT;
     }
 
+    //방장 퇴장 시
+    public void resignLeader() {
+        this.isLeader = false;
+    }
+    //방장 위임
+    public void assignLeader() {
+        this.isLeader = true;
+    }
+
     public void rejoin() {
+
         this.status = ACTIVE;
     }
 }

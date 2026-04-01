@@ -77,7 +77,7 @@ public class GameRoomService {
 
         return gameRoom;
     }
-
+    // 게임방 목록 조회
     public List<RoomListInfo> getRooms(Long groupId, UUID userId) {
         //그룹 활성화된 방
         List<RoomStatus> activeStatuses = List.of(RoomStatus.WAITING, RoomStatus.IN_PROGRESS);
@@ -158,7 +158,52 @@ public class GameRoomService {
         return member;
     }
 
+    /**
+     게임방 퇴장
+     동시 퇴장 시 방장 위임 충돌 미리 방지 - 비관적 락
+     */
+    @Transactional
+    public void LeaveRoom(UUID roomId, UUID userId) {
 
+        //게임방 조회
+        GameRoom gameRoom = gameRoomRepository.findByIdForUpdate(roomId)
+                .orElseThrow(()->new BusinessException(ErrorCode.ROOM_NOT_FOUND));
+        //finished면 error 처리
+        if (gameRoom.getStatus() == RoomStatus.FINISHED) {
+            throw new BusinessException(ErrorCode.ROOM_FINISHED);
+        }
+        //참가자 조회
+        GameParticipant participant = gameParticipantRepository.findByGameRoomAndUserId(gameRoom, userId)
+                .filter(p->p.getStatus() == ParticipantStatus.ACTIVE)
+                .orElseThrow(()->new BusinessException(ErrorCode.ROOM_NOT_FOUND));
+
+        // 방장 여부 기록
+        Boolean wasLeader = participant.getIsLeader();
+        // 방장이면 비활성화
+        if (wasLeader) {
+            participant.resignLeader();
+        }
+
+        participant.leave();
+
+        //남은 ACTIVE 유저 조회
+        List<GameParticipant> remainingActive = gameParticipantRepository.findByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
+        // 아무도 없으면 방 종료다음
+        if (remainingActive.isEmpty()) {
+            gameRoom.finish();
+            return;
+        }
+        // 방장 위임
+        if (wasLeader) {
+            int randomIndex = ThreadLocalRandom.current().nextInt(remainingActive.size());
+            GameParticipant newleader = remainingActive.get(randomIndex);
+            newleader.assignLeader();
+        }
+
+
+
+
+    }
 }
 
 
@@ -197,9 +242,23 @@ gameParticipant.builder()
 
  재참가로 로직 변경
  조회 - 방 상태 체크 - 참가 기록 확인 (기록 있으면 인워 수 체크 후 재참가 로직 )- 인원체크 입장
+
+
+ 방 나가기
+
+ 동시 퇴장 방장 위임 충돌 방지 비관적 락으로 실행
+ 종료된 방인지 확인
+ 종료된 방 아니면
+ 참가자 -> left
+ 방장 -> 방장 위임
+    남은 ACTIVE 찾아서 없으면 게임 종료
+    있으면 랜덤 ACTIVE 유저 방장 위임 isLeader
+
+
+
+
  */
-/**cancel room
- *
- */
+
+
 
 
