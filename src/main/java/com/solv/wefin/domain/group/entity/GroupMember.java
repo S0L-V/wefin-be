@@ -55,12 +55,6 @@ public class GroupMember {
         if (this.joinedAt == null) {
             this.joinedAt = OffsetDateTime.now();
         }
-        if (this.role == null) {
-            this.role = GroupMemberRole.MEMBER;
-        }
-        if (this.status == null) {
-            this.status = GroupMemberStatus.ACTIVE;
-        }
     }
 
     public void leave() {

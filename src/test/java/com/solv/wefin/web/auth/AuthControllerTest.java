@@ -1,7 +1,7 @@
 package com.solv.wefin.web.auth;
 
 import com.solv.wefin.domain.auth.dto.SignupCommand;
-import com.solv.wefin.domain.auth.dto.SignupResult;
+import com.solv.wefin.domain.auth.dto.SignupInfo;
 import com.solv.wefin.domain.auth.service.AuthService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
@@ -54,7 +54,7 @@ class AuthControllerTest {
         void signup_success() throws Exception {
             UUID userId = UUID.randomUUID();
 
-            SignupResult result = new SignupResult(
+            SignupInfo result = new SignupInfo(
                     userId,
                     "test@example.com",
                     "testuser"

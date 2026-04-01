@@ -1,7 +1,7 @@
 package com.solv.wefin.domain.auth.service;
 
 import com.solv.wefin.domain.auth.dto.SignupCommand;
-import com.solv.wefin.domain.auth.dto.SignupResult;
+import com.solv.wefin.domain.auth.dto.SignupInfo;
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.group.service.GroupService;
@@ -74,7 +74,7 @@ class AuthServiceTest {
             when(userRepository.save(any(User.class))).thenReturn(savedUser);
 
             // when
-            SignupResult response = authService.signup(
+            SignupInfo response = authService.signup(
                     new SignupCommand(rawEmail, rawNickname, rawPassword)
             );
 

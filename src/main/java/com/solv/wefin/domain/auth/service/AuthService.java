@@ -1,7 +1,7 @@
 package com.solv.wefin.domain.auth.service;
 
 import com.solv.wefin.domain.auth.dto.SignupCommand;
-import com.solv.wefin.domain.auth.dto.SignupResult;
+import com.solv.wefin.domain.auth.dto.SignupInfo;
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.group.service.GroupService;
@@ -29,7 +29,7 @@ public class AuthService {
     private final GroupService groupService;
 
     @Transactional
-    public SignupResult signup(SignupCommand command) {
+    public SignupInfo signup(SignupCommand command) {
         String email = command.email();
         String nickname = command.nickname();
         String password = command.password();
@@ -71,7 +71,7 @@ public class AuthService {
             User savedUser = userRepository.save(user);
             groupService.createDefaultGroup(savedUser);
 
-            return new SignupResult(
+            return new SignupInfo(
                     savedUser.getUserId(),
                     savedUser.getEmail(),
                     savedUser.getNickname()
