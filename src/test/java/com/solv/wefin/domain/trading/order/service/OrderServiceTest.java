@@ -11,11 +11,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.solv.wefin.domain.trading.account.entity.VirtualAccount;
 import com.solv.wefin.domain.trading.account.service.VirtualAccountService;
 import com.solv.wefin.domain.trading.common.MarketPriceProvider;
 import com.solv.wefin.domain.trading.common.StockInfoProvider;
+import com.solv.wefin.domain.trading.matching.event.OrderMatchedEvent;
 import com.solv.wefin.domain.trading.order.repository.OrderRepository;
 import com.solv.wefin.domain.trading.portfolio.entity.Portfolio;
 import com.solv.wefin.domain.trading.portfolio.service.PortfolioService;
@@ -39,6 +41,8 @@ class OrderServiceTest {
 	private MarketPriceProvider marketPriceProvider;
 	@Mock
 	private StockInfoProvider stockInfoProvider;
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
 
 	@InjectMocks
 	private OrderService orderService;
@@ -64,6 +68,7 @@ class OrderServiceTest {
 		verify(orderRepository).save(any());
 		verify(tradeService).createBuyTrade(any(), eq(1L), eq(1L), eq(20), any(), any(), any(), any(), any());
 		verify(portfolioService).addHolding(eq(1L), eq(1L), eq(20), any(), any());
+		verify(eventPublisher).publishEvent(any(OrderMatchedEvent.class));
 	}
 
 	@Test
@@ -98,6 +103,11 @@ class OrderServiceTest {
 		given(marketPriceProvider.getCurrentPrice("005930"))
 			.willReturn(new BigDecimal("178000"));
 
+		VirtualAccount mockAccount = mock(VirtualAccount.class);
+		given(mockAccount.getBalance()).willReturn(new BigDecimal("9000000"));
+		given(virtualAccountService.depositBalance(eq(1L), any()))
+			.willReturn(mockAccount);
+
 		Portfolio mockPortfolio = mock(Portfolio.class);
 		given(mockPortfolio.getAvgPrice()).willReturn(new BigDecimal("170000"));
 		given(mockPortfolio.getQuantity()).willReturn(20);
@@ -116,6 +126,7 @@ class OrderServiceTest {
 		verify(portfolioService).deductQuantity(eq(1L), eq(1L), eq(10));
 		verify(virtualAccountService).depositBalance(eq(1L), any());
 		verify(virtualAccountService).addRealizedProfit(eq(1L), any());
+		verify(eventPublisher).publishEvent(any(OrderMatchedEvent.class));
 	}
 
 	@Test
