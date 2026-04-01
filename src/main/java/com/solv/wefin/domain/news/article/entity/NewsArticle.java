@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "news_article")
@@ -66,7 +67,7 @@ public class NewsArticle extends BaseEntity {
     private CrawlStatus crawlStatus = CrawlStatus.PENDING;
 
     @Column(name = "crawl_attempted_at")
-    private LocalDateTime crawlAttemptedAt;
+    private OffsetDateTime crawlAttemptedAt;
 
     @Column(name = "crawl_retry_count", nullable = false)
     private int crawlRetryCount = 0;
@@ -82,7 +83,7 @@ public class NewsArticle extends BaseEntity {
     private int embeddingRetryCount = 0;
 
     @Column(name = "embedding_attempted_at")
-    private LocalDateTime embeddingAttemptedAt;
+    private OffsetDateTime embeddingAttemptedAt;
 
     @Column(name = "embedding_error_message")
     private String embeddingErrorMessage;
@@ -133,7 +134,7 @@ public class NewsArticle extends BaseEntity {
             this.thumbnailUrl = thumbnailUrl;
         }
         this.crawlStatus = CrawlStatus.SUCCESS;
-        this.crawlAttemptedAt = LocalDateTime.now();
+        this.crawlAttemptedAt = OffsetDateTime.now();
         this.crawlErrorMessage = null;
     }
 
@@ -146,7 +147,7 @@ public class NewsArticle extends BaseEntity {
     public void markCrawlFailed(String errorMessage) {
         this.crawlRetryCount++;
         this.crawlStatus = CrawlStatus.FAILED;
-        this.crawlAttemptedAt = LocalDateTime.now();
+        this.crawlAttemptedAt = OffsetDateTime.now();
         this.crawlErrorMessage = errorMessage;
     }
 
@@ -156,7 +157,7 @@ public class NewsArticle extends BaseEntity {
      */
     public void markCrawlSkipped() {
         this.crawlStatus = CrawlStatus.SKIPPED;
-        this.crawlAttemptedAt = LocalDateTime.now();
+        this.crawlAttemptedAt = OffsetDateTime.now();
         this.crawlErrorMessage = null;
     }
 
@@ -166,7 +167,7 @@ public class NewsArticle extends BaseEntity {
      */
     public void markEmbeddingProcessing() {
         this.embeddingStatus = EmbeddingStatus.PROCESSING;
-        this.embeddingAttemptedAt = LocalDateTime.now();
+        this.embeddingAttemptedAt = OffsetDateTime.now();
         this.embeddingErrorMessage = null;
     }
 
@@ -176,7 +177,7 @@ public class NewsArticle extends BaseEntity {
      */
     public void markEmbeddingSuccess() {
         this.embeddingStatus = EmbeddingStatus.SUCCESS;
-        this.embeddingAttemptedAt = LocalDateTime.now();
+        this.embeddingAttemptedAt = OffsetDateTime.now();
         this.embeddingErrorMessage = null;
     }
 
@@ -189,7 +190,7 @@ public class NewsArticle extends BaseEntity {
     public void markEmbeddingFailed(String errorMessage) {
         this.embeddingRetryCount++;
         this.embeddingStatus = EmbeddingStatus.FAILED;
-        this.embeddingAttemptedAt = LocalDateTime.now();
+        this.embeddingAttemptedAt = OffsetDateTime.now();
         this.embeddingErrorMessage = errorMessage;
     }
 

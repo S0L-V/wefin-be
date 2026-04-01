@@ -8,4 +8,9 @@ import java.util.List;
 public interface NewsArticleTagRepository extends JpaRepository<NewsArticleTag, Long> {
 
     List<NewsArticleTag> findByNewsArticleId(Long newsArticleId);
+
+    /**
+     * 특정 기사의 태그를 전부 삭제한다. 재태깅 시 기존 태그 정리에 사용한다.
+     */
+    void deleteByNewsArticleId(Long newsArticleId);
 }
