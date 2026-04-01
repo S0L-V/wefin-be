@@ -22,4 +22,7 @@ public interface GameParticipantRepository extends JpaRepository<GameParticipant
     // 유저 참가 이력 조회 - 재참가 때 사용
     Optional<GameParticipant> findByGameRoomAndUserId(GameRoom gameRoom, UUID userId);
 
+    //방장 위임 - 참가자 중 랜덤 선택
+    List<GameParticipant> findByGameRoomAndStatus(GameRoom gameRoom, ParticipantStatus status);
+
 }
