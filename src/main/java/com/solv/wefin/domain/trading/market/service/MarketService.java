@@ -2,7 +2,6 @@ package com.solv.wefin.domain.trading.market.service;
 
 import com.solv.wefin.domain.trading.common.ExchangeRateProvider;
 import com.solv.wefin.domain.trading.market.client.HantuMarketClient;
-import com.solv.wefin.domain.trading.market.client.dto.HantuCandleApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuOrderbookApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuPriceApiResponse;
 import com.solv.wefin.domain.trading.market.dto.CandleResponse;
