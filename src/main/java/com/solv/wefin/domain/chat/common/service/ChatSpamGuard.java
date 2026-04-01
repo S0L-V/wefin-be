@@ -1,7 +1,6 @@
 package com.solv.wefin.domain.chat.common.service;
 
 import com.solv.wefin.domain.chat.common.exception.ChatSpamException;
-import com.solv.wefin.global.error.ErrorCode;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;

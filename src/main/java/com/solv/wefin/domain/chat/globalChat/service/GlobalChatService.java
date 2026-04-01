@@ -36,7 +36,6 @@ public class GlobalChatService {
     private final ChatSpamGuard chatSpamGuard;
 
     private static final long SPAM_WINDOW_SECONDS = 3L;
-    private static final long SPAM_THRESHOLD = 5L;
 
     private final Map<String, Object> chatLocks = new ConcurrentHashMap<>();
     @Transactional
