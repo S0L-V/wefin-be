@@ -2,8 +2,10 @@ package com.solv.wefin.domain.trading.market.service;
 
 import com.solv.wefin.domain.trading.common.ExchangeRateProvider;
 import com.solv.wefin.domain.trading.market.client.HantuMarketClient;
+import com.solv.wefin.domain.trading.market.client.dto.HantuCandleApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuOrderbookApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuPriceApiResponse;
+import com.solv.wefin.domain.trading.market.dto.CandleResponse;
 import com.solv.wefin.domain.trading.market.dto.OrderbookResponse;
 import com.solv.wefin.domain.trading.market.dto.PriceResponse;
 import com.solv.wefin.domain.trading.common.MarketPriceProvider;
@@ -14,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.concurrent.*;
 
 @RequiredArgsConstructor
@@ -127,5 +131,11 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
     @Override
     public BigDecimal getUsdKrwRate() {
         return new BigDecimal("1508.00");
+    }
+
+    public List<CandleResponse> getCandles(String stockCode, LocalDate start, LocalDate end, String periodCode) {
+        return hantuMarketClient.fetchPeriodPrice(stockCode, start, end, periodCode).output2().stream()
+                .map(CandleResponse::from)
+                .toList();
     }
 }
