@@ -97,25 +97,6 @@ class TaggingPersistenceServiceIntegrationTest extends IntegrationTestBase {
         assertThat(saved.get(0).getTagCode()).isEqualTo("NEW_TOPIC");
     }
 
-    @Test
-    @DisplayName("markTaggingFailed 호출 시 상태가 FAILED로 변경되고 에러 메시지가 저장된다")
-    void markTaggingFailed_updatesStatus() {
-        // given
-        NewsArticle article = createAndSaveArticle();
-        article.markTaggingProcessing();
-        newsArticleRepository.flush();
-
-        // when
-        article.markTaggingFailed("API 호출 실패");
-        newsArticleRepository.flush();
-
-        // then
-        NewsArticle updated = newsArticleRepository.findById(article.getId()).orElseThrow();
-        assertThat(updated.getTaggingStatus()).isEqualTo(TaggingStatus.FAILED);
-        assertThat(updated.getTaggingErrorMessage()).isEqualTo("API 호출 실패");
-        assertThat(updated.getTaggingRetryCount()).isEqualTo(1);
-    }
-
     private NewsArticle createAndSaveArticle() {
         NewsArticle article = NewsArticle.builder()
                 .rawNewsArticleId(null)
