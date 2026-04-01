@@ -56,6 +56,7 @@ public enum ErrorCode {
 
     // Tagging
     TAGGING_ARTICLE_NOT_FOUND(500, "태깅 대상 기사를 찾을 수 없습니다."),
+    TAGGING_ALREADY_RUNNING(409, "태깅 생성이 이미 실행 중입니다."),
 
     // GameRoom
     ROOM_NOT_FOUND(404,"게임장을 찾을 수 없습니다."),

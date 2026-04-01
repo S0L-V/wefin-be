@@ -21,13 +21,23 @@ public class TaggingScheduler {
 
     @Scheduled(cron = "${tagging.collect.cron:0 */30 * * * *}")
     public void generateTags() {
-        execute();
+        try {
+            execute();
+        } catch (Exception e) {
+            log.error("태깅 생성 배치 실패: {}", e.getMessage(), e);
+        }
     }
 
     /**
      * 태깅 생성을 실행한다
      *
      * @return 실행 여부 (이미 실행 중이면 false)
+     */
+    /**
+     * 태깅 생성을 실행한다.
+     *
+     * @return 이미 실행 중이면 false, 정상 실행되면 true
+     * @throws RuntimeException 태깅 실행 중 예외 발생 시
      */
     public boolean execute() {
         if (!running.compareAndSet(false, true)) {
@@ -41,9 +51,6 @@ public class TaggingScheduler {
         try {
             taggingService.tagPendingArticles();
             return true;
-        } catch (Exception e) {
-            log.error("태깅 생성 실패: {}", e.getMessage(), e);
-            return false;
         } finally {
             running.set(false);
             long elapsed = System.currentTimeMillis() - start;
