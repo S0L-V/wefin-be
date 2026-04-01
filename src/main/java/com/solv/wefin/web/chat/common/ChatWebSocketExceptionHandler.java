@@ -58,7 +58,7 @@ public class ChatWebSocketExceptionHandler {
         ChatSpamResponse response = ChatSpamResponse.builder()
                 .code(e.getErrorCode().name())
                 .message(e.getMessage())
-                .remainingSeconds(remainingSeconds)
+                .remainingSeconds(e.getRemainingSeconds())
                 .build();
 
         /*

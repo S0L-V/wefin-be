@@ -35,6 +35,9 @@ public class GlobalChatService {
     private final UserRepository userRepository;
     private final ChatSpamGuard chatSpamGuard;
 
+    private static final long SPAM_WINDOW_SECONDS = 3L;
+    private static final long SPAM_THRESHOLD = 5L;
+
     private final Map<String, Object> chatLocks = new ConcurrentHashMap<>();
     @Transactional
     public void sendMessage(String content, UUID userId) {
@@ -45,7 +48,7 @@ public class GlobalChatService {
 
         validateMessage(content);
 
-        String blockKey = ChatScope.GLOBAL + ":" + userId;
+        String blockKey = ChatScope.globalKey(userId);
         Object lock = chatLocks.computeIfAbsent(blockKey, key -> new Object());
 
         /*
@@ -59,7 +62,7 @@ public class GlobalChatService {
 
             long recentCount = globalChatMessageRepository.countByUser_UserIdAndCreatedAtAfter(
                     userId,
-                    now.minusSeconds(3)
+                    now.minusSeconds(SPAM_WINDOW_SECONDS)
             );
 
             // 도배 체크

@@ -13,6 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ChatSpamGuard {
 
     private static final long BLOCK_SECONDS = 10L;
+    private static final long SPAM_THRESHOLD = 5L;
+
 
     // 차단된 사용자 저장 (key = scope:userId)
     private final Map<String, OffsetDateTime> blockedUsers = new ConcurrentHashMap<>();
@@ -31,11 +33,7 @@ public class ChatSpamGuard {
             if(now.isBefore(blockedUntil)) {
                 // 아직 차단 시간 안지났으면 바로 차단
                 long remainingSeconds = getRemainingSeconds(blockKey, now);
-                throw new ChatSpamException(
-                        ErrorCode.CHAT_SPAM_DETECTED,
-                        "도배가 감지되었습니다. " + remainingSeconds + "초 후에 다시 시도해주세요.",
-                        blockKey
-                );
+                throw new ChatSpamException(blockKey, remainingSeconds);
             }
 
             // 차단 시간 지났으면 해제
@@ -44,13 +42,10 @@ public class ChatSpamGuard {
         }
 
         // 최근 메시지 개수 기준 차단
-        if(recentCount >= 5) {
+        if(recentCount >= SPAM_THRESHOLD) {
             blockedUsers.put(blockKey, now.plusSeconds(BLOCK_SECONDS));
-            throw new ChatSpamException(
-                    ErrorCode.CHAT_SPAM_DETECTED,
-                    "도배가 감지되었습니다. " + BLOCK_SECONDS + "초 후에 다시 시도해주세요.",
-                    blockKey
-            );
+            throw new ChatSpamException(blockKey, BLOCK_SECONDS);
+
         }
 
     }

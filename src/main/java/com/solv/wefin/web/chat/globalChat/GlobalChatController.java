@@ -21,7 +21,7 @@ public class GlobalChatController {
     @MessageMapping("/chat/global/send")
     public void sendMessage(GlobalChatSendRequest request, SimpMessageHeaderAccessor accessor) {
         Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
-        if (sessionAttributes == null || sessionAttributes.get("userId") == null) {
+        if (sessionAttributes == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
