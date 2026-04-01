@@ -1,10 +1,12 @@
 package com.solv.wefin.domain.auth.service;
 
+import com.solv.wefin.domain.auth.dto.SignupCommand;
+import com.solv.wefin.domain.auth.dto.SignupInfo;
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
+import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
-import com.solv.wefin.web.auth.dto.SignupResponse;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -24,9 +26,14 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final GroupService groupService;
 
     @Transactional
-    public SignupResponse signup(String email, String nickname, String password) {
+    public SignupInfo signup(SignupCommand command) {
+        String email = command.email();
+        String nickname = command.nickname();
+        String password = command.password();
+
         // null 처리
         if (email == null || nickname == null || password == null) {
             throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
@@ -62,12 +69,13 @@ public class AuthService {
                     .build();
 
             User savedUser = userRepository.save(user);
+            groupService.createDefaultGroup(savedUser);
 
-            return SignupResponse.builder()
-                    .userId(savedUser.getUserId())
-                    .email(savedUser.getEmail())
-                    .nickname(savedUser.getNickname())
-                    .build();
+            return new SignupInfo(
+                    savedUser.getUserId(),
+                    savedUser.getEmail(),
+                    savedUser.getNickname()
+            );
 
         } catch (DataIntegrityViolationException e) {
             throw mapConstraintViolation(e);

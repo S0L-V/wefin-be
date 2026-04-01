@@ -1,10 +1,10 @@
 package com.solv.wefin.web.auth;
 
+import com.solv.wefin.domain.auth.dto.SignupCommand;
+import com.solv.wefin.domain.auth.dto.SignupInfo;
+import com.solv.wefin.domain.auth.service.AuthService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
-import com.solv.wefin.web.auth.dto.SignupResponse;
-import com.solv.wefin.domain.auth.service.AuthService;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -17,7 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -54,17 +54,14 @@ class AuthControllerTest {
         void signup_success() throws Exception {
             UUID userId = UUID.randomUUID();
 
-            SignupResponse response = SignupResponse.builder()
-                    .userId(userId)
-                    .email("test@example.com")
-                    .nickname("testuser")
-                    .build();
+            SignupInfo result = new SignupInfo(
+                    userId,
+                    "test@example.com",
+                    "testuser"
+            );
 
-            when(authService.signup(
-                    eq("test@example.com"),
-                    eq("testuser"),
-                    eq("pass1234")
-            )).thenReturn(response);
+            when(authService.signup(any(SignupCommand.class)))
+                    .thenReturn(result);
 
             String requestBody = signupRequest("test@example.com", "pass1234", "testuser");
 
@@ -79,7 +76,7 @@ class AuthControllerTest {
                     .andExpect(jsonPath("$.data.email").value("test@example.com"))
                     .andExpect(jsonPath("$.data.nickname").value("testuser"));
 
-            verify(authService).signup("test@example.com", "testuser", "pass1234");
+            verify(authService).signup(any(SignupCommand.class));
         }
 
         @Test
@@ -131,16 +128,11 @@ class AuthControllerTest {
         @Test
         @DisplayName("이메일이 이미 존재하면 409와 에러 응답을 반환한다")
         void signup_fail_when_email_duplicated() throws Exception {
-            // given
-            when(authService.signup(
-                    eq("test@example.com"),
-                    eq("testuser"),
-                    eq("pass1234")
-            )).thenThrow(new BusinessException(ErrorCode.AUTH_EMAIL_DUPLICATED));
+            when(authService.signup(any(SignupCommand.class)))
+                    .thenThrow(new BusinessException(ErrorCode.AUTH_EMAIL_DUPLICATED));
 
             String requestBody = signupRequest("test@example.com", "pass1234", "testuser");
 
-            // when & then
             mockMvc.perform(post("/api/auth/signup")
                             .with(csrf())
                             .with(user("test"))
@@ -155,16 +147,11 @@ class AuthControllerTest {
         @Test
         @DisplayName("닉네임이 이미 존재하면 409와 에러 응답을 반환한다")
         void signup_fail_when_nickname_duplicated() throws Exception {
-            // given
-            when(authService.signup(
-                    eq("test@example.com"),
-                    eq("testuser"),
-                    eq("pass1234")
-            )).thenThrow(new BusinessException(ErrorCode.AUTH_NICKNAME_DUPLICATED));
+            when(authService.signup(any(SignupCommand.class)))
+                    .thenThrow(new BusinessException(ErrorCode.AUTH_NICKNAME_DUPLICATED));
 
             String requestBody = signupRequest("test@example.com", "pass1234", "testuser");
 
-            // when & then
             mockMvc.perform(post("/api/auth/signup")
                             .with(csrf())
                             .with(user("test"))
