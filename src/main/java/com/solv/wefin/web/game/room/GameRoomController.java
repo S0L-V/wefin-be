@@ -4,6 +4,7 @@ import com.solv.wefin.domain.game.participant.entity.GameParticipant;
 import com.solv.wefin.domain.game.room.dto.CreateRoomCommand;
 import com.solv.wefin.domain.game.room.dto.RoomDetailInfo;
 import com.solv.wefin.domain.game.room.dto.RoomListInfo;
+import com.solv.wefin.domain.game.room.dto.StartRoomInfo;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.room.service.GameRoomService;
 import com.solv.wefin.global.common.ApiResponse;
@@ -88,6 +89,21 @@ public class GameRoomController {
 
         gameRoomService.leaveRoom(roomId, TEMP_USER_ID);
         LeaveRoomResponse response = LeaveRoomResponse.success();
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    //게임 시작
+    @PostMapping("/{roomId}/start")
+    public ResponseEntity<ApiResponse<StartRoomResponse>> startRoom(
+            @PathVariable UUID roomId) {
+
+        StartRoomInfo info = gameRoomService.startRoom(roomId, TEMP_USER_ID);
+
+        TurnDetailDto turnDto = TurnDetailDto.from(info.firstTurn());
+        StartRoomResponse response = StartRoomResponse.from(info.room().getRoomId(),
+                info.room().getStatus(), turnDto
+        );
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }
