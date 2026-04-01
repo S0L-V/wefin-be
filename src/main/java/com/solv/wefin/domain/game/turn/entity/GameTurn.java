@@ -31,7 +31,7 @@ public class GameTurn {
     @Column(name = "briefing_id", nullable = false)
     private UUID briefingId;
 
-    @Column(name= "turn_Number", nullable = false)
+    @Column(name= "turn_number", nullable = false)
     private Integer turnNumber;
 
     @Column(name = "turn_date", nullable = false)

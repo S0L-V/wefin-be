@@ -1,0 +1,1 @@
+ALTER TABLE game_turn ALTER COLUMN briefing_id DROP NOT NULL;

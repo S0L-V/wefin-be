@@ -159,6 +159,11 @@ public class GameRoomService {
         GameParticipant member = GameParticipant.createMember(gameRoom, userId);
         gameParticipantRepository.save(member);
 
+        // 게임 진행 중 신규 참가자 시드머니 지급
+        if (gameRoom.getStatus() == RoomStatus.IN_PROGRESS) {
+            member.assignSeed(gameRoom.getSeed());
+        }
+
         return member;
     }
 
