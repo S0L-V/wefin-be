@@ -33,4 +33,22 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
             @Param("maxRetryCount") int maxRetryCount,
             @Param("staleBefore") OffsetDateTime staleBefore,
             Pageable pageable);
+
+    /**
+     * 태깅 대상 기사를 조회한다.
+     * PENDING/FAILED 상태이거나, PROCESSING 상태에서 staleBefore 이전에 시도된 기사를 포함한다.
+     */
+    @Query("SELECT a FROM NewsArticle a " +
+            "WHERE a.crawlStatus = :crawlStatus " +
+            "AND a.taggingRetryCount < :maxRetryCount " +
+            "AND (a.taggingStatus IN :taggingStatuses " +
+            "     OR (a.taggingStatus = :processingStatus AND a.taggingAttemptedAt < :staleBefore)) " +
+            "ORDER BY a.collectedAt DESC")
+    List<NewsArticle> findTaggingTargets(
+            @Param("crawlStatus") NewsArticle.CrawlStatus crawlStatus,
+            @Param("taggingStatuses") List<NewsArticle.TaggingStatus> taggingStatuses,
+            @Param("processingStatus") NewsArticle.TaggingStatus processingStatus,
+            @Param("maxRetryCount") int maxRetryCount,
+            @Param("staleBefore") OffsetDateTime staleBefore,
+            Pageable pageable);
 }
