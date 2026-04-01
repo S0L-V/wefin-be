@@ -1,14 +1,16 @@
 package com.solv.wefin.domain.game.room.service;
 
 import com.solv.wefin.domain.game.participant.entity.GameParticipant;
-import com.solv.wefin.domain.game.participant.entity.GameParticipant;
 import com.solv.wefin.domain.game.participant.entity.ParticipantStatus;
 import com.solv.wefin.domain.game.participant.repository.GameParticipantRepository;
 import com.solv.wefin.domain.game.room.dto.RoomDetailInfo;
 import com.solv.wefin.domain.game.room.dto.RoomListInfo;
+import com.solv.wefin.domain.game.room.dto.StartRoomInfo;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.room.entity.RoomStatus;
 import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
+import com.solv.wefin.domain.game.turn.entity.GameTurn;
+import com.solv.wefin.domain.game.turn.repository.GameTurnRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.domain.game.room.dto.CreateRoomCommand;
@@ -46,6 +48,9 @@ class GameRoomServiceTest {
 
     @Mock
     private GameParticipantRepository gameParticipantRepository;
+
+    @Mock
+    private GameTurnRepository gameTurnRepository;
 
     private static final UUID TEST_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000001");
     private static final Long TEST_GROUP_ID = 1L;
@@ -531,6 +536,147 @@ class GameRoomServiceTest {
                     BusinessException be = (BusinessException) ex;
                     assertThat(be.getErrorCode()).isEqualTo(ErrorCode.ROOM_NOT_PARTICIPANT);
                 });
+    }
+// === API 6: 게임 시작 테스트 ===
+
+    @Test
+    @DisplayName("게임 시작 성공 — 시드머니 지급, 첫 턴 생성, 상태 IN_PROGRESS")
+    void startRoom_success() {
+        // Given — WAITING 방, 방장 + 일반 참가자 1명 (2명)
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        GameParticipant leader = GameParticipant.createLeader(gameRoom, TEST_USER_ID);
+        GameParticipant member = GameParticipant.createMember(gameRoom, OTHER_USER_ID);
+
+        given(gameRoomRepository.findByIdForUpdate(roomId))
+                .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, TEST_USER_ID))
+                .willReturn(Optional.of(leader));
+        given(gameParticipantRepository.findByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE))
+                .willReturn(List.of(leader, member));
+
+        // When
+        StartRoomInfo result = gameRoomService.startRoom(roomId, TEST_USER_ID);
+
+        // Then — 방 상태 변경
+        assertThat(result.room().getStatus()).isEqualTo(RoomStatus.IN_PROGRESS);
+        assertThat(result.room().getStartedAt()).isNotNull();
+
+        // Then — 첫 턴 생성
+        assertThat(result.firstTurn().getTurnNumber()).isEqualTo(1);
+        assertThat(result.firstTurn().getTurnDate()).isEqualTo(gameRoom.getStartDate());
+        verify(gameTurnRepository).save(any(GameTurn.class));
+
+        // Then — 시드머니 지급
+        assertThat(leader.getSeed()).isEqualTo(10000000L);
+        assertThat(member.getSeed()).isEqualTo(10000000L);
+    }
+
+    @Test
+    @DisplayName("게임 시작 실패 — 존재하지 않는 방")
+    void startRoom_notFound() {
+        // Given
+        UUID fakeRoomId = UUID.fromString("00000000-0000-4000-a000-999999999999");
+        given(gameRoomRepository.findByIdForUpdate(fakeRoomId))
+                .willReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> gameRoomService.startRoom(fakeRoomId, TEST_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.ROOM_NOT_FOUND);
+                });
+    }
+
+    @Test
+    @DisplayName("게임 시작 실패 — WAITING이 아닌 방 (이미 진행 중)")
+    void startRoom_notWaiting() {
+        // Given — IN_PROGRESS 방
+        GameRoom gameRoom = createGameRoom();
+        gameRoom.start();
+        UUID roomId = gameRoom.getRoomId();
+
+        given(gameRoomRepository.findByIdForUpdate(roomId))
+                .willReturn(Optional.of(gameRoom));
+
+        // When & Then
+        assertThatThrownBy(() -> gameRoomService.startRoom(roomId, TEST_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.ROOM_NOT_WAITING);
+                });
+    }
+
+    @Test
+    @DisplayName("게임 시작 실패 — 참가자가 아닌 경우")
+    void startRoom_notParticipant() {
+        // Given — 참가 이력 없는 유저가 시작 요청
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+
+        given(gameRoomRepository.findByIdForUpdate(roomId))
+                .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
+                .willReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> gameRoomService.startRoom(roomId, OTHER_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.ROOM_NOT_PARTICIPANT);
+                });
+    }
+
+    @Test
+    @DisplayName("게임 시작 실패 — 방장이 아닌 참가자가 시작 요청")
+    void startRoom_notHost() {
+        // Given — 일반 참가자가 시작 요청
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        GameParticipant member = GameParticipant.createMember(gameRoom, OTHER_USER_ID);
+
+        given(gameRoomRepository.findByIdForUpdate(roomId))
+                .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, OTHER_USER_ID))
+                .willReturn(Optional.of(member));
+
+        // When & Then
+        assertThatThrownBy(() -> gameRoomService.startRoom(roomId, OTHER_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.ROOM_NOT_HOST);
+                });
+    }
+
+    @Test
+    @DisplayName("게임 시작 실패 — 참가자 2명 미만")
+    void startRoom_minPlayers() {
+        // Given — 방장 1명만 있는 방
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        GameParticipant leader = GameParticipant.createLeader(gameRoom, TEST_USER_ID);
+
+        given(gameRoomRepository.findByIdForUpdate(roomId))
+                .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, TEST_USER_ID))
+                .willReturn(Optional.of(leader));
+        given(gameParticipantRepository.findByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE))
+                .willReturn(List.of(leader)); // 1명만
+
+        // When & Then
+        assertThatThrownBy(() -> gameRoomService.startRoom(roomId, TEST_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.ROOM_MIN_PLAYERS);
+                });
+
+        // 시작 안 됐으니 턴 생성도 안 됨
+        verify(gameTurnRepository, never()).save(any());
     }
 
     // === 헬퍼 메서드 ===

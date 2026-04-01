@@ -20,11 +20,11 @@ import static com.solv.wefin.domain.game.turn.entity.TurnStatus.*;
 public class GameTurn {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "room_id", nullable = false )
+    @Column(name = "turn_id")
     private UUID turnId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @Column(name = "room_id", nullable = false)
+    @JoinColumn(name = "room_id", nullable = false)
     private GameRoom gameRoom;
 
     //ai 브리핑 테이블 생선 전이라 fk 처리 안 했습니다
@@ -38,7 +38,7 @@ public class GameTurn {
     private LocalDate turnDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "turn_status", nullable = false)
+    @Column(name = "status", nullable = false)
     private TurnStatus status;
 
     @Builder
