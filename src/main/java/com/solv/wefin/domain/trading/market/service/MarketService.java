@@ -7,6 +7,7 @@ import com.solv.wefin.domain.trading.market.client.dto.HantuPriceApiResponse;
 import com.solv.wefin.domain.trading.market.dto.OrderbookResponse;
 import com.solv.wefin.domain.trading.market.dto.PriceResponse;
 import com.solv.wefin.domain.trading.common.MarketPriceProvider;
+import com.solv.wefin.domain.trading.stock.service.StockService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MarketService implements MarketPriceProvider, ExchangeRateProvider {
 
     private final HantuMarketClient hantuMarketClient;
+    private final StockService stockService;
 
     private final ConcurrentHashMap<String, CompletableFuture<PriceResponse>> ongoingRequests = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, PriceResponse> priceCache = new ConcurrentHashMap<>();
@@ -29,10 +31,14 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
     private static final long CACHE_TTL_MS = 5000; // 5초
 
     public PriceResponse getPrice(String stockCode) {
+        if (!stockService.existsByCode(stockCode)) {
+            throw new BusinessException(ErrorCode.MARKET_STOCK_NOT_FOUND);
+        }
+
         // 캐시 확인
-        Long cachedTime = priceCacheTimestamp.get(stockCode);
-        if (cachedTime != null && System.currentTimeMillis() - cachedTime < CACHE_TTL_MS) {
-            return priceCache.get(stockCode);
+        PriceResponse cached = getCachedPrice(stockCode);
+        if (cached != null) {
+            return cached;
         }
 
         // thundering herd 방지: 같은 종목에 대해 첫 요청만 API를 호출하고, 나머지는 결과를 공유
@@ -54,11 +60,16 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
 
         // 첫 번째 요청만 처리
         try {
+            cached = getCachedPrice(stockCode);
+            if (cached != null) {
+                newFuture.complete(cached);
+                return cached;
+            }
+
             // 캐시 미스 -> 한투 API 호출 + PriceResponse 생성
             HantuPriceApiResponse.Output output = hantuMarketClient.fetchCurrentPrice(stockCode).output();
             PriceResponse response = PriceResponse.from(stockCode, output);
 
-            // 캐시 저장
             priceCache.put(stockCode, response);
             priceCacheTimestamp.put(stockCode, System.currentTimeMillis());
 
@@ -67,12 +78,25 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
             return response;
 
         } catch (Exception e) {
-            newFuture.completeExceptionally(e); // 비즈니스 에러 추출
+            newFuture.completeExceptionally(e);
             throw new BusinessException(ErrorCode.MARKET_API_FAILED);
         }
         finally {
             ongoingRequests.remove(stockCode);
         }
+    }
+
+    /**
+     * 캐시에서 유효한 시세를 조회한다. TTL 만료 시 null 반환.
+     */
+    private PriceResponse getCachedPrice(String stockCode) {
+        Long cachedTime = priceCacheTimestamp.get(stockCode);
+
+        if (cachedTime != null && System.currentTimeMillis() - cachedTime < CACHE_TTL_MS) {
+            return priceCache.get(stockCode);
+        }
+
+        return null;
     }
 
     public OrderbookResponse getOrderbook(String stockCode) {
