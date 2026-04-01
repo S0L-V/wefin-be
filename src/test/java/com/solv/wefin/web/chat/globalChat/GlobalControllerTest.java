@@ -84,7 +84,7 @@ class GlobalChatControllerTest {
 
         // then
         verify(globalChatService).sendSystemMessage(
-                eq("안타깝네요. tico님이 삼성전자에서 -10000원을 잃었습니다.")
+                eq("안타깝네요. tico님이 삼성전자에서 10000원을 잃었습니다.")
         );
     }
 
