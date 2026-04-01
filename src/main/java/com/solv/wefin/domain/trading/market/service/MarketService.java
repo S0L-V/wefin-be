@@ -14,9 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 
 @RequiredArgsConstructor
 @Service
@@ -48,12 +46,13 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
         // 이미 누군가 API 호출 중
         if (existing != null) {
             try {
-                return existing.join();
-            } catch (CompletionException e) {
-                // 첫 번째 요청의 API 호출이 실패해서 completeExceptionally(e)로 채워진 경우, join()이 CompletionException을 던짐
+                return existing.get(10, TimeUnit.SECONDS);
+            } catch (ExecutionException e) {
                 if (e.getCause() instanceof BusinessException) {
                     throw (BusinessException) e.getCause();
                 }
+                throw new BusinessException(ErrorCode.MARKET_API_FAILED);
+            } catch (TimeoutException | InterruptedException e) {
                 throw new BusinessException(ErrorCode.MARKET_API_FAILED);
             }
         }
@@ -79,6 +78,10 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
 
         } catch (Exception e) {
             newFuture.completeExceptionally(e);
+            if (e instanceof BusinessException) {
+                throw (BusinessException) e;
+            }
+
             throw new BusinessException(ErrorCode.MARKET_API_FAILED);
         }
         finally {
@@ -94,6 +97,11 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
 
         if (cachedTime != null && System.currentTimeMillis() - cachedTime < CACHE_TTL_MS) {
             return priceCache.get(stockCode);
+        }
+
+        if (cachedTime != null) {
+            priceCache.remove(stockCode);
+            priceCacheTimestamp.remove(stockCode);
         }
 
         return null;
