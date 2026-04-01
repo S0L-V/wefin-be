@@ -13,6 +13,7 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.stereotype.Component;
 
+import java.security.Principal;
 import java.util.Map;
 import java.util.UUID;
 
@@ -62,8 +63,9 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             }
 
             accessor.getSessionAttributes().put("userId", userId);
+            accessor.setUser(new StompPrincipal(userId.toString()));
 
-            log.info("CONNECT userIdHeader={}", userIdHeader);
+            log.info("CONNECT userIdHeader={}", userId.toString());
             log.info("existsById={}", exists);
             log.info("WebSocket CONNECT user={}", userId);
         }
@@ -81,5 +83,12 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         return message;
 
 
+    }
+
+    private record StompPrincipal(String value) implements Principal {
+        @Override
+        public String getName() {
+            return value;
+        }
     }
 }

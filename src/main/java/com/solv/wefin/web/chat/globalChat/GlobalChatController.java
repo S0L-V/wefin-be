@@ -20,13 +20,15 @@ public class GlobalChatController {
 
     @MessageMapping("/chat/global/send")
     public void sendMessage(GlobalChatSendRequest request, SimpMessageHeaderAccessor accessor) {
-
         Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
-        if(sessionAttributes == null || sessionAttributes.get("userId") == null) {
+        if (sessionAttributes == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        UUID userId = (UUID) sessionAttributes.get("userId");
-        globalChatService.sendMessage(request, userId);
+        Object userIdValue = sessionAttributes.get("userId");
+        if (!(userIdValue instanceof UUID userId)) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+        globalChatService.sendMessage(request.getContent(), userId);
     }
 }

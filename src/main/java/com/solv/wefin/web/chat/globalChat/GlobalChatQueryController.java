@@ -20,7 +20,10 @@ public class GlobalChatQueryController {
 
     @GetMapping("/messages")
     public ApiResponse<List<GlobalChatMessageResponse>> getRecentMessage(@RequestParam(defaultValue = "50") int limit) {
-        List<GlobalChatMessageResponse> messages = globalChatService.getRecentMessages(limit);
+        List<GlobalChatMessageResponse> messages = globalChatService.getRecentMessages(limit)
+                .stream()
+                .map(GlobalChatMessageResponse::from)
+                .toList();
 
         return ApiResponse.success(messages);
     }
