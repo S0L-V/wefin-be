@@ -5,13 +5,15 @@ import com.solv.wefin.domain.game.participant.entity.ParticipantStatus;
 import com.solv.wefin.domain.game.room.dto.CreateRoomCommand;
 import com.solv.wefin.domain.game.room.dto.RoomDetailInfo;
 import com.solv.wefin.domain.game.room.dto.RoomListInfo;
+import com.solv.wefin.domain.game.room.dto.StartRoomInfo;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.participant.repository.GameParticipantRepository;
 import com.solv.wefin.domain.game.room.entity.RoomStatus;
 import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
+import com.solv.wefin.domain.game.turn.entity.GameTurn;
+import com.solv.wefin.domain.game.turn.repository.GameTurnRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
-import com.solv.wefin.web.game.room.dto.request.CreateRoomRequest;
 import com.solv.wefin.web.game.room.dto.response.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,7 @@ public class GameRoomService {
 
     private final GameRoomRepository gameRoomRepository;
     private final GameParticipantRepository gameParticipantRepository;
+    private final GameTurnRepository gameTurnRepository;
 
     //게임방 생성
     @Transactional //트랜잭션으로 방생성과 방장유저 지정 동시에 이루어짐
@@ -49,16 +52,16 @@ public class GameRoomService {
             throw new BusinessException(ErrorCode.ROOM_HOST_ALREADY_EXISTS);
         }
 
-            // 방장 횟수 제한 1일 1회
+        // 방장 횟수 제한 1일 1회
         OffsetDateTime todayStart = LocalDate.now().atStartOfDay().atZone(ZoneId.systemDefault()).toOffsetDateTime();
         OffsetDateTime todayEnd = todayStart.plusDays(1);
 
-        if(gameRoomRepository.existsByUserIdAndStartedAtBetween(userId, todayStart, todayEnd)) {
+        if (gameRoomRepository.existsByUserIdAndStartedAtBetween(userId, todayStart, todayEnd)) {
             throw new BusinessException(ErrorCode.ROOM_HOST_DAILY_LIMIT);
         }
 
         //endDate 계산
-        LocalDate rangeStart = LocalDate.of(2020,1,1);
+        LocalDate rangeStart = LocalDate.of(2020, 1, 1);
         LocalDate rangeEnd = LocalDate.of(2024, 12, 31).minusMonths(command.periodMonths());
         long daysBetween = ChronoUnit.DAYS.between(rangeStart, rangeEnd);
         long randomDays = ThreadLocalRandom.current().nextLong(daysBetween + 1);
@@ -77,6 +80,7 @@ public class GameRoomService {
 
         return gameRoom;
     }
+
     // 게임방 목록 조회
     public List<RoomListInfo> getRooms(Long groupId, UUID userId) {
         //그룹 활성화된 방
@@ -102,7 +106,7 @@ public class GameRoomService {
     public RoomDetailInfo getRoomDetail(UUID roomId) {
 
         // 방 조회
-        GameRoom gameRoom= gameRoomRepository.findById(roomId).orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_FOUND));
+        GameRoom gameRoom = gameRoomRepository.findById(roomId).orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_FOUND));
 
         //참가자 상세
         List<GameParticipant> participants = gameParticipantRepository.findByGameRoomOrderByJoinedAtAsc(gameRoom);
@@ -112,8 +116,8 @@ public class GameRoomService {
     }
 
     /**
-     게임 입장
-     비관적 락으로 동시 입장 동시성 제어
+     * 게임 입장
+     * 비관적 락으로 동시 입장 동시성 제어
      *
      */
     @Transactional
@@ -133,7 +137,7 @@ public class GameRoomService {
         if (existing.isPresent()) {
             GameParticipant participant = existing.get();
 
-            if(participant.getStatus() == ParticipantStatus.ACTIVE){
+            if (participant.getStatus() == ParticipantStatus.ACTIVE) {
                 throw new BusinessException(ErrorCode.ROOM_ALREADY_JOINED);
             }
             int currentPlayers = gameParticipantRepository.countByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
@@ -155,27 +159,32 @@ public class GameRoomService {
         GameParticipant member = GameParticipant.createMember(gameRoom, userId);
         gameParticipantRepository.save(member);
 
+        // 게임 진행 중 신규 참가자 시드머니 지급
+        if (gameRoom.getStatus() == RoomStatus.IN_PROGRESS) {
+            member.assignSeed(gameRoom.getSeed());
+        }
+
         return member;
     }
 
     /**
-     게임방 퇴장
-     동시 퇴장 시 방장 위임 충돌 미리 방지 - 비관적 락
+     * 게임방 퇴장
+     * 동시 퇴장 시 방장 위임 충돌 미리 방지 - 비관적 락
      */
     @Transactional
     public void leaveRoom(UUID roomId, UUID userId) {
 
         //게임방 조회
         GameRoom gameRoom = gameRoomRepository.findByIdForUpdate(roomId)
-                .orElseThrow(()->new BusinessException(ErrorCode.ROOM_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_FOUND));
         //finished면 error 처리
         if (gameRoom.getStatus() == RoomStatus.FINISHED) {
             throw new BusinessException(ErrorCode.ROOM_FINISHED);
         }
         //참가자 조회
         GameParticipant participant = gameParticipantRepository.findByGameRoomAndUserId(gameRoom, userId)
-                .filter(p->p.getStatus() == ParticipantStatus.ACTIVE)
-                .orElseThrow(()->new BusinessException(ErrorCode.ROOM_NOT_PARTICIPANT));
+                .filter(p -> p.getStatus() == ParticipantStatus.ACTIVE)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_PARTICIPANT));
 
         // 방장 여부 기록
         Boolean wasLeader = participant.getIsLeader();
@@ -200,12 +209,56 @@ public class GameRoomService {
             newLeader.assignLeader();
         }
 
+    }
 
+    //게임 시작
+    @Transactional
+    public StartRoomInfo startRoom(UUID roomId, UUID userId) {
 
+        //검증 로직 Fail-Fast 패턴 적용
+        // 1. 방 조회 + 비관적 락 (중복 시작 방지)
+        GameRoom gameRoom = gameRoomRepository.findByIdForUpdate(roomId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_FOUND));
 
+        // 2. WAITING 상태에서만 시작 가능
+        if (gameRoom.getStatus() != RoomStatus.WAITING) {
+            throw new BusinessException(ErrorCode.ROOM_NOT_WAITING);
+        }
+
+        // 3. 요청자가 방장인지 확인
+        GameParticipant host = gameParticipantRepository
+                .findByGameRoomAndUserId(gameRoom, userId)
+                .filter(p -> p.getStatus() == ParticipantStatus.ACTIVE)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_PARTICIPANT));
+
+        if (!host.getIsLeader()) {
+            throw new BusinessException(ErrorCode.ROOM_NOT_HOST);
+        }
+
+        // 4. ACTIVE 참가자 2명 이상인지 확인
+        List<GameParticipant> activeParticipants = gameParticipantRepository
+                .findByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
+
+        if (activeParticipants.size() < 2) {
+            throw new BusinessException(ErrorCode.ROOM_MIN_PLAYERS);
+        }
+
+        // 5. 참가자 전원에게 시드머니 지급
+        Long seedMoney = gameRoom.getSeed();
+        for (GameParticipant participant : activeParticipants) {
+            participant.assignSeed(seedMoney);
+        }
+
+        // 6. 첫 턴 생성
+        GameTurn firstTurn = GameTurn.createFirst(gameRoom);
+        gameTurnRepository.save(firstTurn);
+
+        // 7. 방 상태 변경 (WAITING → IN_PROGRESS, startedAt 기록)
+        gameRoom.start();
+
+        return new StartRoomInfo(gameRoom, firstTurn);
     }
 }
-
 
 /** creatRooom
 

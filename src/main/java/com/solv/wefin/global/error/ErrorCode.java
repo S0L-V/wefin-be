@@ -71,7 +71,12 @@ public enum ErrorCode {
     ROOM_ALREADY_JOINED(409, "이미 참가 중인 방입니다."),
     ROOM_FULL(400, "인원 초과"),
     ROOM_FINISHED(400, "종료된 방입니다."),
-    ROOM_NOT_PARTICIPANT(404, "참가자가 아닙니다.");
+    ROOM_NOT_PARTICIPANT(404, "참가자가 아닙니다."),
+    ROOM_NOT_HOST(403,"방장만 게임을 시작할 수 있습니다."),
+    ROOM_MIN_PLAYERS(400, "2명 이상의 참가자가 필요합니다."),
+    ROOM_NOT_WAITING(400, "대기 상태가 아닙니다");
+
+    // GameTurn
 
     private final int status;
     private final String message;
