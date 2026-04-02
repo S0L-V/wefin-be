@@ -5,9 +5,14 @@ import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.entity.GroupMember;
 import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.domain.group.repository.GroupRepository;
+import com.solv.wefin.domain.group.dto.GroupMemberInfo;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -31,5 +36,17 @@ public class GroupService {
                 .build();
 
         groupMemberRepository.save(groupMember);
+    }
+
+    public List<GroupMemberInfo> getActiveMembers(Long groupId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
+
+        return groupMemberRepository.findByGroupAndStatusWithUser(
+                        group,
+                        GroupMember.GroupMemberStatus.ACTIVE
+                ).stream()
+                .map(GroupMemberInfo::from)
+                .toList();
     }
 }
