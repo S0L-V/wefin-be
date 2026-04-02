@@ -1,6 +1,9 @@
 package com.solv.wefin.domain.trading.account.service;
 
+import static com.solv.wefin.domain.trading.common.TradingConstants.*;
+
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -45,6 +48,16 @@ public class VirtualAccountService {
 	public VirtualAccount getAccountByUserId(UUID userId) {
 		return accountRepository.findByUserId(userId)
 			.orElseThrow(() -> new BusinessException(ErrorCode.ACCOUNT_NOT_FOUND));
+	}
+
+	/**
+	 * 주문 가능 수량 조회
+	 */
+	public Integer calculateBuyingPower(Long virtualAccountId, BigDecimal price) {
+		VirtualAccount account = accountRepository.findById(virtualAccountId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.ACCOUNT_NOT_FOUND));
+		BigDecimal priceWithFee = price.multiply(BigDecimal.ONE.add(FEE_RATE));
+		return account.getBalance().divide(priceWithFee, 0, RoundingMode.DOWN).intValue();
 	}
 
 	/**
