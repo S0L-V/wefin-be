@@ -34,18 +34,22 @@ news:
     display: ${NAVER_NEWS_DISPLAY:100}
     base-url: ${NAVER_NEWS_BASE_URL:https://openapi.naver.com/v1/search/news.json}
   collect:
-    cron: "0 0 */2 * * *"
+    cron: ${NEWS_COLLECT_CRON:-}
 
 market:
   bok:
     api-key: ${BOK_API_KEY:}
     base-url: ${BOK_BASE_URL:https://ecos.bok.or.kr/api}
   collect:
-    cron: "0 */5 * * * *"
+    cron: ${MARKET_COLLECT_CRON:-}
 
 embedding:
   collect:
-    cron: "0 */30 * * * *"
+    cron: ${EMBEDDING_COLLECT_CRON:-}
+
+tagging:
+  collect:
+    cron: ${TAGGING_COLLECT_CRON:-}
 
 websocket:
   allowed-origins:

@@ -14,8 +14,14 @@ openai:
   embedding:
     model: text-embedding-3-small
     version: v1
+  tagging:
+    model: gpt-4o-mini
 
 embedding:
+  collect:
+    cron: "0 */30 * * * *"
+
+tagging:
   collect:
     cron: "0 */30 * * * *"
 

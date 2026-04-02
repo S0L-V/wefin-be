@@ -88,6 +88,19 @@ public class NewsArticle extends BaseEntity {
     @Column(name = "embedding_error_message")
     private String embeddingErrorMessage;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tagging_status", nullable = false, length = 30)
+    private TaggingStatus taggingStatus = TaggingStatus.PENDING;
+
+    @Column(name = "tagging_retry_count", nullable = false)
+    private int taggingRetryCount = 0;
+
+    @Column(name = "tagging_attempted_at")
+    private OffsetDateTime taggingAttemptedAt;
+
+    @Column(name = "tagging_error_message")
+    private String taggingErrorMessage;
+
     @Builder
     private NewsArticle(Long rawNewsArticleId, String publisherName, String title,
                         String summary, String content, String originalUrl,
@@ -115,6 +128,10 @@ public class NewsArticle extends BaseEntity {
     }
 
     public enum EmbeddingStatus {
+        PENDING, PROCESSING, SUCCESS, FAILED
+    }
+
+    public enum TaggingStatus {
         PENDING, PROCESSING, SUCCESS, FAILED
     }
 
@@ -192,6 +209,50 @@ public class NewsArticle extends BaseEntity {
         this.embeddingStatus = EmbeddingStatus.FAILED;
         this.embeddingAttemptedAt = OffsetDateTime.now();
         this.embeddingErrorMessage = errorMessage;
+    }
+
+    /**
+     * 태깅 처리 시작을 기록한다.
+     * 상태를 PROCESSING으로 변경하고 이전 에러 메시지를 초기화한다.
+     */
+    public void markTaggingProcessing() {
+        this.taggingStatus = TaggingStatus.PROCESSING;
+        this.taggingAttemptedAt = OffsetDateTime.now();
+        this.taggingErrorMessage = null;
+    }
+
+    /**
+     * 태깅 성공을 기록한다.
+     * 상태를 SUCCESS로 변경하고 에러 메시지를 초기화한다.
+     */
+    public void markTaggingSuccess() {
+        this.taggingStatus = TaggingStatus.SUCCESS;
+        this.taggingAttemptedAt = OffsetDateTime.now();
+        this.taggingErrorMessage = null;
+    }
+
+    /**
+     * AI 요약을 저장한다. 태깅 시 함께 생성된 한 줄 요약을 반영한다.
+     *
+     * @param summary 한 줄 요약 (50자 이내)
+     */
+    public void updateSummary(String summary) {
+        if (summary != null && !summary.isBlank()) {
+            this.summary = summary;
+        }
+    }
+
+    /**
+     * 태깅 실패를 기록한다.
+     * retryCount를 증가시키고 상태를 FAILED로 변경한다.
+     *
+     * @param errorMessage 실패 원인 메시지
+     */
+    public void markTaggingFailed(String errorMessage) {
+        this.taggingRetryCount++;
+        this.taggingStatus = TaggingStatus.FAILED;
+        this.taggingAttemptedAt = OffsetDateTime.now();
+        this.taggingErrorMessage = errorMessage;
     }
 
     public static NewsArticle of(RawNewsArticle rawArticle, CollectedNewsApiResponse dto,

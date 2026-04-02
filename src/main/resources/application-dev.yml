@@ -46,6 +46,10 @@ embedding:
   collect:
     cron: "0 */30 * * * *"
 
+tagging:
+  collect:
+    cron: "0 */30 * * * *"
+
 websocket:
   allowed-origins:
     - https://dev.wefin.ai.kr
