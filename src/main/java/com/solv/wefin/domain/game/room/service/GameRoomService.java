@@ -215,6 +215,7 @@ public class GameRoomService {
     @Transactional
     public StartRoomInfo startRoom(UUID roomId, UUID userId) {
 
+        //검증 로직 Fail-Fast 패턴 적용
         // 1. 방 조회 + 비관적 락 (중복 시작 방지)
         GameRoom gameRoom = gameRoomRepository.findByIdForUpdate(roomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_FOUND));

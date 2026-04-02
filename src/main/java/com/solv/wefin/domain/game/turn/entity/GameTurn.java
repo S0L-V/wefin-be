@@ -28,7 +28,7 @@ public class GameTurn {
     private GameRoom gameRoom;
 
     //ai 브리핑 테이블 생선 전이라 fk 처리 안 했습니다
-    @Column(name = "briefing_id", nullable = false)
+    @Column(name = "briefing_id")
     private UUID briefingId;
 
     @Column(name= "turn_number", nullable = false)
