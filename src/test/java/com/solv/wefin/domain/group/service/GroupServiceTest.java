@@ -6,6 +6,8 @@ import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.entity.GroupMember;
 import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.domain.group.repository.GroupRepository;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -21,7 +23,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,7 +41,7 @@ class GroupServiceTest {
 
     @Nested
     @DisplayName("getActiveMembers")
-    class GetActiveMembers {
+    class GetActiveMembersTest {
 
         @Test
         @DisplayName("그룹이 존재하면 ACTIVE 멤버 목록을 반환한다")
@@ -84,15 +87,15 @@ class GroupServiceTest {
             List<GroupMemberInfo> result = groupService.getActiveMembers(1L);
 
             // then
-            assertThat(result).hasSize(2);
-
-            assertThat(result.get(0).getUserId()).isEqualTo(leaderUser.getUserId());
-            assertThat(result.get(0).getNickname()).isEqualTo("리더");
-            assertThat(result.get(0).getRole()).isEqualTo("LEADER");
-
-            assertThat(result.get(1).getUserId()).isEqualTo(memberUser.getUserId());
-            assertThat(result.get(1).getNickname()).isEqualTo("멤버");
-            assertThat(result.get(1).getRole()).isEqualTo("MEMBER");
+            assertAll(
+                    () -> assertThat(result).hasSize(2),
+                    () -> assertThat(result.get(0).getUserId()).isEqualTo(leaderUser.getUserId()),
+                    () -> assertThat(result.get(0).getNickname()).isEqualTo("리더"),
+                    () -> assertThat(result.get(0).getRole()).isEqualTo("LEADER"),
+                    () -> assertThat(result.get(1).getUserId()).isEqualTo(memberUser.getUserId()),
+                    () -> assertThat(result.get(1).getNickname()).isEqualTo("멤버"),
+                    () -> assertThat(result.get(1).getRole()).isEqualTo("MEMBER")
+            );
 
             verify(groupRepository).findById(1L);
             verify(groupMemberRepository).findByGroupAndStatusWithUser(
@@ -103,16 +106,18 @@ class GroupServiceTest {
 
         @Test
         @DisplayName("그룹이 없으면 예외가 발생한다")
-        void getActiveMembers_fail_whenGroupNotFound() {
+        void getActiveMembers_fail_when_group_not_found() {
             // given
             when(groupRepository.findById(999L)).thenReturn(Optional.empty());
 
-            // when & then
-            assertThatThrownBy(() -> groupService.getActiveMembers(999L))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("그룹이 존재하지 않습니다.");
+            // when
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> groupService.getActiveMembers(999L)
+            );
 
-            verify(groupRepository).findById(999L);
+            // then
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_NOT_FOUND);
             verify(groupMemberRepository, never()).findByGroupAndStatusWithUser(any(), any());
         }
     }

@@ -6,6 +6,8 @@ import com.solv.wefin.domain.group.entity.GroupMember;
 import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.domain.group.repository.GroupRepository;
 import com.solv.wefin.domain.group.dto.GroupMemberInfo;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,7 +40,7 @@ public class GroupService {
 
     public List<GroupMemberInfo> getActiveMembers(Long groupId) {
         Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new IllegalArgumentException("그룹이 존재하지 않습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
 
         return groupMemberRepository.findByGroupAndStatusWithUser(
                         group,
