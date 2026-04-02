@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 @RestController
@@ -99,9 +98,7 @@ public class GameRoomController {
         StartRoomInfo info = gameRoomService.startRoom(roomId, userId);
 
         TurnDetailDto turnDto = TurnDetailDto.from(info.firstTurn());
-        StartRoomResponse response = StartRoomResponse.from(info.room().getRoomId(),
-                info.room().getStatus(), turnDto
-        );
+        StartRoomResponse response = StartRoomResponse.from(info);
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }

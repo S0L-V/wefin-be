@@ -67,7 +67,7 @@ public enum ErrorCode {
     ROOM_MIN_PLAYERS(400, "2명 이상의 참가자가 필요합니다."),
     ROOM_NOT_WAITING(400, "대기 상태가 아닙니다");
 
-    // GaemTurn
+    // GameTurn
 
     private final int status;
     private final String message;

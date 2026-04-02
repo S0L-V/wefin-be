@@ -27,7 +27,7 @@ public class GameTurn {
     @JoinColumn(name = "room_id", nullable = false)
     private GameRoom gameRoom;
 
-    //ai 브리핑 테이블 생선 전이라 fk 처리 안 했습니다
+    //ai 브리핑 테이블 생성 전이라 fk 처리 안 했습니다
     @Column(name = "briefing_id")
     private UUID briefingId;
 
