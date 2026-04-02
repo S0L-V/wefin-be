@@ -1,6 +1,7 @@
 package com.solv.wefin.web.group;
 
 import com.solv.wefin.domain.group.service.GroupService;
+import com.solv.wefin.global.common.ApiResponse;
 import com.solv.wefin.web.group.dto.GroupMemberResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,9 +19,11 @@ public class GroupController {
     private final GroupService groupService;
 
     @GetMapping("/{groupId}/members")
-    public List<GroupMemberResponse> getGroupMembers(@PathVariable Long groupId) {
-        return groupService.getActiveMembers(groupId).stream()
+    public ApiResponse<List<GroupMemberResponse>> getMembers(@PathVariable Long groupId) {
+        List<GroupMemberResponse> responses = groupService.getActiveMembers(groupId).stream()
                 .map(GroupMemberResponse::from)
                 .toList();
+
+        return ApiResponse.success(responses);
     }
 }

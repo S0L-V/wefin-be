@@ -51,12 +51,13 @@ class GroupControllerTest {
         // when & then
         mockMvc.perform(get("/api/groups/{groupId}/members", 1L))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].userId").value(leaderId.toString()))
-                .andExpect(jsonPath("$[0].nickname").value("리더"))
-                .andExpect(jsonPath("$[0].role").value("LEADER"))
-                .andExpect(jsonPath("$[1].userId").value(memberId.toString()))
-                .andExpect(jsonPath("$[1].nickname").value("멤버"))
-                .andExpect(jsonPath("$[1].role").value("MEMBER"));
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].userId").value(leaderId.toString()))
+                .andExpect(jsonPath("$.data[0].nickname").value("리더"))
+                .andExpect(jsonPath("$.data[0].role").value("LEADER"))
+                .andExpect(jsonPath("$.data[1].userId").value(memberId.toString()))
+                .andExpect(jsonPath("$.data[1].nickname").value("멤버"))
+                .andExpect(jsonPath("$.data[1].role").value("MEMBER"));
     }
 }
