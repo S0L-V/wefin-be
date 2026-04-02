@@ -1,5 +1,7 @@
 package com.solv.wefin.domain.trading.order.service;
 
+import static com.solv.wefin.domain.trading.common.TradingConstants.*;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
@@ -12,6 +14,7 @@ import com.solv.wefin.domain.trading.account.service.VirtualAccountService;
 import com.solv.wefin.domain.trading.common.MarketPriceProvider;
 import com.solv.wefin.domain.trading.common.StockInfoProvider;
 import com.solv.wefin.domain.trading.matching.event.OrderMatchedEvent;
+import com.solv.wefin.domain.trading.order.dto.OrderInfo;
 import com.solv.wefin.domain.trading.order.entity.Order;
 import com.solv.wefin.domain.trading.order.entity.OrderSide;
 import com.solv.wefin.domain.trading.order.entity.OrderType;
@@ -31,9 +34,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class OrderService {
 
-	private static final BigDecimal FEE_RATE = new BigDecimal("0.00015");
-	private static final BigDecimal TAX_RATE = new BigDecimal("0.0018");
-
 	private final OrderRepository orderRepository;
 	private final PortfolioService portfolioService;
 	private final VirtualAccountService virtualAccountService;
@@ -43,7 +43,7 @@ public class OrderService {
 	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional
-	public Order buyMarket(Long virtualAccountId, Long stockId, Integer quantity) {
+	public OrderInfo buyMarket(Long virtualAccountId, Long stockId, Integer quantity) {
 		// 1. 수량 검증
 		if (quantity == null || quantity <= 0) {
 			throw new BusinessException(ErrorCode.ORDER_INVALID_QUANTITY);
@@ -83,11 +83,12 @@ public class OrderService {
 			quantity, currentPrice, fee, account.getBalance()
 		));
 
-		return order;
+		return new OrderInfo(order, stock.getStockCode(), stock.getStockName(), currentPrice,
+			totalAmount, BigDecimal.ZERO, BigDecimal.ZERO, account.getBalance());
 	}
 
 	@Transactional
-	public Order sellMarket(Long virtualAccountId, Long stockId, Integer quantity) {
+	public OrderInfo sellMarket(Long virtualAccountId, Long stockId, Integer quantity) {
 		// 1. 수량 검증
 		if (quantity == null || quantity <= 0) {
 			throw new BusinessException(ErrorCode.ORDER_INVALID_QUANTITY);
@@ -149,6 +150,7 @@ public class OrderService {
 			quantity, currentPrice, fee, tax, realizedAmount, account.getBalance()
 		));
 
-		return order;
+		return new OrderInfo(order, stock.getStockCode(), stock.getStockName(), currentPrice,
+			totalAmount, tax, realizedAmount, account.getBalance());
 	}
 }
