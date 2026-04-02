@@ -18,6 +18,7 @@ public enum ErrorCode {
     CHAT_MESSAGE_EMPTY(400, "메시지 내용은 비어 있을 수 없습니다."),
     CHAT_MESSAGE_TOO_LONG(400, "메시지는 1000자를 초과할 수 없습니다."),
     CHAT_SPAM_DETECTED(429, "메시지를 너무 빠르게 전송하고 있습니다."),
+    INVALID_PROFIT_AMOUNT(400, "손익 금액은 0이 될 수 없습니다."),
 
     // Common
     INVALID_INPUT(400, "잘못된 입력입니다."),

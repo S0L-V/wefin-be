@@ -1,4 +1,4 @@
-package com.solv.wefin.domain.chat.globalChat.dto;
+package com.solv.wefin.domain.chat.globalChat.dto.info;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;

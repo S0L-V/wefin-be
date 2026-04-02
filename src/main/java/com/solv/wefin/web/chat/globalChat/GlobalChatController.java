@@ -1,34 +1,46 @@
 package com.solv.wefin.web.chat.globalChat;
 
+import com.solv.wefin.domain.chat.globalChat.dto.command.GlobalProfitShareCommand;
 import com.solv.wefin.domain.chat.globalChat.service.GlobalChatService;
-import com.solv.wefin.global.error.BusinessException;
-import com.solv.wefin.global.error.ErrorCode;
-import com.solv.wefin.web.chat.globalChat.dto.request.GlobalChatSendRequest;
+import com.solv.wefin.global.common.ApiResponse;
+import com.solv.wefin.web.chat.globalChat.dto.request.GlobalProfitShareRequest;
+import com.solv.wefin.web.chat.globalChat.dto.response.GlobalChatMessageResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
-import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-import java.util.UUID;
+import java.text.NumberFormat;
+import java.util.List;
+import java.util.Locale;
 
-@Controller
+@RestController
 @RequiredArgsConstructor
+@RequestMapping("/api/chat/global")
 public class GlobalChatController {
 
     private final GlobalChatService globalChatService;
 
-    @MessageMapping("/chat/global/send")
-    public void sendMessage(GlobalChatSendRequest request, SimpMessageHeaderAccessor accessor) {
-        Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
-        if (sessionAttributes == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
+    @GetMapping("/messages")
+    public ApiResponse<List<GlobalChatMessageResponse>> getRecentMessage(@RequestParam(defaultValue = "50") int limit) {
+        List<GlobalChatMessageResponse> messages = globalChatService.getRecentMessages(limit)
+                .stream()
+                .map(GlobalChatMessageResponse::from)
+                .toList();
 
-        Object userIdValue = sessionAttributes.get("userId");
-        if (!(userIdValue instanceof UUID userId)) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
-        globalChatService.sendMessage(request.getContent(), userId);
+        return ApiResponse.success(messages);
+    }
+
+    @PostMapping("/profit-share")
+    public ApiResponse<Void> sendProfitShareMessage(@Valid @RequestBody GlobalProfitShareRequest request) {
+        GlobalProfitShareCommand command = GlobalProfitShareCommand.builder()
+                .type(request.getType())
+                .userNickname(request.getUserNickname())
+                .stockName(request.getStockName())
+                .profitAmount(request.getProfitAmount())
+                .build();
+
+        globalChatService.sendProfitShareMessage(command);
+
+        return ApiResponse.success(null);
     }
 }
