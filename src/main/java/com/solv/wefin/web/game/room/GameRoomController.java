@@ -30,16 +30,16 @@ public class GameRoomController {
     private final GameRoomService gameRoomService;
 
     //로그인 구현 전 묵데이터
-    private static final UUID TEMP_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000001");
+    //private static final UUID TEMP_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000001");
     private static final Long TEMP_GROUP_ID = 1L;
 
     @PostMapping
     public ResponseEntity<ApiResponse<CreateRoomResponse>> createRoom(
-            @Valid @RequestBody CreateRoomRequest request) {
+            @RequestHeader("X-User-Id") UUID userId, @Valid @RequestBody CreateRoomRequest request) {
 
         CreateRoomCommand command = new CreateRoomCommand(
                 request.getSeedMoney(), request.getPeriodMonths(), request.getMoveDays());
-        GameRoom gameRoom = gameRoomService.createRoom(TEMP_USER_ID, TEMP_GROUP_ID, command);
+        GameRoom gameRoom = gameRoomService.createRoom(userId, TEMP_GROUP_ID, command);
         CreateRoomResponse response = CreateRoomResponse.from(gameRoom);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(201, response));
@@ -49,12 +49,10 @@ public class GameRoomController {
     /**
      게임방 목록 조회
      get /api/rooms
-     get /api/rooms?status=WAITING or in_progress or finished
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<List<RoomListResponse>>> getRooms() {
-
-        List<RoomListInfo> rooms = gameRoomService.getRooms(TEMP_GROUP_ID, TEMP_USER_ID);
+    public ResponseEntity<ApiResponse<List<RoomListResponse>>> getRooms(@RequestHeader("X-User-Id") UUID userId) {
+        List<RoomListInfo> rooms = gameRoomService.getRooms(TEMP_GROUP_ID, userId);
         List<RoomListResponse> response = rooms.stream().map(
                 r -> RoomListResponse.from(r.room(), r.playerCount())).collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -75,9 +73,9 @@ public class GameRoomController {
 
     // 게임방 입장
     @PostMapping("/{roomId}/join")
-    public ResponseEntity<ApiResponse<JoinRoomResponse>> joinRoom(@PathVariable UUID roomId) {
+    public ResponseEntity<ApiResponse<JoinRoomResponse>> joinRoom(@PathVariable UUID roomId, @RequestHeader("X-User-Id") UUID userId) {
 
-        GameParticipant participant = gameRoomService.joinRoom(roomId, TEMP_USER_ID);
+        GameParticipant participant = gameRoomService.joinRoom(roomId, userId);
         JoinRoomResponse response = JoinRoomResponse.from(participant);
 
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -85,9 +83,9 @@ public class GameRoomController {
 
     //게임방 퇴장
     @DeleteMapping("/{roomId}/leave")
-    public ResponseEntity<ApiResponse<LeaveRoomResponse>> leaveRoom(@PathVariable UUID roomId) {
+    public ResponseEntity<ApiResponse<LeaveRoomResponse>> leaveRoom(@PathVariable UUID roomId, @RequestHeader("X-User-Id") UUID userId) {
 
-        gameRoomService.leaveRoom(roomId, TEMP_USER_ID);
+        gameRoomService.leaveRoom(roomId, userId);
         LeaveRoomResponse response = LeaveRoomResponse.success();
 
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -96,9 +94,9 @@ public class GameRoomController {
     //게임 시작
     @PostMapping("/{roomId}/start")
     public ResponseEntity<ApiResponse<StartRoomResponse>> startRoom(
-            @PathVariable UUID roomId) {
+            @PathVariable UUID roomId, @RequestHeader("X-User-Id") UUID userId) {
 
-        StartRoomInfo info = gameRoomService.startRoom(roomId, TEMP_USER_ID);
+        StartRoomInfo info = gameRoomService.startRoom(roomId, userId);
 
         TurnDetailDto turnDto = TurnDetailDto.from(info.firstTurn());
         StartRoomResponse response = StartRoomResponse.from(info.room().getRoomId(),
