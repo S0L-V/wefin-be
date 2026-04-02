@@ -1,6 +1,7 @@
 package com.solv.wefin.web.chat.globalChat.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 @Getter
@@ -16,6 +17,6 @@ public class GlobalProfitShareRequest {
     @NotBlank
     private String stockName;
 
-    @NonNull
+    @NotNull
     private Long profitAmount;
 }

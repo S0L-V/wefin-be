@@ -4,14 +4,17 @@ import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.chat.common.constant.ChatScope;
 import com.solv.wefin.domain.chat.common.service.ChatSpamGuard;
+import com.solv.wefin.domain.chat.globalChat.dto.command.GlobalProfitShareCommand;
 import com.solv.wefin.domain.chat.globalChat.entity.ChatRole;
 import com.solv.wefin.domain.chat.globalChat.entity.GlobalChatMessage;
 import com.solv.wefin.domain.chat.globalChat.event.GlobalChatMessageCreatedEvent;
 import com.solv.wefin.domain.chat.globalChat.repository.GlobalChatMessageRepository;
 import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -20,8 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 public class GlobalChatServiceTest {
@@ -163,15 +165,20 @@ public class GlobalChatServiceTest {
     }
 
     @Test
-    @DisplayName("시스템 메시지를 저장하고 이벤트를 발생한다.")
-    void sendSystemMessage_success() {
+    @DisplayName("수익 공유 시스템 메시지를 저장하고 이벤트를 발생한다")
+    void sendProfitShareMessage_profit_success() {
         // given
-        String content = "tico님이 삼성전자에서 523000원의 수익을 달성하셨습니다.";
+        GlobalProfitShareCommand command = GlobalProfitShareCommand.builder()
+                .type("PROFIT_ALERT")
+                .userNickname("tico")
+                .stockName("삼성전자")
+                .profitAmount(523000L)
+                .build();
 
         GlobalChatMessage savedMessage = GlobalChatMessage.builder()
                 .user(null)
                 .role(ChatRole.SYSTEM)
-                .content(content)
+                .content("축하합니다! tico님이 삼성전자에서 523,000원의 수익을 달성하셨습니다!")
                 .createdAt(OffsetDateTime.now())
                 .build();
         ReflectionTestUtils.setField(savedMessage, "id", 1L);
@@ -179,11 +186,40 @@ public class GlobalChatServiceTest {
         when(globalChatMessageRepository.save(any(GlobalChatMessage.class)))
                 .thenReturn(savedMessage);
 
+        ArgumentCaptor<GlobalChatMessage> captor = ArgumentCaptor.forClass(GlobalChatMessage.class);
+
         // when
-        globalChatService.sendSystemMessage(content);
+        globalChatService.sendProfitShareMessage(command);
 
         // then
-        verify(globalChatMessageRepository, times(1)).save(any(GlobalChatMessage.class));
-        verify(eventPublisher, times(1)).publishEvent(any(GlobalChatMessageCreatedEvent.class));
+        verify(globalChatMessageRepository).save(captor.capture());
+        verify(eventPublisher).publishEvent(any(GlobalChatMessageCreatedEvent.class));
+
+        GlobalChatMessage capturedMessage = captor.getValue();
+        assertEquals(ChatRole.SYSTEM, capturedMessage.getRole());
+        assertEquals("축하합니다! tico님이 삼성전자에서 523,000원의 수익을 달성하셨습니다!", capturedMessage.getContent());
+        assertNull(capturedMessage.getUser());
+    }
+
+
+    @Test
+    @DisplayName("손익이 0원이면 예외가 발생한다")
+    void sendProfitShareMessage_fail_when_profitAmount_zero() {
+        // given
+        GlobalProfitShareCommand command = GlobalProfitShareCommand.builder()
+                .type("PROFIT_ALERT")
+                .userNickname("tico")
+                .stockName("삼성전자")
+                .profitAmount(0L)
+                .build();
+
+        // when
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> globalChatService.sendProfitShareMessage(command));
+
+        // then
+        assertEquals(ErrorCode.INVALID_PROFIT_AMOUNT, exception.getErrorCode());
+        verify(globalChatMessageRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 }

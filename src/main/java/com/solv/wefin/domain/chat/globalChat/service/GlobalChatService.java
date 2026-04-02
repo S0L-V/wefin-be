@@ -4,7 +4,8 @@ import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.chat.common.constant.ChatScope;
 import com.solv.wefin.domain.chat.common.service.ChatSpamGuard;
-import com.solv.wefin.domain.chat.globalChat.dto.GlobalChatMessageInfo;
+import com.solv.wefin.domain.chat.globalChat.dto.command.GlobalProfitShareCommand;
+import com.solv.wefin.domain.chat.globalChat.dto.info.GlobalChatMessageInfo;
 import com.solv.wefin.domain.chat.globalChat.entity.ChatRole;
 import com.solv.wefin.domain.chat.globalChat.entity.GlobalChatMessage;
 import com.solv.wefin.domain.chat.globalChat.event.GlobalChatMessageCreatedEvent;
@@ -18,11 +19,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.NumberFormat;
 import java.time.OffsetDateTime;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -90,6 +89,13 @@ public class GlobalChatService {
         eventPublisher.publishEvent(toEvent(savedMessage));
     }
 
+    @Transactional
+    public void sendProfitShareMessage(GlobalProfitShareCommand command) {
+        String content = createProfitShareMessage(command);
+        sendSystemMessage(content);
+    }
+
+
     private GlobalChatMessageInfo toInfo(GlobalChatMessage message) {
         User user = message.getUser();
 
@@ -147,5 +153,23 @@ public class GlobalChatService {
                 .sorted(Comparator.comparing(GlobalChatMessage::getId))
                 .map(this::toInfo)
                 .toList();
+    }
+
+    // 수익 메시지 변환
+    private String createProfitShareMessage(GlobalProfitShareCommand command) {
+        String nickname = command.userNickname();
+        String stockName = command.stockName();
+        long profitAmount = command.profitAmount();
+        NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.KOREA);
+
+        if (profitAmount > 0) {
+            String amount = numberFormat.format(profitAmount);
+            return "축하합니다! " + nickname + "님이 " + stockName + "에서 " + amount + "원의 수익을 달성하셨습니다!";
+        } else if (profitAmount < 0) {
+            String amount = numberFormat.format(Math.abs(profitAmount));
+            return "안타깝네요. " + nickname + "님이 " + stockName + "에서 " + amount + "원을 잃었습니다.";
+        }
+
+        throw new BusinessException(ErrorCode.INVALID_PROFIT_AMOUNT);
     }
 }

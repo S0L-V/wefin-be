@@ -1,6 +1,6 @@
 package com.solv.wefin.web.chat.globalChat.dto.response;
 
-import com.solv.wefin.domain.chat.globalChat.dto.GlobalChatMessageInfo;
+import com.solv.wefin.domain.chat.globalChat.dto.info.GlobalChatMessageInfo;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
