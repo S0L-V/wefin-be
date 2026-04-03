@@ -44,8 +44,8 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@RequestBody @Valid LoginRequest request) {
         LoginInfo result = authService.login(
-                request.getEmail(),
-                request.getPassword()
+                request.email(),
+                request.password()
         );
 
         LoginResponse response = LoginResponse.builder()
