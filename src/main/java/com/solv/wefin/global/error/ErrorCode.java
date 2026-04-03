@@ -69,6 +69,11 @@ public enum ErrorCode {
     TAGGING_ARTICLE_NOT_FOUND(500, "태깅 대상 기사를 찾을 수 없습니다."),
     TAGGING_ALREADY_RUNNING(409, "태깅 생성이 이미 실행 중입니다."),
 
+    // Clustering
+    CLUSTERING_ALREADY_RUNNING(409, "클러스터링이 이미 실행 중입니다."),
+    CLUSTERING_ARTICLE_NOT_FOUND(500, "클러스터링 대상 기사를 찾을 수 없습니다."),
+    CLUSTERING_NO_EMBEDDING(500, "기사의 임베딩이 존재하지 않습니다."),
+
     // GameRoom
     ROOM_NOT_FOUND(404,"게임장을 찾을 수 없습니다."),
     ROOM_ALREADY_EXISTS(409, "이미 진행 중이거나 대기 중인 게임방이 있습니다."),
