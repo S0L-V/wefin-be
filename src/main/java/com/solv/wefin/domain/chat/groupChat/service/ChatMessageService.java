@@ -156,7 +156,12 @@ public class ChatMessageService {
 
     private UUID extractUserId(ChatMessage message) {
         User user = message.getUser();
-        return user != null ? user.getUserId() : null;
+
+        if (message.getMessageType() == MessageType.SYSTEM || user == null) {
+            return null;
+        }
+
+        return user.getUserId();
     }
 
     private Long extractGroupId(ChatMessage message) {

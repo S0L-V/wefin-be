@@ -173,6 +173,11 @@ public class GlobalChatService {
 
     private UUID extractUserId(GlobalChatMessage message) {
         User user = message.getUser();
-        return user != null ? user.getUserId() : null;
+
+        if (message.getRole() == ChatRole.SYSTEM || user == null) {
+            return null;
+        }
+
+        return user.getUserId();
     }
 }
