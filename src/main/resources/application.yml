@@ -29,6 +29,9 @@ websocket:
   allowed-origins:
     - http://localhost:5173
 
+jwt:
+  secret: ${JWT_SECRET:test-secret-key-test-secret-key-test-secret-key}
+
 hantu:
   api:
     baseUrl: https://openapivts.koreainvestment.com:29443
