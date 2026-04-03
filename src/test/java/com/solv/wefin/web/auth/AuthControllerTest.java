@@ -4,6 +4,7 @@ import com.solv.wefin.domain.auth.dto.LoginInfo;
 import com.solv.wefin.domain.auth.dto.SignupCommand;
 import com.solv.wefin.domain.auth.dto.SignupInfo;
 import com.solv.wefin.domain.auth.service.AuthService;
+import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -35,6 +36,9 @@ class AuthControllerTest {
 
     @MockBean
     private AuthService authService;
+
+    @MockBean
+    private JwtProvider jwtProvider;
 
     @Nested
     @DisplayName("POST /api/auth/signup")
@@ -267,6 +271,78 @@ class AuthControllerTest {
                     .andExpect(jsonPath("$.status").value(423))
                     .andExpect(jsonPath("$.code").value("ACCOUNT_LOCKED"))
                     .andExpect(jsonPath("$.message").value("계정이 잠금 상태입니다."));
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/auth/refresh")
+    class RefreshTest {
+
+        private String refreshRequest(String refreshToken) {
+            return """
+        {
+          "refreshToken": "%s"
+        }
+        """.formatted(refreshToken);
+        }
+
+        @Test
+        @DisplayName("토큰 재발급 성공 시 200과 새 access token을 반환한다")
+        void refresh_success() throws Exception {
+            when(authService.refresh("refresh-token"))
+                    .thenReturn("new-access-token");
+
+            String requestBody = refreshRequest("refresh-token");
+
+            mockMvc.perform(post("/api/auth/refresh")
+                            .with(csrf())
+                            .with(user("test"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value(200))
+                    .andExpect(jsonPath("$.data.accessToken").value("new-access-token"));
+
+            verify(authService).refresh("refresh-token");
+        }
+
+        @Test
+        @DisplayName("refreshToken이 비어 있으면 validation 에러를 반환한다")
+        void refresh_fail_when_refresh_token_blank() throws Exception {
+            String requestBody = """
+                {
+                  "refreshToken": ""
+                }
+                """;
+
+            mockMvc.perform(post("/api/auth/refresh")
+                            .with(csrf())
+                            .with(user("test"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.code").value("AUTH_VALIDATION_FAILED"))
+                    .andExpect(jsonPath("$.data.refreshToken").value("리프레시 토큰은 필수입니다."));
+        }
+
+        @Test
+        @DisplayName("유효하지 않은 refresh token이면 401 에러를 반환한다")
+        void refresh_fail_when_token_invalid() throws Exception {
+            when(authService.refresh("invalid-refresh-token"))
+                    .thenThrow(new BusinessException(ErrorCode.AUTH_INVALID_TOKEN));
+
+            String requestBody = refreshRequest("invalid-refresh-token");
+
+            mockMvc.perform(post("/api/auth/refresh")
+                            .with(csrf())
+                            .with(user("test"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.status").value(401))
+                    .andExpect(jsonPath("$.code").value("AUTH_INVALID_TOKEN"))
+                    .andExpect(jsonPath("$.message").value("유효하지 않은 인증 토큰입니다."));
         }
     }
 }
