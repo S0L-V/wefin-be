@@ -1,5 +1,6 @@
 package com.solv.wefin.web.auth;
 
+import com.solv.wefin.domain.auth.dto.LoginInfo;
 import com.solv.wefin.domain.auth.dto.SignupCommand;
 import com.solv.wefin.domain.auth.dto.SignupInfo;
 import com.solv.wefin.domain.auth.service.AuthService;
@@ -161,6 +162,111 @@ class AuthControllerTest {
                     .andExpect(jsonPath("$.status").value(409))
                     .andExpect(jsonPath("$.code").value("AUTH_NICKNAME_DUPLICATED"))
                     .andExpect(jsonPath("$.message").value("이미 사용 중인 닉네임입니다."));
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/auth/login")
+    class LoginTest {
+
+        private String loginRequest(String email, String password) {
+            return """
+            {
+              "email": "%s",
+              "password": "%s"
+            }
+            """.formatted(email, password);
+        }
+
+        @Test
+        @DisplayName("로그인 성공 시 200과 토큰 응답 데이터를 반환한다")
+        void login_success() throws Exception {
+            UUID userId = UUID.randomUUID();
+
+            LoginInfo result = new LoginInfo(
+                    userId,
+                    "testuser",
+                    "access-token",
+                    "refresh-token"
+            );
+
+            when(authService.login("test@example.com", "pass1234"))
+                    .thenReturn(result);
+
+            String requestBody = loginRequest("test@example.com", "pass1234");
+
+            mockMvc.perform(post("/api/auth/login")
+                            .with(csrf())
+                            .with(user("test"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value(200))
+                    .andExpect(jsonPath("$.data.userId").value(userId.toString()))
+                    .andExpect(jsonPath("$.data.nickname").value("testuser"))
+                    .andExpect(jsonPath("$.data.accessToken").value("access-token"))
+                    .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"));
+
+            verify(authService).login("test@example.com", "pass1234");
+        }
+
+        @Test
+        @DisplayName("이메일 형식이 잘못되면 validation 에러를 반환한다")
+        void login_fail_when_email_invalid() throws Exception {
+            String requestBody = """
+                    {
+                      "email": "wrong-email",
+                      "password": "pass1234"
+                    }
+                    """;
+
+            mockMvc.perform(post("/api/auth/login")
+                            .with(csrf())
+                            .with(user("test"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.code").value("AUTH_VALIDATION_FAILED"))
+                    .andExpect(jsonPath("$.data.email").value("올바른 이메일 형식이 아닙니다."));
+        }
+
+        @Test
+        @DisplayName("이메일 또는 비밀번호가 틀리면 401 에러를 반환한다")
+        void login_fail_when_login_failed() throws Exception {
+            when(authService.login("test@example.com", "wrongpass"))
+                    .thenThrow(new BusinessException(ErrorCode.AUTH_LOGIN_FAILED));
+
+            String requestBody = loginRequest("test@example.com", "wrongpass");
+
+            mockMvc.perform(post("/api/auth/login")
+                            .with(csrf())
+                            .with(user("test"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.status").value(401))
+                    .andExpect(jsonPath("$.code").value("AUTH_LOGIN_FAILED"))
+                    .andExpect(jsonPath("$.message").value("이메일 또는 비밀번호가 올바르지 않습니다."));
+        }
+
+        @Test
+        @DisplayName("잠긴 계정이면 423 에러를 반환한다")
+        void login_fail_when_account_locked() throws Exception {
+            when(authService.login("test@example.com", "pass1234"))
+                    .thenThrow(new BusinessException(ErrorCode.ACCOUNT_LOCKED));
+
+            String requestBody = loginRequest("test@example.com", "pass1234");
+
+            mockMvc.perform(post("/api/auth/login")
+                            .with(csrf())
+                            .with(user("test"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isLocked())
+                    .andExpect(jsonPath("$.status").value(423))
+                    .andExpect(jsonPath("$.code").value("ACCOUNT_LOCKED"))
+                    .andExpect(jsonPath("$.message").value("계정이 잠금 상태입니다."));
         }
     }
 }
