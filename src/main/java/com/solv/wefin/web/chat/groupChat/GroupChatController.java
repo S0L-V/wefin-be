@@ -6,10 +6,7 @@ import com.solv.wefin.global.common.ApiResponse;
 import com.solv.wefin.web.chat.groupChat.dto.response.ChatMessageResponse;
 import com.solv.wefin.web.chat.groupChat.dto.response.GroupChatMetaResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,7 +20,7 @@ public class GroupChatController {
 
     @GetMapping("/messages")
     public ApiResponse<List<ChatMessageResponse>> getRecentMessages(
-            @RequestParam UUID userId,
+            @RequestHeader("X-User-Id") UUID userId,
             @RequestParam(defaultValue = "50") int limit) {
         List<ChatMessageResponse> messages = chatMessageService.getRecentMessages(userId, limit)
                 .stream()
@@ -35,7 +32,7 @@ public class GroupChatController {
 
     @GetMapping("/me")
     public ApiResponse<GroupChatMetaResponse> getMyGroup(
-            @RequestParam UUID userId
+            @RequestHeader("X-User-Id") UUID userId
     ) {
         Group group = chatMessageService.getMyGroup(userId);
 
