@@ -8,9 +8,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> {
     boolean existsByUserAndGroup(User user, Group group);
+
+    Optional<GroupMember> findByUser_UserIdAndStatus(
+            UUID userId,
+            GroupMember.GroupMemberStatus status
+    );
 
     @Query("""
             select gm

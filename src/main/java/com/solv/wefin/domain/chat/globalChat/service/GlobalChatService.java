@@ -35,6 +35,8 @@ public class GlobalChatService {
     private final ChatSpamGuard chatSpamGuard;
 
     private static final long SPAM_WINDOW_SECONDS = 3L;
+    private static final String SYSTEM = "시스템";
+    private static final int MAX_MESSAGE_LENGTH = 1000;
 
     private final Map<String, Object> chatLocks = new ConcurrentHashMap<>();
     @Transactional
@@ -97,36 +99,22 @@ public class GlobalChatService {
 
 
     private GlobalChatMessageInfo toInfo(GlobalChatMessage message) {
-        User user = message.getUser();
-
-        String sender = (message.getRole() == ChatRole.SYSTEM || user == null)
-                ? "시스템"
-                : user.getNickname();
-
-        UUID userId = user != null ? user.getUserId() : null;
-
         return new GlobalChatMessageInfo(
                 message.getId(),
-                userId,
+                extractUserId(message),
                 message.getRole().name(),
-                sender,
+                resolveSender(message),
                 message.getContent(),
                 message.getCreatedAt()
         );
     }
 
     private GlobalChatMessageCreatedEvent toEvent(GlobalChatMessage message) {
-        User user = message.getUser();
-
-        String sender = (message.getRole() == ChatRole.SYSTEM || user == null)
-                ? "시스템"
-                : user.getNickname();
-
         return new GlobalChatMessageCreatedEvent(
                 message.getId(),
-                user != null ? user.getUserId() : null,
+                extractUserId(message),
                 message.getRole().name(),
-                sender,
+                resolveSender(message),
                 message.getContent(),
                 message.getCreatedAt()
         );
@@ -137,7 +125,7 @@ public class GlobalChatService {
             throw new BusinessException(ErrorCode.CHAT_MESSAGE_EMPTY);
         }
 
-        if (content.length() > 1000) {
+        if (content.length() > MAX_MESSAGE_LENGTH) {
             throw new BusinessException(ErrorCode.CHAT_MESSAGE_TOO_LONG);
         }
     }
@@ -171,5 +159,25 @@ public class GlobalChatService {
         }
 
         throw new BusinessException(ErrorCode.INVALID_PROFIT_AMOUNT);
+    }
+
+    private String resolveSender(GlobalChatMessage message) {
+        User user = message.getUser();
+
+        if (message.getRole() == ChatRole.SYSTEM || user == null) {
+            return SYSTEM;
+        }
+
+        return user.getNickname();
+    }
+
+    private UUID extractUserId(GlobalChatMessage message) {
+        User user = message.getUser();
+
+        if (message.getRole() == ChatRole.SYSTEM || user == null) {
+            return null;
+        }
+
+        return user.getUserId();
     }
 }

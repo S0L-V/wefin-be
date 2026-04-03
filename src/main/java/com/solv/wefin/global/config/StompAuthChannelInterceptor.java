@@ -34,7 +34,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             return message;
         }
 
-        // CONNECT 일때 nickname을 웹소켓 사용자로 저장
+        // CONNECT 일때 id를 웹소켓 사용자로 저장
         if(StompCommand.CONNECT.equals(accessor.getCommand())) {
             String userIdHeader = accessor.getFirstNativeHeader("userId");
 
