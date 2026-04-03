@@ -77,6 +77,13 @@ public class NewsClusterArticle {
      */
     public static NewsClusterArticle create(Long clusterId, Long articleId,
                                             int order, boolean suspicious) {
+        if (clusterId == null) {
+            throw new IllegalArgumentException("clusterId는 null일 수 없습니다");
+        }
+        if (articleId == null) {
+            throw new IllegalArgumentException("articleId는 null일 수 없습니다");
+        }
+
         return NewsClusterArticle.builder()
                 .newsClusterId(clusterId)
                 .newsArticleId(articleId)

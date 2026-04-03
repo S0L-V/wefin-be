@@ -83,7 +83,7 @@ public class NewsCluster extends BaseEntity {
                         Long representativeArticleId, String thumbnailUrl,
                         OffsetDateTime publishedAt) {
         this.clusterType = clusterType;
-        this.centroidVector = centroidVector;
+        this.centroidVector = centroidVector != null ? centroidVector.clone() : null;
         this.representativeArticleId = representativeArticleId;
         this.thumbnailUrl = thumbnailUrl;
         this.publishedAt = publishedAt;

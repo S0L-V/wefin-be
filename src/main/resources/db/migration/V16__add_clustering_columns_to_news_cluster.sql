@@ -39,3 +39,6 @@ CREATE INDEX IF NOT EXISTS idx_news_cluster_status ON news_cluster (status);
 
 -- 인덱스: summary_status 기반 요약 대상 조회용
 CREATE INDEX IF NOT EXISTS idx_news_cluster_summary_status ON news_cluster (summary_status);
+
+-- 인덱스: 클러스터 미배정 기사 조회 + existsByNewsArticleId 용
+CREATE INDEX IF NOT EXISTS idx_news_cluster_article_news_article_id ON news_cluster_article (news_article_id);

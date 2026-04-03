@@ -42,11 +42,22 @@ public class ArticleVectorService {
      * 청크 임베딩들의 단순 평균 벡터를 계산한다.
      */
     private float[] averageVectors(List<ArticleEmbedding> embeddings) {
-        int dimension = embeddings.get(0).getEmbedding().length;
+        float[] firstVector = embeddings.get(0).getEmbedding();
+        if (firstVector == null || firstVector.length == 0) {
+            throw new IllegalArgumentException("첫 번째 청크의 임베딩이 null이거나 비어있습니다");
+        }
+
+        int dimension = firstVector.length;
         float[] sum = new float[dimension];
 
-        for (ArticleEmbedding embedding : embeddings) {
-            float[] vector = embedding.getEmbedding();
+        for (int idx = 0; idx < embeddings.size(); idx++) {
+            float[] vector = embeddings.get(idx).getEmbedding();
+            if (vector == null || vector.length != dimension) {
+                throw new IllegalArgumentException(
+                        "청크 임베딩 차원 불일치 - index: " + idx
+                                + ", expected: " + dimension
+                                + ", actual: " + (vector == null ? "null" : vector.length));
+            }
             for (int i = 0; i < dimension; i++) {
                 sum[i] += vector[i];
             }
