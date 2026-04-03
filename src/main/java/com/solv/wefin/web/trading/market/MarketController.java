@@ -1,5 +1,6 @@
 package com.solv.wefin.web.trading.market;
 
+import com.solv.wefin.domain.trading.market.dto.CandleResponse;
 import com.solv.wefin.domain.trading.market.dto.OrderbookResponse;
 import com.solv.wefin.domain.trading.market.dto.PriceResponse;
 import com.solv.wefin.domain.trading.market.service.MarketService;
@@ -9,6 +10,7 @@ import com.solv.wefin.global.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 
@@ -35,5 +37,14 @@ public class MarketController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String market) {
         return ApiResponse.success(stockService.search(keyword, market));
+    }
+
+    @GetMapping("/{code}/candles")
+    public ApiResponse<List<CandleResponse>> getCandle(
+            @PathVariable String code,
+            @RequestParam LocalDate start,
+            @RequestParam LocalDate end,
+            @RequestParam String periodCode) {
+        return ApiResponse.success(marketService.getCandles(code, start, end, periodCode));
     }
 }

@@ -2,8 +2,10 @@ package com.solv.wefin.domain.trading.market.service;
 
 import com.solv.wefin.domain.trading.common.ExchangeRateProvider;
 import com.solv.wefin.domain.trading.market.client.HantuMarketClient;
+import com.solv.wefin.domain.trading.market.client.dto.HantuCandleApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuOrderbookApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuPriceApiResponse;
+import com.solv.wefin.domain.trading.market.dto.CandleResponse;
 import com.solv.wefin.domain.trading.market.dto.OrderbookResponse;
 import com.solv.wefin.domain.trading.market.dto.PriceResponse;
 import com.solv.wefin.domain.trading.common.MarketPriceProvider;
@@ -14,6 +16,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.*;
 
 @RequiredArgsConstructor
@@ -27,11 +32,10 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
     private final ConcurrentHashMap<String, PriceResponse> priceCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Long> priceCacheTimestamp = new ConcurrentHashMap<>();
     private static final long CACHE_TTL_MS = 5000; // 5초
+    private static final Set<String> VALID_PERIOD_CODES = Set.of("D", "W", "M", "Y");
 
     public PriceResponse getPrice(String stockCode) {
-        if (!stockService.existsByCode(stockCode)) {
-            throw new BusinessException(ErrorCode.MARKET_STOCK_NOT_FOUND);
-        }
+        validateStockCode(stockCode);
 
         // 캐시 확인
         PriceResponse cached = getCachedPrice(stockCode);
@@ -127,5 +131,44 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
     @Override
     public BigDecimal getUsdKrwRate() {
         return new BigDecimal("1508.00");
+    }
+
+    public List<CandleResponse> getCandles(String stockCode, LocalDate start, LocalDate end, String periodCode) {
+        validateStockCode(stockCode);
+
+        if (start.isAfter(end)) {
+            throw new BusinessException(ErrorCode.MARKET_INVALID_DATE);
+        }
+
+        periodCode = periodCode.toUpperCase();
+        if (!VALID_PERIOD_CODES.contains(periodCode)) {
+            throw new BusinessException(ErrorCode.MARKET_INVALID_PERIOD_CODE);
+        }
+
+        HantuCandleApiResponse response = hantuMarketClient.fetchPeriodPrice(stockCode, start, end, periodCode);
+
+        if (response == null) {
+            return List.of();
+        }
+
+        // 한투 API 응답 코드 검증 (rt_cd "0"이면 정상)
+        if (!"0".equals(response.output1().rt_cd())) {
+            throw new BusinessException(ErrorCode.MARKET_API_FAILED);
+        }
+
+        if (response.output2() == null) {
+            return List.of();
+        }
+
+        return response.output2().stream()
+                    .map(CandleResponse::from)
+                    .toList();
+
+    }
+
+    private void validateStockCode(String stockCode) {
+        if (!stockService.existsByCode(stockCode)) {
+            throw new BusinessException(ErrorCode.MARKET_STOCK_NOT_FOUND);
+        }
     }
 }
