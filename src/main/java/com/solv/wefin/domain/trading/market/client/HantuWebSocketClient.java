@@ -24,7 +24,7 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
     private String wsUrl;
 
     private final WebSocketClient hantuWsClient;
-    private final HantuWsKeyManager hantuWsKeyManager;
+    private final HantuWebSocketKeyManager hantuWebSocketKeyManager;
     private WebSocketSession session;
 
     // 한투 WS에 연결

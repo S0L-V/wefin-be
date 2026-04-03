@@ -11,7 +11,7 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 @Component
-public class HantuWsKeyManager {
+public class HantuWebSocketKeyManager {
 
     @Value("${hantu.api.appkey}")
     private String appKey;

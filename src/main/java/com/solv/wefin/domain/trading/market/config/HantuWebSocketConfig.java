@@ -7,7 +7,7 @@ import org.springframework.web.socket.client.WebSocketClient;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 
 @Configuration
-public class HantuWsConfig {
+public class HantuWebSocketConfig {
 
     @Value("${hantu.ws.url}")
     private String baseUrl;
