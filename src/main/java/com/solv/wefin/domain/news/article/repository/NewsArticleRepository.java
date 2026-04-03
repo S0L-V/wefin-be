@@ -18,7 +18,6 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
 
     /**
      * 임베딩 대상 기사를 조회한다.
-     * PENDING/FAILED 상태이거나, PROCESSING 상태에서 staleBefore 이전에 시도된 기사를 포함한다.
      */
     @Query("SELECT a FROM NewsArticle a " +
             "WHERE a.crawlStatus = :crawlStatus " +
@@ -50,5 +49,18 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
             @Param("processingStatus") NewsArticle.TaggingStatus processingStatus,
             @Param("maxRetryCount") int maxRetryCount,
             @Param("staleBefore") OffsetDateTime staleBefore,
+            Pageable pageable);
+
+    /**
+     * 클러스터링 대상 기사를 조회한다.
+     */
+    @Query("SELECT a FROM NewsArticle a " +
+            "WHERE a.embeddingStatus = :embeddingStatus " +
+            "AND a.id NOT IN (SELECT nca.newsArticleId FROM NewsClusterArticle nca) " +
+            "AND a.createdAt > :since " +
+            "ORDER BY a.collectedAt DESC")
+    List<NewsArticle> findClusteringTargets(
+            @Param("embeddingStatus") NewsArticle.EmbeddingStatus embeddingStatus,
+            @Param("since") OffsetDateTime since,
             Pageable pageable);
 }
