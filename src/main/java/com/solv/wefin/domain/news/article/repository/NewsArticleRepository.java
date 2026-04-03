@@ -56,7 +56,7 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
      */
     @Query("SELECT a FROM NewsArticle a " +
             "WHERE a.embeddingStatus = :embeddingStatus " +
-            "AND a.id NOT IN (SELECT nca.newsArticleId FROM NewsClusterArticle nca) " +
+            "AND NOT EXISTS (SELECT 1 FROM NewsClusterArticle nca WHERE nca.newsArticleId = a.id) " +
             "AND a.createdAt > :since " +
             "ORDER BY a.collectedAt DESC")
     List<NewsArticle> findClusteringTargets(
