@@ -46,6 +46,8 @@ public enum ErrorCode {
     // Market
     MARKET_STOCK_NOT_FOUND(404, "종목을 찾을 수 없습니다."),
     MARKET_API_FAILED(503, "한투 API 호출에 실패했습니다."),
+    MARKET_INVALID_PERIOD_CODE(400, "유효하지 않은 기간 옵션입니다."),
+    MARKET_INVALID_DATE(400, "조회 시작일자는 종료일자 이전이어야 합니다."),
 
     // Interest
     INTEREST_ALREADY_EXISTS(400, "이미 등록된 관심종목입니다."),
