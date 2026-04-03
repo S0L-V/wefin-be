@@ -4,6 +4,7 @@ import com.solv.wefin.domain.auth.dto.LoginInfo;
 import com.solv.wefin.domain.auth.dto.SignupCommand;
 import com.solv.wefin.domain.auth.dto.SignupInfo;
 import com.solv.wefin.domain.auth.service.AuthService;
+import com.solv.wefin.global.config.security.JwtAuthenticationEntryPoint;
 import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
@@ -39,6 +40,9 @@ class AuthControllerTest {
 
     @MockBean
     private JwtProvider jwtProvider;
+
+    @MockBean
+    private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     @Nested
     @DisplayName("POST /api/auth/signup")
