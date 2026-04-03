@@ -147,13 +147,23 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
 
         HantuCandleApiResponse response = hantuMarketClient.fetchPeriodPrice(stockCode, start, end, periodCode);
 
-        if (response == null || response.output2() == null) {
+        if (response == null) {
             return List.of();
-        } else {
-            return response.output2().stream()
+        }
+
+        // 한투 API 응답 코드 검증 (rt_cd "0"이면 정상)
+        if (!"0".equals(response.output1().rt_cd())) {
+            throw new BusinessException(ErrorCode.MARKET_API_FAILED);
+        }
+
+        if (response.output2() == null) {
+            return List.of();
+        }
+
+        return response.output2().stream()
                     .map(CandleResponse::from)
                     .toList();
-        }
+
     }
 
     private void validateStockCode(String stockCode) {

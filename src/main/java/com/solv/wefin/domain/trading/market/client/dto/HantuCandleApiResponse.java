@@ -3,8 +3,16 @@ package com.solv.wefin.domain.trading.market.client.dto;
 import java.util.List;
 
 public record HantuCandleApiResponse(
+        Output1 output1,
         List<Output2> output2
 ) {
+
+    public record Output1(
+            String rt_cd,
+            String msg_cd,
+            String msg1
+    ) {}
+
     public record Output2(
             String stck_bsop_date,  // 날짜
             String stck_oprc,       // 시가
