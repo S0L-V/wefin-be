@@ -28,6 +28,10 @@ public class ArticleVectorService {
      * @return 대표 벡터 (1536차원), 임베딩이 없으면 null
      */
     public float[] calculateRepresentativeVector(Long newsArticleId) {
+        if (newsArticleId == null) {
+            throw new IllegalArgumentException("newsArticleId는 null일 수 없습니다");
+        }
+
         List<ArticleEmbedding> embeddings = articleEmbeddingRepository
                 .findByNewsArticleIdAndEmbeddingModel(newsArticleId, embeddingModel);
 
