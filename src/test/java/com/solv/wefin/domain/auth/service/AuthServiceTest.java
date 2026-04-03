@@ -1,10 +1,15 @@
 package com.solv.wefin.domain.auth.service;
 
+import com.solv.wefin.domain.auth.dto.LoginInfo;
 import com.solv.wefin.domain.auth.dto.SignupCommand;
 import com.solv.wefin.domain.auth.dto.SignupInfo;
+import com.solv.wefin.domain.auth.entity.RefreshToken;
 import com.solv.wefin.domain.auth.entity.User;
+import com.solv.wefin.domain.auth.entity.UserStatus;
+import com.solv.wefin.domain.auth.repository.RefreshTokenRepository;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.group.service.GroupService;
+import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import org.hibernate.exception.ConstraintViolationException;
@@ -21,6 +26,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.sql.SQLException;
+import java.time.OffsetDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,6 +49,12 @@ class AuthServiceTest {
     @Mock
     private GroupService groupService;
 
+    @Mock
+    private JwtProvider jwtProvider;
+
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+
     @InjectMocks
     private AuthService authService;
 
@@ -52,7 +65,6 @@ class AuthServiceTest {
         @Test
         @DisplayName("회원가입에 성공한다")
         void signup_success() {
-            // given
             String rawEmail = "  TEST@Example.com  ";
             String rawNickname = "  testuser  ";
             String rawPassword = "pass1234";
@@ -73,12 +85,10 @@ class AuthServiceTest {
 
             when(userRepository.save(any(User.class))).thenReturn(savedUser);
 
-            // when
             SignupInfo response = authService.signup(
                     new SignupCommand(rawEmail, rawNickname, rawPassword)
             );
 
-            // then
             ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
             verify(userRepository).save(captor.capture());
             verify(groupService).createDefaultGroup(savedUser);
@@ -98,10 +108,8 @@ class AuthServiceTest {
         @Test
         @DisplayName("이메일이 중복되면 예외가 발생한다")
         void signup_fail_when_email_duplicated() {
-            // given
             when(userRepository.existsByEmail("test@example.com")).thenReturn(true);
 
-            // when
             BusinessException exception = assertThrows(
                     BusinessException.class,
                     () -> authService.signup(
@@ -109,7 +117,6 @@ class AuthServiceTest {
                     )
             );
 
-            // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_EMAIL_DUPLICATED);
             verify(userRepository, never()).existsByNickname(anyString());
             verify(userRepository, never()).save(any(User.class));
@@ -119,11 +126,9 @@ class AuthServiceTest {
         @Test
         @DisplayName("닉네임이 중복되면 예외가 발생한다")
         void signup_fail_when_nickname_duplicated() {
-            // given
             when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
             when(userRepository.existsByNickname("nickname")).thenReturn(true);
 
-            // when
             BusinessException exception = assertThrows(
                     BusinessException.class,
                     () -> authService.signup(
@@ -131,7 +136,6 @@ class AuthServiceTest {
                     )
             );
 
-            // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_NICKNAME_DUPLICATED);
             verify(userRepository, never()).save(any(User.class));
             verify(groupService, never()).createDefaultGroup(any(User.class));
@@ -166,7 +170,6 @@ class AuthServiceTest {
         @Test
         @DisplayName("DB 이메일 unique 제약 위반 시 이메일 중복 예외로 변환한다")
         void signup_fail_when_email_constraint_violated() {
-            // given
             when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
             when(userRepository.existsByNickname("nickname")).thenReturn(false);
             when(passwordEncoder.encode("pass1234")).thenReturn("encoded-password");
@@ -177,7 +180,6 @@ class AuthServiceTest {
             when(userRepository.save(any(User.class)))
                     .thenThrow(new DataIntegrityViolationException("db error", cause));
 
-            // when
             BusinessException exception = assertThrows(
                     BusinessException.class,
                     () -> authService.signup(
@@ -185,7 +187,6 @@ class AuthServiceTest {
                     )
             );
 
-            // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_EMAIL_DUPLICATED);
             verify(groupService, never()).createDefaultGroup(any(User.class));
         }
@@ -193,7 +194,6 @@ class AuthServiceTest {
         @Test
         @DisplayName("DB 닉네임 unique 제약 위반 시 닉네임 중복 예외로 변환한다")
         void signup_fail_when_nickname_constraint_violated() {
-            // given
             when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
             when(userRepository.existsByNickname("nickname")).thenReturn(false);
             when(passwordEncoder.encode("pass1234")).thenReturn("encoded-password");
@@ -204,7 +204,6 @@ class AuthServiceTest {
             when(userRepository.save(any(User.class)))
                     .thenThrow(new DataIntegrityViolationException("db error", cause));
 
-            // when
             BusinessException exception = assertThrows(
                     BusinessException.class,
                     () -> authService.signup(
@@ -212,9 +211,141 @@ class AuthServiceTest {
                     )
             );
 
-            // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_NICKNAME_DUPLICATED);
             verify(groupService, never()).createDefaultGroup(any(User.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("login")
+    class LoginTest {
+
+        @Test
+        @DisplayName("로그인에 성공하면 access token, refresh token을 발급하고 저장한다")
+        void login_success() {
+            UUID userId = UUID.randomUUID();
+            OffsetDateTime expiresAt = OffsetDateTime.now().plusDays(14);
+
+            User user = User.builder()
+                    .email("test@example.com")
+                    .nickname("testuser")
+                    .password("encoded-password")
+                    .build();
+
+            ReflectionTestUtils.setField(user, "userId", userId);
+            ReflectionTestUtils.setField(user, "status", UserStatus.ACTIVE);
+
+            when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+            when(passwordEncoder.matches("pass1234", "encoded-password")).thenReturn(true);
+            when(jwtProvider.generateAccessToken(userId)).thenReturn("access-token");
+            when(jwtProvider.generateRefreshToken(userId)).thenReturn("refresh-token");
+            when(jwtProvider.getExpiration("refresh-token")).thenReturn(expiresAt);
+            when(refreshTokenRepository.findById(userId)).thenReturn(Optional.empty());
+
+            LoginInfo result = authService.login("test@example.com", "pass1234");
+
+            ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
+            verify(refreshTokenRepository).save(captor.capture());
+
+            RefreshToken savedToken = captor.getValue();
+
+            assertAll(
+                    () -> assertThat(result.userId()).isEqualTo(userId),
+                    () -> assertThat(result.nickname()).isEqualTo("testuser"),
+                    () -> assertThat(result.accessToken()).isEqualTo("access-token"),
+                    () -> assertThat(result.refreshToken()).isEqualTo("refresh-token"),
+                    () -> assertThat(savedToken.getUserId()).isEqualTo(userId),
+                    () -> assertThat(savedToken.getToken()).isEqualTo("refresh-token"),
+                    () -> assertThat(savedToken.getExpiresAt()).isEqualTo(expiresAt),
+                    () -> assertThat(savedToken.isRevoked()).isFalse()
+            );
+        }
+
+        @Test
+        @DisplayName("이메일이 존재하지 않으면 로그인 실패 예외가 발생한다")
+        void login_fail_when_user_not_found() {
+            when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.login("test@example.com", "pass12324")
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_LOGIN_FAILED);
+            verify(refreshTokenRepository, never()).save(any(RefreshToken.class));
+        }
+
+        @Test
+        @DisplayName("비밀번호가 일치하지 않으면 로그인 실패 예외가 발생한다")
+        void login_fail_when_password_not_matched() {
+            UUID userId = UUID.randomUUID();
+
+            User user = User.builder()
+                    .email("test@example.com")
+                    .nickname("testuser")
+                    .password("encoded-password")
+                    .build();
+
+            ReflectionTestUtils.setField(user, "userId", userId);
+            ReflectionTestUtils.setField(user, "status", UserStatus.ACTIVE);
+
+            when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+            when(passwordEncoder.matches("wrong-pass", "encoded-password")).thenReturn(false);
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.login("test@example.com", "wrong-pass")
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_LOGIN_FAILED);
+            verify(refreshTokenRepository, never()).save(any(RefreshToken.class));
+        }
+
+        @Test
+        @DisplayName("계정이 잠금 상태면 ACCOUNT_LOCKED 예외가 발생한다")
+        void login_fail_when_account_locked() {
+            UUID userId = UUID.randomUUID();
+
+            User user = User.builder()
+                    .email("test@example.com")
+                    .nickname("testuser")
+                    .password("encoded-password")
+                    .build();
+
+            ReflectionTestUtils.setField(user, "userId", userId);
+            ReflectionTestUtils.setField(user, "status", UserStatus.LOCKED);
+
+            when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.login("test@example.com", "pass1234")
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ACCOUNT_LOCKED);
+            verify(refreshTokenRepository, never()).save(any(RefreshToken.class));
+        }
+
+        @Test
+        @DisplayName("입력값이 null 또는 blank면 validation 예외가 발생한다")
+        void login_fail_when_input_invalid() {
+            BusinessException nullException = assertThrows(
+                    BusinessException.class,
+                    () -> authService.login(null, "pass1234")
+            );
+
+            BusinessException blankException = assertThrows(
+                    BusinessException.class,
+                    () -> authService.login("   ", "pass1234")
+            );
+
+            assertAll(
+                    () -> assertThat(nullException.getErrorCode()).isEqualTo(ErrorCode.AUTH_VALIDATION_FAILED),
+                    () -> assertThat(blankException.getErrorCode()).isEqualTo(ErrorCode.AUTH_VALIDATION_FAILED)
+            );
+
+            verify(userRepository, never()).findByEmail(anyString());
+            verify(refreshTokenRepository, never()).save(any(RefreshToken.class));
         }
     }
 }

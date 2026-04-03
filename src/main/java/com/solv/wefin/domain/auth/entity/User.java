@@ -30,10 +30,15 @@ public class User extends BaseEntity {
     @Column(name = "password", nullable = false, length = 255)
     private String password;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private UserStatus status;
+
     @Builder
     public User(String email, String nickname, String password) {
         this.email = email;
         this.nickname = nickname;
         this.password = password;
+        this.status = UserStatus.ACTIVE;
     }
 }

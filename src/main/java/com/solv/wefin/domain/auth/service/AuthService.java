@@ -1,10 +1,15 @@
 package com.solv.wefin.domain.auth.service;
 
+import com.solv.wefin.domain.auth.dto.LoginInfo;
 import com.solv.wefin.domain.auth.dto.SignupCommand;
 import com.solv.wefin.domain.auth.dto.SignupInfo;
+import com.solv.wefin.domain.auth.entity.RefreshToken;
 import com.solv.wefin.domain.auth.entity.User;
+import com.solv.wefin.domain.auth.entity.UserStatus;
+import com.solv.wefin.domain.auth.repository.RefreshTokenRepository;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.group.service.GroupService;
+import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.Locale;
 
 @Service
@@ -27,6 +33,8 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final GroupService groupService;
+    private final JwtProvider jwtProvider;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Transactional
     public SignupInfo signup(SignupCommand command) {
@@ -34,26 +42,21 @@ public class AuthService {
         String nickname = command.nickname();
         String password = command.password();
 
-        // null 처리
         if (email == null || nickname == null || password == null) {
             throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
         }
 
-        // 입력값 정규화
         email = email.trim().toLowerCase(Locale.ROOT);
         nickname = nickname.trim();
 
-        // 빈 값 처리
         if (email.isBlank() || nickname.isBlank() || password.isBlank()) {
             throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
         }
 
-        // 비밀번호 앞뒤 공백 비허용
         if (!password.equals(password.trim())) {
             throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
         }
 
-        // 중복 처리
         if (userRepository.existsByEmail(email)) {
             throw new BusinessException(ErrorCode.AUTH_EMAIL_DUPLICATED);
         }
@@ -82,7 +85,62 @@ public class AuthService {
         }
     }
 
-    // unique 제약 위반 예외를 도메인 에러 코드로 변환
+    @Transactional
+    public LoginInfo login(String email, String password) {
+        if (email == null || password == null) {
+            throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
+        }
+
+        email = email.trim().toLowerCase(Locale.ROOT);
+
+        if (email.isBlank() || password.isBlank()) {
+            throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
+        }
+
+        if (!password.equals(password.trim())) {
+            throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_LOGIN_FAILED));
+
+        if (user.getStatus() == UserStatus.LOCKED) {
+            throw new BusinessException(ErrorCode.ACCOUNT_LOCKED);
+        }
+
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new BusinessException(ErrorCode.AUTH_LOGIN_FAILED);
+        }
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new BusinessException(ErrorCode.AUTH_LOGIN_FAILED);
+        }
+
+        String accessToken = jwtProvider.generateAccessToken(user.getUserId());
+        String refreshTokenValue = jwtProvider.generateRefreshToken(user.getUserId());
+        OffsetDateTime refreshTokenExpiresAt = jwtProvider.getExpiration(refreshTokenValue);
+
+        RefreshToken refreshToken = refreshTokenRepository.findById(user.getUserId())
+                .map(saved -> {
+                    saved.update(refreshTokenValue, refreshTokenExpiresAt);
+                    return saved;
+                })
+                .orElseGet(() -> RefreshToken.builder()
+                        .userId(user.getUserId())
+                        .token(refreshTokenValue)
+                        .expiresAt(refreshTokenExpiresAt)
+                        .build());
+
+        refreshTokenRepository.save(refreshToken);
+
+        return new LoginInfo(
+                user.getUserId(),
+                user.getNickname(),
+                accessToken,
+                refreshTokenValue
+        );
+    }
+
     private BusinessException mapConstraintViolation(DataIntegrityViolationException e) {
         Throwable cause = e;
 

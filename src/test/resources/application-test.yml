@@ -16,7 +16,7 @@ ai:
     url: http://localhost:8000
 
 jwt:
-  secret: test-secret-key
+  secret: ${JWT_SECRET:wefin-test-jwt-secret-key-1234567890}
 
 news:
   naver:

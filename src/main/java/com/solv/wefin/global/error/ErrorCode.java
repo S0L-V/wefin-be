@@ -30,6 +30,10 @@ public enum ErrorCode {
     AUTH_NICKNAME_DUPLICATED(409, "이미 사용 중인 닉네임입니다."),
     AUTH_VALIDATION_FAILED(400, "잘못된 입력입니다."),
 
+    // Auth - LOGIN
+    AUTH_LOGIN_FAILED(401, "이메일 또는 비밀번호가 올바르지 않습니다."),
+    ACCOUNT_LOCKED(423, "계정이 잠금 상태입니다."),
+
     // Order - BUY
     ORDER_INSUFFICIENT_BALANCE(400, "예수금이 부족합니다."),
     ORDER_INVALID_QUANTITY(400, "주문 수량은 1 이상이어야 합니다."),
