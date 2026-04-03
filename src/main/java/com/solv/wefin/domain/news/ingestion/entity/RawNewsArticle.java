@@ -11,6 +11,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "raw_news_article")
@@ -47,7 +48,7 @@ public class RawNewsArticle {
     private String originalThumbnailUrl;
 
     @Column(name = "original_published_at")
-    private LocalDateTime originalPublishedAt;
+    private OffsetDateTime originalPublishedAt;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "raw_payload", columnDefinition = "jsonb")
@@ -64,7 +65,7 @@ public class RawNewsArticle {
     private RawNewsArticle(NewsSource newsSource, NewsCollectBatch newsCollectBatch,
                            String externalArticleId, String originalUrl, String originalTitle,
                            String originalContent, String originalThumbnailUrl,
-                           LocalDateTime originalPublishedAt, String rawPayload) {
+                           OffsetDateTime originalPublishedAt, String rawPayload) {
         this.newsSource = newsSource;
         this.newsCollectBatch = newsCollectBatch;
         this.externalArticleId = externalArticleId;

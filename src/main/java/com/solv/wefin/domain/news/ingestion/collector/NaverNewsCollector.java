@@ -16,7 +16,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -154,11 +154,11 @@ public class NaverNewsCollector implements NewsCollector {
         return Jsoup.parse(text).text().trim();
     }
 
-    private LocalDateTime parseNaverDate(String pubDate) {
+    private OffsetDateTime parseNaverDate(String pubDate) {
         if (pubDate == null || pubDate.isBlank()) return null;
         try {
             ZonedDateTime zdt = ZonedDateTime.parse(pubDate, RFC_1123);
-            return zdt.toLocalDateTime();
+            return zdt.toOffsetDateTime();
         } catch (Exception e) {
             log.debug("날짜 파싱 실패: {}", pubDate);
             return null;
