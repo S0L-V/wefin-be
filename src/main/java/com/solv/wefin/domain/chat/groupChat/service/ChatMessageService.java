@@ -41,6 +41,7 @@ public class ChatMessageService {
 
     private static final long SPAM_WINDOW_SECONDS = 3L;
     private static final String SYSTEM = "시스템";
+    private static final int MAX_MESSAGE_LENGTH = 1000;
 
     private final Map<String, Object> chatLocks = new ConcurrentHashMap<>();
 
@@ -98,43 +99,24 @@ public class ChatMessageService {
     }
 
     private ChatMessageInfo toInfo(ChatMessage message) {
-        User user = message.getUser();
-
-        Group group = message.getGroup();
-
-        String sender = (message.getMessageType() == MessageType.SYSTEM || user == null)
-                ? SYSTEM
-                : user.getNickname();
-
-        UUID userId = user != null ? user.getUserId() : null;
-        Long groupId = group != null ? group.getId() : null;
-
         return new ChatMessageInfo(
                 message.getId(),
-                userId,
-                groupId,
+                extractUserId(message),
+                extractGroupId(message),
                 message.getMessageType().name(),
-                sender,
+                resolveSender(message),
                 message.getContent(),
                 message.getCreatedAt()
         );
     }
 
     private ChatMessageCreatedEvent toEvent(ChatMessage message) {
-        User user = message.getUser();
-
-        Group group = message.getGroup();
-
-        String sender = (message.getMessageType() == MessageType.SYSTEM || user == null)
-                ? SYSTEM
-                : user.getNickname();
-
         return new ChatMessageCreatedEvent(
                 message.getId(),
-                user != null ? user.getUserId() : null,
-                group != null ? group.getId() : null,
+                extractUserId(message),
+                extractGroupId(message),
                 message.getMessageType().name(),
-                sender,
+                resolveSender(message),
                 message.getContent(),
                 message.getCreatedAt()
         );
@@ -145,7 +127,7 @@ public class ChatMessageService {
             throw new BusinessException(ErrorCode.CHAT_MESSAGE_EMPTY);
         }
 
-        if (content.length() > 1000) {
+        if (content.length() > MAX_MESSAGE_LENGTH) {
             throw new BusinessException(ErrorCode.CHAT_MESSAGE_TOO_LONG);
         }
     }
@@ -161,4 +143,25 @@ public class ChatMessageService {
     public Group getMyGroup(UUID userId) {
         return findActiveUserGroup(userId);
     }
+
+    private String resolveSender(ChatMessage message) {
+        User user = message.getUser();
+
+        if (message.getMessageType() == MessageType.SYSTEM || user == null) {
+            return SYSTEM;
+        }
+
+        return user.getNickname();
+    }
+
+    private UUID extractUserId(ChatMessage message) {
+        User user = message.getUser();
+        return user != null ? user.getUserId() : null;
+    }
+
+    private Long extractGroupId(ChatMessage message) {
+        Group group = message.getGroup();
+        return group != null ? group.getId() : null;
+    }
+
 }
