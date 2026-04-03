@@ -11,7 +11,7 @@ public record CandleResponse(
         int highPrice,
         int lowPrice,
         int closePrice,
-        int volume
+        long volume
 ) {
     public static CandleResponse from(HantuCandleApiResponse.Output2 output2) {
         return new CandleResponse(
@@ -20,7 +20,7 @@ public record CandleResponse(
                 Integer.parseInt(output2.stck_hgpr()),
                 Integer.parseInt(output2.stck_lwpr()),
                 Integer.parseInt(output2.stck_clpr()),
-                Integer.parseInt(output2.acml_vol())
+                Long.parseLong(output2.acml_vol())
         );
     }
 
