@@ -140,6 +140,7 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
             throw new BusinessException(ErrorCode.MARKET_INVALID_DATE);
         }
 
+        periodCode = periodCode.toUpperCase();
         if (!VALID_PERIOD_CODES.contains(periodCode)) {
             throw new BusinessException(ErrorCode.MARKET_INVALID_PERIOD_CODE);
         }
