@@ -48,3 +48,15 @@ embedding:
 tagging:
   collect:
     cron: "-"
+
+clustering:
+  threshold: 0.80
+  sample-k: 5
+  penalty:
+    category-mismatch: 15
+    stocks-no-overlap: 20
+  score:
+    reject-cutoff: 70
+    suspicious-cutoff: 80
+  collect:
+    cron: "-"

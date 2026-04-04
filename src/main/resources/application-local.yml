@@ -51,6 +51,10 @@ tagging:
   collect:
     cron: ${TAGGING_COLLECT_CRON:-}
 
+clustering:
+  collect:
+    cron: ${CLUSTERING_COLLECT_CRON:-}
+
 websocket:
   allowed-origins:
     - http://localhost:5173

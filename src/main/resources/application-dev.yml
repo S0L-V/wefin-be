@@ -50,6 +50,10 @@ tagging:
   collect:
     cron: "0 */30 * * * *"
 
+clustering:
+  collect:
+    cron: "0 */30 * * * *"
+
 websocket:
   allowed-origins:
     - https://dev.wefin.ai.kr
