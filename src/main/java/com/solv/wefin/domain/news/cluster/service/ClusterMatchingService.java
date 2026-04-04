@@ -6,6 +6,7 @@ import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepositor
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -92,18 +93,12 @@ public class ClusterMatchingService {
      * 클러스터 소속 기사 중 centroid에 가장 가까운 상위 K건과 새 기사의 유사도를 비교한다.
      */
     private boolean validateWithSampling(float[] articleVector, NewsCluster cluster) {
-        // 최신순 정렬된 매핑 조회
-        List<NewsClusterArticle> mappings = clusterArticleRepository
-                .findByNewsClusterIdOrderByCreatedAtDesc(cluster.getId());
+        List<NewsClusterArticle> sample = clusterArticleRepository
+                .findByNewsClusterIdOrderByCreatedAtDesc(cluster.getId(), PageRequest.of(0, sampleK));
 
-        if (mappings.isEmpty()) {
+        if (sample.isEmpty()) {
             return true;
         }
-
-        // cluster size ≤ K면 전량, 초과면 최근 K건만 (벡터 조회 수 제한)
-        List<NewsClusterArticle> sample = mappings.size() <= sampleK
-                ? mappings
-                : mappings.subList(0, sampleK);
 
         List<float[]> sampleVectors = sample.stream()
                 .map(m -> getCachedVector(m.getNewsArticleId()))
