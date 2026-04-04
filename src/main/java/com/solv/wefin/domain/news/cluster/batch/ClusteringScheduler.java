@@ -57,6 +57,9 @@ public class ClusteringScheduler {
             // 2. 미배정 기사 클러스터링
             clusteringService.clusterPendingArticles();
             return true;
+        } catch (Exception e) {
+            log.error("클러스터링 실행 실패: {}", e.getMessage(), e);
+            throw e; // AdminController 경로에서도 로그 보장
         } finally {
             running.set(false); // 배치 종료 시 락 해제
             long elapsed = System.currentTimeMillis() - start;
