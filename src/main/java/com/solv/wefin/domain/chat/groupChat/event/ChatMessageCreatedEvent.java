@@ -1,5 +1,6 @@
 package com.solv.wefin.domain.chat.groupChat.event;
 
+import com.solv.wefin.domain.chat.groupChat.dto.info.ReplyMessageInfo;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -16,4 +17,5 @@ public class ChatMessageCreatedEvent {
     private final String sender;
     private final String content;
     private final OffsetDateTime createdAt;
+    private final ReplyMessageInfo replyTo;
 }
