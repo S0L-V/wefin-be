@@ -31,6 +31,6 @@ public class GroupChatWebSocketController {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        chatMessageService.sendMessage(request.getContent(), userId);
+        chatMessageService.sendMessage(request.content(), userId, request.replyToMessageId());
     }
 }

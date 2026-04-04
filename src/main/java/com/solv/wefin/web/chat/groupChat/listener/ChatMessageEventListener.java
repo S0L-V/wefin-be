@@ -25,6 +25,7 @@ public class ChatMessageEventListener {
                 .sender(event.getSender())
                 .content(event.getContent())
                 .createdAt(event.getCreatedAt())
+                .replyTo(event.getReplyTo())
                 .build();
 
         messagingTemplate.convertAndSend(
