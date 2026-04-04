@@ -8,7 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -99,14 +98,14 @@ public class ClusterMatchingService {
             return true;
         }
 
-        float[] centroid = cluster.getCentroidVector();
+        // cluster size ≤ K면 전량, 초과면 최근 K건만 (벡터 조회 수 제한)
+        List<NewsClusterArticle> sample = mappings.size() <= sampleK
+                ? mappings
+                : mappings.subList(mappings.size() - sampleK, mappings.size());
 
-        // 기사 대표 벡터를 캐시에서 조회하거나 계산
-        List<float[]> sampleVectors = mappings.stream()
+        List<float[]> sampleVectors = sample.stream()
                 .map(m -> getCachedVector(m.getNewsArticleId()))
                 .filter(v -> v != null)
-                .sorted(Comparator.comparingDouble((float[] v) -> cosineSimilarity(v, centroid)).reversed())
-                .limit(sampleK)
                 .toList();
 
         if (sampleVectors.isEmpty()) {

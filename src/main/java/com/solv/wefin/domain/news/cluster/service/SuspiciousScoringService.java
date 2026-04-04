@@ -38,8 +38,8 @@ public class SuspiciousScoringService {
     @Value("${clustering.penalty.stocks-no-overlap:20}")
     private int stocksNoOverlapPenalty; // STOCK 교집합 없을 때 감점
 
-    @Value("${clustering.score.reject-cutoff:60}")
-    private int rejectCutoff; // 특정 점수 미만 → 클러스터 매칭 거부
+    @Value("${clustering.score.reject-cutoff:70}")
+    private int rejectCutoff; // 이 점수 미만 → 클러스터 매칭 거부 (category -15 + stocks -20 = 65 < 70으로 REJECT 도달 가능)
 
     @Value("${clustering.score.suspicious-cutoff:80}")
     private int suspiciousCutoff; // 특정 점수 미만 → suspicious 플래그
