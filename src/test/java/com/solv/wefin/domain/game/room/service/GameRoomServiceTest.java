@@ -8,12 +8,14 @@ import com.solv.wefin.domain.game.room.dto.RoomListInfo;
 import com.solv.wefin.domain.game.room.dto.StartRoomInfo;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.room.entity.RoomStatus;
+import com.solv.wefin.domain.game.room.event.GameRoomEvent;
 import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
 import com.solv.wefin.domain.game.turn.entity.GameTurn;
 import com.solv.wefin.domain.game.turn.repository.GameTurnRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.domain.game.room.dto.CreateRoomCommand;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -51,6 +53,9 @@ class GameRoomServiceTest {
 
     @Mock
     private GameTurnRepository gameTurnRepository;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     private static final UUID TEST_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000001");
     private static final Long TEST_GROUP_ID = 1L;
@@ -255,6 +260,7 @@ class GameRoomServiceTest {
         // Then
         assertThat(result.getGameRoom().getStatus()).isEqualTo(RoomStatus.IN_PROGRESS);
         verify(gameParticipantRepository).save(any(GameParticipant.class));
+        verify(eventPublisher).publishEvent(new GameRoomEvent(roomId, GameRoomEvent.EventType.PARTICIPANT_JOINED));
     }
 
     @Test
@@ -280,6 +286,7 @@ class GameRoomServiceTest {
         assertThat(result.getGameRoom().getStatus()).isEqualTo(RoomStatus.WAITING);
         assertThat(result.getStatus()).isEqualTo(ParticipantStatus.ACTIVE); // LEFT → ACTIVE
         verify(gameParticipantRepository, never()).save(any()); // 더티 체킹이니까 save 안 부름
+        verify(eventPublisher).publishEvent(new GameRoomEvent(roomId, GameRoomEvent.EventType.PARTICIPANT_JOINED));
     }
 
     @Test
@@ -401,6 +408,7 @@ class GameRoomServiceTest {
         assertThat(leader.getIsLeader()).isTrue();
         // 방은 종료되지 않음
         assertThat(gameRoom.getStatus()).isEqualTo(RoomStatus.WAITING);
+        verify(eventPublisher).publishEvent(new GameRoomEvent(roomId, GameRoomEvent.EventType.PARTICIPANT_LEFT));
     }
 
     @Test
@@ -430,6 +438,7 @@ class GameRoomServiceTest {
         assertThat(member.getIsLeader()).isTrue();
         // 방은 종료되지 않음
         assertThat(gameRoom.getStatus()).isEqualTo(RoomStatus.WAITING);
+        verify(eventPublisher).publishEvent(new GameRoomEvent(roomId, GameRoomEvent.EventType.PARTICIPANT_LEFT));
     }
 
     @Test
@@ -570,6 +579,7 @@ class GameRoomServiceTest {
         // Then — 시드머니 지급
         assertThat(leader.getSeed()).isEqualTo(10000000L);
         assertThat(member.getSeed()).isEqualTo(10000000L);
+        verify(eventPublisher).publishEvent(new GameRoomEvent(roomId, GameRoomEvent.EventType.GAME_STARTED));
     }
 
     @Test
