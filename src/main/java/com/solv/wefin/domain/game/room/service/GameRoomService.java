@@ -9,6 +9,7 @@ import com.solv.wefin.domain.game.room.dto.StartRoomInfo;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.participant.repository.GameParticipantRepository;
 import com.solv.wefin.domain.game.room.entity.RoomStatus;
+import com.solv.wefin.domain.game.room.event.GameRoomEvent;
 import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
 import com.solv.wefin.domain.game.turn.entity.GameTurn;
 import com.solv.wefin.domain.game.turn.repository.GameTurnRepository;
@@ -16,6 +17,7 @@ import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.game.room.dto.response.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +40,8 @@ public class GameRoomService {
     private final GameRoomRepository gameRoomRepository;
     private final GameParticipantRepository gameParticipantRepository;
     private final GameTurnRepository gameTurnRepository;
+    private final ApplicationEventPublisher eventPublisher;
+
 
     //게임방 생성
     @Transactional //트랜잭션으로 방생성과 방장유저 지정 동시에 이루어짐
@@ -145,6 +149,7 @@ public class GameRoomService {
                 throw new BusinessException(ErrorCode.ROOM_FULL);
             }
             participant.rejoin();
+            eventPublisher.publishEvent(new GameRoomEvent(roomId, GameRoomEvent.EventType.PARTICIPANT_JOINED));
             return participant;
         }
 
@@ -164,6 +169,7 @@ public class GameRoomService {
             member.assignSeed(gameRoom.getSeed());
         }
 
+        eventPublisher.publishEvent(new GameRoomEvent(roomId, GameRoomEvent.EventType.PARTICIPANT_JOINED));
         return member;
     }
 
@@ -208,6 +214,7 @@ public class GameRoomService {
             GameParticipant newLeader = remainingActive.get(randomIndex);
             newLeader.assignLeader();
         }
+        eventPublisher.publishEvent(new GameRoomEvent(roomId, GameRoomEvent.EventType.PARTICIPANT_LEFT));
 
     }
 
@@ -256,6 +263,7 @@ public class GameRoomService {
         // 7. 방 상태 변경 (WAITING → IN_PROGRESS, startedAt 기록)
         gameRoom.start();
 
+        eventPublisher.publishEvent(new GameRoomEvent(roomId, GameRoomEvent.EventType.GAME_STARTED));
         return new StartRoomInfo(gameRoom, firstTurn);
     }
 }
