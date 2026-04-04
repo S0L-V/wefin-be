@@ -60,7 +60,7 @@ public class NewsCluster extends BaseEntity {
     private SummaryStatus summaryStatus = SummaryStatus.PENDING;
 
     // 클러스터의 중심점, 소속 기사들의 임베딩 벡터를 평균 낸 값
-    @Column(name = "centroid_vector", columnDefinition = "vector(1536)")
+    @Column(name = "centroid_vector", columnDefinition = "float8[]")
     private float[] centroidVector;
 
     @Column(name = "article_count", nullable = false)
