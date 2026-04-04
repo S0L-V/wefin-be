@@ -1,6 +1,6 @@
 package com.solv.wefin.web.chat.groupChat;
 
-import com.solv.wefin.domain.chat.groupChat.ChatMessageInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessageInfo;
 import com.solv.wefin.domain.chat.groupChat.service.ChatMessageService;
 import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.global.error.BusinessException;
@@ -50,7 +50,8 @@ class GroupChatControllerTest {
                 "CHAT",
                 "groupUser",
                 "안녕하세요",
-                OffsetDateTime.now()
+                OffsetDateTime.now(),
+                null
         );
 
         when(chatMessageService.getRecentMessages(userId, 50))
