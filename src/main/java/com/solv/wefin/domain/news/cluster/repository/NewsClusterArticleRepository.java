@@ -13,6 +13,11 @@ public interface NewsClusterArticleRepository extends JpaRepository<NewsClusterA
     List<NewsClusterArticle> findByNewsClusterId(Long newsClusterId);
 
     /**
+     * 특정 클러스터의 소속 기사 매핑을 최신순으로 조회한다.
+     */
+    List<NewsClusterArticle> findByNewsClusterIdOrderByCreatedAtDesc(Long newsClusterId);
+
+    /**
      * 특정 클러스터의 소속 기사 수를 조회한다.
      */
     int countByNewsClusterId(Long newsClusterId);

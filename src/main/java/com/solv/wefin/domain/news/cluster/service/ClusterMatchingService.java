@@ -92,7 +92,9 @@ public class ClusterMatchingService {
      * 클러스터 소속 기사 중 centroid에 가장 가까운 상위 K건과 새 기사의 유사도를 비교한다.
      */
     private boolean validateWithSampling(float[] articleVector, NewsCluster cluster) {
-        List<NewsClusterArticle> mappings = clusterArticleRepository.findByNewsClusterId(cluster.getId());
+        // 최신순 정렬된 매핑 조회
+        List<NewsClusterArticle> mappings = clusterArticleRepository
+                .findByNewsClusterIdOrderByCreatedAtDesc(cluster.getId());
 
         if (mappings.isEmpty()) {
             return true;
@@ -101,7 +103,7 @@ public class ClusterMatchingService {
         // cluster size ≤ K면 전량, 초과면 최근 K건만 (벡터 조회 수 제한)
         List<NewsClusterArticle> sample = mappings.size() <= sampleK
                 ? mappings
-                : mappings.subList(mappings.size() - sampleK, mappings.size());
+                : mappings.subList(0, sampleK);
 
         List<float[]> sampleVectors = sample.stream()
                 .map(m -> getCachedVector(m.getNewsArticleId()))
@@ -112,12 +114,12 @@ public class ClusterMatchingService {
             return true;
         }
 
-        // K건 중 과반이 threshold 이상이면 통과
+        // K건 중 절반 이상(≥50%, 올림)이 threshold 이상이면 통과
         long passCount = sampleVectors.stream()
                 .filter(v -> cosineSimilarity(articleVector, v) >= threshold)
                 .count();
 
-        int requiredCount = (sampleVectors.size() + 1) / 2;
+        int requiredCount = (sampleVectors.size() + 1) / 2; // 올림: size=4→2, size=5→3
         return passCount >= requiredCount;
     }
 
