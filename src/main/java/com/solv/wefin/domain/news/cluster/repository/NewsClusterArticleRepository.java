@@ -1,6 +1,7 @@
 package com.solv.wefin.domain.news.cluster.repository;
 
 import com.solv.wefin.domain.news.cluster.entity.NewsClusterArticle;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -11,6 +12,11 @@ public interface NewsClusterArticleRepository extends JpaRepository<NewsClusterA
      * 특정 클러스터의 소속 기사 매핑을 조회한다.
      */
     List<NewsClusterArticle> findByNewsClusterId(Long newsClusterId);
+
+    /**
+     * 특정 클러스터의 소속 기사 매핑을 최신순으로 조회한다.
+     */
+    List<NewsClusterArticle> findByNewsClusterIdOrderByCreatedAtDesc(Long newsClusterId, Pageable pageable);
 
     /**
      * 특정 클러스터의 소속 기사 수를 조회한다.

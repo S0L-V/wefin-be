@@ -45,7 +45,7 @@ public class NewsArticle extends BaseEntity {
     private String thumbnailUrl;
 
     @Column(name = "published_at")
-    private LocalDateTime publishedAt;
+    private OffsetDateTime publishedAt;
 
     @Column(name = "category", length = 50)
     private String category;
@@ -104,7 +104,7 @@ public class NewsArticle extends BaseEntity {
     @Builder
     private NewsArticle(Long rawNewsArticleId, String publisherName, String title,
                         String summary, String content, String originalUrl,
-                        String thumbnailUrl, LocalDateTime publishedAt,
+                        String thumbnailUrl, OffsetDateTime publishedAt,
                         String category, String marketScope, String languageCode,
                         String dedupKey, LocalDateTime collectedAt) {
         this.rawNewsArticleId = rawNewsArticleId;
