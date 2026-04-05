@@ -364,12 +364,14 @@ public class OutlierDetectionService {
             return;
         }
 
-        // 태그별 개수 집계
-        Map<String, Long> tagCounts = categoryTags.stream()
-                .collect(Collectors.groupingBy(NewsArticleTag::getTagCode, Collectors.counting()));
+        // 태그별 distinct 기사 집계
+        Map<String, Set<Long>> tagToArticles = categoryTags.stream()
+                .collect(Collectors.groupingBy(
+                        NewsArticleTag::getTagCode,
+                        Collectors.mapping(NewsArticleTag::getNewsArticleId, Collectors.toSet())));
 
         // 최대 비중 계산
-        long maxCount = tagCounts.values().stream().mapToLong(Long::longValue).max().orElse(0);
+        int maxCount = tagToArticles.values().stream().mapToInt(Set::size).max().orElse(0);
         double dominance = (double) maxCount / mappings.size();
 
         // 기준보다 낮으면 경고
