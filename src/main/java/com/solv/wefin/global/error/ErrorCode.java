@@ -34,6 +34,8 @@ public enum ErrorCode {
     // Auth - LOGIN
     AUTH_LOGIN_FAILED(401, "이메일 또는 비밀번호가 올바르지 않습니다."),
     ACCOUNT_LOCKED(423, "계정이 잠금 상태입니다."),
+    AUTH_INVALID_TOKEN(401, "유효하지 않은 인증 토큰입니다."),
+    AUTH_UNAUTHORIZED(401, "인증이 필요합니다."),
 
     // Order - BUY
     ORDER_INSUFFICIENT_BALANCE(400, "예수금이 부족합니다."),

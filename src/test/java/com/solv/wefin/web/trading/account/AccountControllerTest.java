@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.math.BigDecimal;
 
+import com.solv.wefin.global.config.security.JwtProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -24,6 +25,9 @@ class AccountControllerTest {
 
 	@MockitoBean
 	private VirtualAccountService accountService;
+
+	@MockitoBean
+	private JwtProvider jwtProvider;
 
 	@Test
 	@WithMockUser
