@@ -33,12 +33,16 @@ public class HantuWebSocketKeyManager {
     private void fetchApprovalKey() {
         for (int tries = 1; tries <= 3; tries++) {
             try {
-                Map response = hantuRestClient.post()
+                @SuppressWarnings("unchecked")
+                Map<String, Object> response = hantuRestClient.post()
                         .uri("/oauth2/Approval")
                         .body(Map.of("grant_type", "client_credentials",
                                 "appkey", appKey, "secretkey", appSecret))
                         .retrieve()
                         .body(Map.class);
+                if (response == null || response.get("approval_key") == null) {
+                    throw new RuntimeException("한투 웹소켓 접속키 응답이 비어있습니다.");
+                }
                 this.approvalKey = (String) response.get("approval_key");
 
                 return;
