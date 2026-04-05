@@ -6,6 +6,7 @@ import com.solv.wefin.domain.news.embedding.entity.ArticleEmbedding;
 import com.solv.wefin.domain.news.article.entity.NewsArticle;
 import com.solv.wefin.domain.news.article.entity.NewsArticle.CrawlStatus;
 import com.solv.wefin.domain.news.article.entity.NewsArticle.EmbeddingStatus;
+import com.solv.wefin.domain.news.article.entity.NewsArticle.RelevanceStatus;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -83,6 +84,7 @@ public class EmbeddingService {
                 EmbeddingStatus.PROCESSING,
                 MAX_RETRY,
                 staleBefore,
+                RelevanceStatus.IRRELEVANT,
                 PageRequest.of(0, BATCH_SIZE));
     }
 

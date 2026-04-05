@@ -13,6 +13,12 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
 
     boolean existsByDedupKey(String dedupKey);
 
+    /**
+     * 특정 RelevanceStatus의 기사를 id 오름차순으로 조회한다.
+     */
+    List<NewsArticle> findByRelevanceOrderByIdAsc(NewsArticle.RelevanceStatus relevance,
+                                                   org.springframework.data.domain.Pageable pageable);
+
     List<NewsArticle> findByCrawlStatusInAndCrawlRetryCountLessThanOrderByCollectedAtDesc(
             List<NewsArticle.CrawlStatus> statuses, int maxRetryCount, Pageable pageable);
 
@@ -21,6 +27,7 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
      */
     @Query("SELECT a FROM NewsArticle a " +
             "WHERE a.crawlStatus = :crawlStatus " +
+            "AND a.relevance <> :excludedRelevance " +
             "AND a.embeddingRetryCount < :maxRetryCount " +
             "AND (a.embeddingStatus IN :embeddingStatuses " +
             "     OR (a.embeddingStatus = :processingStatus AND a.embeddingAttemptedAt < :staleBefore)) " +
@@ -31,6 +38,7 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
             @Param("processingStatus") NewsArticle.EmbeddingStatus processingStatus,
             @Param("maxRetryCount") int maxRetryCount,
             @Param("staleBefore") OffsetDateTime staleBefore,
+            @Param("excludedRelevance") NewsArticle.RelevanceStatus excludedRelevance,
             Pageable pageable);
 
     /**
@@ -56,11 +64,13 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
      */
     @Query("SELECT a FROM NewsArticle a " +
             "WHERE a.embeddingStatus = :embeddingStatus " +
+            "AND a.relevance <> :excludedRelevance " +
             "AND NOT EXISTS (SELECT 1 FROM NewsClusterArticle nca WHERE nca.newsArticleId = a.id) " +
             "AND a.createdAt > :since " +
             "ORDER BY a.collectedAt DESC")
     List<NewsArticle> findClusteringTargets(
             @Param("embeddingStatus") NewsArticle.EmbeddingStatus embeddingStatus,
             @Param("since") OffsetDateTime since,
+            @Param("excludedRelevance") NewsArticle.RelevanceStatus excludedRelevance,
             Pageable pageable);
 }

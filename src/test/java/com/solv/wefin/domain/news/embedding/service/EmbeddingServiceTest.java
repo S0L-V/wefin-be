@@ -167,7 +167,7 @@ class EmbeddingServiceTest {
                         eq(CrawlStatus.SUCCESS),
                         eq(List.of(EmbeddingStatus.PENDING, EmbeddingStatus.FAILED)),
                         eq(EmbeddingStatus.PROCESSING),
-                        eq(3), any(), any()))
+                        eq(3), any(), any(), any()))
                 .willReturn(articles);
     }
 
