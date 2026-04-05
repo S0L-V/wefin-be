@@ -41,7 +41,13 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
     // 한투 WS에 연결
     @EventListener(ApplicationReadyEvent.class)
     public void connect() {
-        hantuWsClient.execute(this, wsUrl);
+        try {
+            hantuWsClient.execute(this, wsUrl);
+        } catch (Exception e) {
+            log.error("한투 웹소켓 초기 연결 실패. 5초 후 재시도...", e);
+            scheduler.schedule(this::connect, 5, TimeUnit.SECONDS);
+
+        }
     }
 
     // 연결 성공 시
