@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
@@ -17,10 +18,14 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
         from ChatMessage m
         left join fetch m.user
         left join fetch m.group
+        left join fetch m.replyToMessage
+        left join fetch m.replyToMessage.user
         where m.group.id = :groupId
         order by m.id desc
     """)
     List<ChatMessage> findRecentMessagesByGroupId(@Param("groupId") Long groupId, Pageable pageable);
 
     long countByGroup_IdAndUser_UserIdAndCreatedAtAfter(Long groupId, UUID userId, OffsetDateTime time);
+
+    Optional<ChatMessage> findByIdAndGroup_Id(Long messageId, Long groupId);
 }

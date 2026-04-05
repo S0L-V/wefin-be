@@ -4,7 +4,7 @@ import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.chat.common.constant.ChatScope;
 import com.solv.wefin.domain.chat.common.service.ChatSpamGuard;
-import com.solv.wefin.domain.chat.groupChat.ChatMessageInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessageInfo;
 import com.solv.wefin.domain.chat.groupChat.entity.ChatMessage;
 import com.solv.wefin.domain.chat.groupChat.entity.MessageType;
 import com.solv.wefin.domain.chat.groupChat.event.ChatMessageCreatedEvent;
@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -110,7 +111,7 @@ class ChatMessageServiceTest {
         ArgumentCaptor<ChatMessage> captor = ArgumentCaptor.forClass(ChatMessage.class);
 
         // when
-        chatMessageService.sendMessage(content, userId);
+        chatMessageService.sendMessage(content, userId, null);
 
         // then
         verify(chatMessageRepository, times(1))
@@ -125,6 +126,7 @@ class ChatMessageServiceTest {
         assertEquals(user, capturedMessage.getUser());
         assertEquals(MessageType.CHAT, capturedMessage.getMessageType());
         assertEquals(content, capturedMessage.getContent());
+        assertNull(capturedMessage.getReplyToMessage());
     }
 
     @Test
@@ -135,7 +137,7 @@ class ChatMessageServiceTest {
 
         // when // then
         BusinessException exception = assertThrows(BusinessException.class,
-                () -> chatMessageService.sendMessage(" ", userId));
+                () -> chatMessageService.sendMessage(" ", userId, null));
 
         assertEquals(ErrorCode.CHAT_MESSAGE_EMPTY, exception.getErrorCode());
         verify(chatMessageRepository, never()).save(any());
@@ -153,7 +155,7 @@ class ChatMessageServiceTest {
 
         // when // then
         BusinessException exception = assertThrows(BusinessException.class,
-                () -> chatMessageService.sendMessage("안녕하세요", userId));
+                () -> chatMessageService.sendMessage("안녕하세요", userId, null));
 
         assertEquals(ErrorCode.GROUP_MEMBER_FORBIDDEN, exception.getErrorCode());
         verify(chatMessageRepository, never()).save(any());
@@ -208,6 +210,7 @@ class ChatMessageServiceTest {
         assertEquals(3L, result.get(0).groupId());
         assertEquals("groupUser", result.get(0).sender());
         assertEquals("CHAT", result.get(0).messageType());
+        assertNull(result.get(0).replyTo());
     }
 
     @Test
@@ -246,4 +249,111 @@ class ChatMessageServiceTest {
         assertEquals(5L, result.getId());
         assertEquals("우리 그룹", result.getName());
     }
+
+    @Test
+    @DisplayName("답장 대상 메시지가 있으면 replyToMessage를 저장한다")
+    void sendMessage_success_with_reply() {
+        // given
+        UUID userId = UUID.randomUUID();
+        String content = "답장합니다";
+
+        User user = User.builder()
+                .email("test@test.com")
+                .nickname("groupUser")
+                .password("password")
+                .build();
+        ReflectionTestUtils.setField(user, "userId", userId);
+
+        Group group = Group.builder()
+                .name("1조")
+                .build();
+        ReflectionTestUtils.setField(group, "id", 1L);
+
+        GroupMember groupMember = GroupMember.builder()
+                .user(user)
+                .group(group)
+                .role(GroupMember.GroupMemberRole.MEMBER)
+                .status(GroupMember.GroupMemberStatus.ACTIVE)
+                .build();
+
+        ChatMessage replyTarget = ChatMessage.builder()
+                .user(user)
+                .group(group)
+                .messageType(MessageType.CHAT)
+                .content("원본 메시지")
+                .createdAt(OffsetDateTime.now())
+                .build();
+        ReflectionTestUtils.setField(replyTarget, "id", 99L);
+
+        ChatMessage savedMessage = ChatMessage.builder()
+                .user(user)
+                .group(group)
+                .messageType(MessageType.CHAT)
+                .content(content)
+                .replyToMessage(replyTarget)
+                .createdAt(OffsetDateTime.now())
+                .build();
+        ReflectionTestUtils.setField(savedMessage, "id", 10L);
+
+        when(groupMemberRepository.findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(groupMember));
+        when(chatMessageRepository.findByIdAndGroup_Id(99L, 1L))
+                .thenReturn(Optional.of(replyTarget));
+        when(chatMessageRepository.countByGroup_IdAndUser_UserIdAndCreatedAtAfter(
+                eq(1L), eq(userId), any(OffsetDateTime.class))
+        ).thenReturn(0L);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(chatMessageRepository.save(any(ChatMessage.class))).thenReturn(savedMessage);
+
+        ArgumentCaptor<ChatMessage> captor = ArgumentCaptor.forClass(ChatMessage.class);
+
+        // when
+        chatMessageService.sendMessage(content, userId, 99L);
+
+        // then
+        verify(chatMessageRepository).save(captor.capture());
+
+        ChatMessage capturedMessage = captor.getValue();
+        assertEquals(replyTarget, capturedMessage.getReplyToMessage());
+    }
+
+    @Test
+    @DisplayName("답장 대상 메시지가 없으면 예외가 발생한다")
+    void sendMessage_fail_when_reply_target_not_found() {
+        // given
+        UUID userId = UUID.randomUUID();
+
+        User user = User.builder()
+                .email("test@test.com")
+                .nickname("groupUser")
+                .password("password")
+                .build();
+        ReflectionTestUtils.setField(user, "userId", userId);
+
+        Group group = Group.builder()
+                .name("1조")
+                .build();
+        ReflectionTestUtils.setField(group, "id", 1L);
+
+        GroupMember groupMember = GroupMember.builder()
+                .user(user)
+                .group(group)
+                .role(GroupMember.GroupMemberRole.MEMBER)
+                .status(GroupMember.GroupMemberStatus.ACTIVE)
+                .build();
+
+        when(groupMemberRepository.findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(groupMember));
+        when(chatMessageRepository.findByIdAndGroup_Id(99L, 1L))
+                .thenReturn(Optional.empty());
+
+        // when
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> chatMessageService.sendMessage("답장", userId, 99L));
+
+        // then
+        assertEquals(ErrorCode.CHAT_MESSAGE_NOT_FOUND, exception.getErrorCode());
+        verify(chatMessageRepository, never()).save(any());
+    }
+
 }

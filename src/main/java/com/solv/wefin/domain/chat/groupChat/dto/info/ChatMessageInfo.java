@@ -1,4 +1,4 @@
-package com.solv.wefin.domain.chat.groupChat;
+package com.solv.wefin.domain.chat.groupChat.dto.info;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -10,6 +10,7 @@ public record ChatMessageInfo(
         String messageType,
         String sender,
         String content,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        ReplyMessageInfo replyTo
 ) {
 }

@@ -36,24 +36,30 @@ public class ChatMessage {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reply_to_message_id")
+    private ChatMessage replyToMessage;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
     @Builder
-    public ChatMessage(User user, Group group, MessageType messageType, String content, OffsetDateTime createdAt) {
+    public ChatMessage(User user, Group group, MessageType messageType, String content, ChatMessage replyToMessage, OffsetDateTime createdAt) {
         this.user = user;
         this.group = group;
         this.messageType = messageType;
         this.content = content;
+        this.replyToMessage = replyToMessage;
         this.createdAt = createdAt;
     }
 
-    public static ChatMessage createUserMessage(User user, Group group, String content) {
+    public static ChatMessage createUserMessage(User user, Group group, String content, ChatMessage replyToMessage) {
         return ChatMessage.builder()
                 .user(user)
                 .group(group)
                 .messageType(MessageType.CHAT)
                 .content(content)
+                .replyToMessage(replyToMessage)
                 .createdAt(OffsetDateTime.now())
                 .build();
     }

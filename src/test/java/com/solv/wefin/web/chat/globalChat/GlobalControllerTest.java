@@ -3,6 +3,7 @@ package com.solv.wefin.web.chat.globalChat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solv.wefin.domain.chat.globalChat.dto.command.GlobalProfitShareCommand;
 import com.solv.wefin.domain.chat.globalChat.service.GlobalChatService;
+import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.global.error.GlobalExceptionHandler;
@@ -36,6 +37,9 @@ class GlobalChatControllerTest {
 
     @MockBean
     private GlobalChatService globalChatService;
+
+    @MockBean
+    private JwtProvider jwtProvider;
 
     @Test
     @DisplayName("수익 공유 요청이 들어오면 command로 변환해 서비스에 전달한다")

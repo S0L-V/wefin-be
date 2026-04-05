@@ -1,8 +1,9 @@
 package com.solv.wefin.web.chat.groupChat;
 
-import com.solv.wefin.domain.chat.groupChat.ChatMessageInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessageInfo;
 import com.solv.wefin.domain.chat.groupChat.service.ChatMessageService;
 import com.solv.wefin.domain.group.entity.Group;
+import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.global.error.GlobalExceptionHandler;
@@ -37,6 +38,9 @@ class GroupChatControllerTest {
     @MockBean
     private ChatMessageService chatMessageService;
 
+    @MockBean
+    private JwtProvider jwtProvider;
+
     @Test
     @DisplayName("현재 사용자의 그룹 최근 메시지를 응답으로 반환한다")
     void getRecentMessages_success() throws Exception {
@@ -50,7 +54,8 @@ class GroupChatControllerTest {
                 "CHAT",
                 "groupUser",
                 "안녕하세요",
-                OffsetDateTime.now()
+                OffsetDateTime.now(),
+                null
         );
 
         when(chatMessageService.getRecentMessages(userId, 50))

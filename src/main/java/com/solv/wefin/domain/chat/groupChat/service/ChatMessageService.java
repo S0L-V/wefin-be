@@ -4,7 +4,8 @@ import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.chat.common.constant.ChatScope;
 import com.solv.wefin.domain.chat.common.service.ChatSpamGuard;
-import com.solv.wefin.domain.chat.groupChat.ChatMessageInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessageInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.ReplyMessageInfo;
 import com.solv.wefin.domain.chat.groupChat.entity.ChatMessage;
 import com.solv.wefin.domain.chat.groupChat.entity.MessageType;
 import com.solv.wefin.domain.chat.groupChat.event.ChatMessageCreatedEvent;
@@ -46,7 +47,7 @@ public class ChatMessageService {
     private final Map<String, Object> chatLocks = new ConcurrentHashMap<>();
 
     @Transactional
-    public void sendMessage(String content, UUID userId) {
+    public void sendMessage(String content, UUID userId, Long replyToMessageId) {
         if (userId == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
@@ -55,6 +56,8 @@ public class ChatMessageService {
 
         Group group = findActiveUserGroup(userId);
         Long groupId = group.getId();
+
+        ChatMessage replyTarget = findReplyTarget(replyToMessageId, groupId);
 
         String blockKey = ChatScope.groupKey(groupId, userId);
         Object lock = chatLocks.computeIfAbsent(blockKey, key -> new Object());
@@ -74,7 +77,7 @@ public class ChatMessageService {
                     .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
             ChatMessage savedMessage = chatMessageRepository.save(
-                    ChatMessage.createUserMessage(user, group, content)
+                    ChatMessage.createUserMessage(user, group, content, replyTarget)
             );
 
             eventPublisher.publishEvent(toEvent(savedMessage));
@@ -106,7 +109,20 @@ public class ChatMessageService {
                 message.getMessageType().name(),
                 resolveSender(message),
                 message.getContent(),
-                message.getCreatedAt()
+                message.getCreatedAt(),
+                toReplyInfo(message.getReplyToMessage())
+        );
+    }
+
+    private ReplyMessageInfo toReplyInfo(ChatMessage replyMessage) {
+        if(replyMessage == null) {
+            return null;
+        }
+
+        return new ReplyMessageInfo(
+                replyMessage.getId(),
+                resolveSender(replyMessage),
+                replyMessage.getContent()
         );
     }
 
@@ -118,7 +134,8 @@ public class ChatMessageService {
                 message.getMessageType().name(),
                 resolveSender(message),
                 message.getContent(),
-                message.getCreatedAt()
+                message.getCreatedAt(),
+                toReplyInfo(message.getReplyToMessage())
         );
     }
 
@@ -167,6 +184,15 @@ public class ChatMessageService {
     private Long extractGroupId(ChatMessage message) {
         Group group = message.getGroup();
         return group != null ? group.getId() : null;
+    }
+
+    private ChatMessage findReplyTarget(Long replyToMessageId, Long groupId) {
+        if(replyToMessageId == null) {
+            return null;
+        }
+
+        return chatMessageRepository.findByIdAndGroup_Id(replyToMessageId, groupId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_FOUND));
     }
 
 }
