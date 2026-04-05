@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+import com.solv.wefin.global.config.security.JwtProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,8 @@ class OrderControllerTest {
 	private OrderService orderService;
 	@MockitoBean
 	private VirtualAccountService accountService;
+	@MockitoBean
+	private JwtProvider jwtProvider;
 
 	private VirtualAccount mockAccount;
 
