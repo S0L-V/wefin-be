@@ -2,6 +2,7 @@ package com.solv.wefin.domain.news.cluster.repository;
 
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.ClusterStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.OffsetDateTime;
@@ -21,7 +22,8 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
 
     /**
      * ACTIVE 클러스터 중 요약 생성이 필요한 클러스터를 조회한다.
-     * INACTIVE 클러스터는 피드에서 제외되었으므로 요약 대상에서 제외.
      */
-    List<NewsCluster> findByStatusAndSummaryStatusIn(ClusterStatus status, List<NewsCluster.SummaryStatus> statuses);
+    List<NewsCluster> findByStatusAndSummaryStatusIn(ClusterStatus status,
+                                                     List<NewsCluster.SummaryStatus> statuses,
+                                                     Pageable pageable);
 }

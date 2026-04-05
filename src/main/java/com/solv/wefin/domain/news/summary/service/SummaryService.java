@@ -11,6 +11,8 @@ import com.solv.wefin.domain.news.summary.client.OpenAiSummaryClient;
 import com.solv.wefin.domain.news.summary.dto.SummaryResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -43,14 +45,11 @@ public class SummaryService {
      * 요약 생성이 필요한 클러스터를 조회하여 AI 요약을 생성한다.
      */
     public void generatePendingSummaries() {
-        // 대상 조회: ACTIVE 상태 + 요약이 필요한 상태(PENDING/STALE/FAILED)
-        List<NewsCluster> allTargets = newsClusterRepository.findByStatusAndSummaryStatusIn(
+        // 대상 조회: ACTIVE 상태 + 요약이 필요한 상태(PENDING/STALE/FAILED).
+        List<NewsCluster> targets = newsClusterRepository.findByStatusAndSummaryStatusIn(
                 ClusterStatus.ACTIVE,
-                List.of(SummaryStatus.PENDING, SummaryStatus.STALE, SummaryStatus.FAILED));
-
-        // 배치 크기 제한
-        List<NewsCluster> targets = allTargets.size() > BATCH_SIZE
-                ? allTargets.subList(0, BATCH_SIZE) : allTargets;
+                List.of(SummaryStatus.PENDING, SummaryStatus.STALE, SummaryStatus.FAILED),
+                PageRequest.of(0, BATCH_SIZE, Sort.by(Sort.Direction.ASC, "id")));
 
         log.info("요약 생성 대상 클러스터 수: {}", targets.size());
 

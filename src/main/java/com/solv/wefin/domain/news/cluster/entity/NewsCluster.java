@@ -206,11 +206,11 @@ public class NewsCluster extends BaseEntity {
     /**
      * 이상치 제거 후 클러스터 집계 상태를 재계산한다.
      *
-     * @param newArticleCount 남은 기사 수
+     * @param newArticleCount 남은 기사 수 (0일 수 있음)
      * @param newCentroid 재계산된 centroid (남은 기사 없으면 null)
-     * @param newRepresentativeArticleId 새 대표 기사 ID (null이면 변경 안 함)
-     * @param newPublishedAt 새 대표 기사 발행 시각
-     * @param newThumbnailUrl 새 대표 기사 썸네일
+     * @param newRepresentativeArticleId 새 대표 기사 ID (남은 기사 없으면 null — 초기화)
+     * @param newPublishedAt 새 대표 기사 발행 시각 (남은 기사 없으면 null)
+     * @param newThumbnailUrl 새 대표 기사 썸네일 (없거나 blank면 null로 초기화)
      */
     public void recalculateAfterOutlierRemoval(int newArticleCount, float[] newCentroid,
                                                 Long newRepresentativeArticleId,
@@ -218,13 +218,9 @@ public class NewsCluster extends BaseEntity {
                                                 String newThumbnailUrl) {
         this.articleCount = newArticleCount;
         this.centroidVector = newCentroid != null ? newCentroid.clone() : null;
-
-        if (newRepresentativeArticleId != null) {
-            this.representativeArticleId = newRepresentativeArticleId;
-            this.publishedAt = newPublishedAt;
-            if (newThumbnailUrl != null && !newThumbnailUrl.isBlank()) {
-                this.thumbnailUrl = newThumbnailUrl;
-            }
-        }
+        this.representativeArticleId = newRepresentativeArticleId;
+        this.publishedAt = newPublishedAt;
+        this.thumbnailUrl = (newThumbnailUrl != null && !newThumbnailUrl.isBlank())
+                ? newThumbnailUrl : null;
     }
 }

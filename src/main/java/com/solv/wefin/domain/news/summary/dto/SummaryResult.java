@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * OpenAI 요약 생성 응답 DTOㄴ
+ * OpenAI 요약 생성 응답 DTO
  */
 @Getter
 @NoArgsConstructor

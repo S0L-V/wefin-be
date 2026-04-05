@@ -79,7 +79,7 @@ class SummaryServiceTest {
         NewsArticle article2 = createArticle(2L);
         NewsArticle article3 = createArticle(3L);
 
-        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any()))
+        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any(), any()))
                 .willReturn(List.of(cluster));
         given(outlierDetectionService.removeOutliers(cluster))
                 .willReturn(0);
@@ -113,7 +113,7 @@ class SummaryServiceTest {
         NewsCluster cluster = createCluster(10L, 1, SummaryStatus.PENDING);
         NewsArticle article = createArticle(1L);
 
-        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any()))
+        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any(), any()))
                 .willReturn(List.of(cluster));
         given(clusterArticleRepository.findByNewsClusterId(10L))
                 .willReturn(List.of(NewsClusterArticle.create(10L, 1L, 1, false)));
@@ -136,7 +136,7 @@ class SummaryServiceTest {
         // given
         NewsCluster cluster = createCluster(10L, 2, SummaryStatus.PENDING);
 
-        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any()))
+        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any(), any()))
                 .willReturn(List.of(cluster));
         given(outlierDetectionService.removeOutliers(cluster))
                 .willReturn(0);
@@ -161,7 +161,7 @@ class SummaryServiceTest {
     @DisplayName("대상 클러스터가 없으면 아무것도 실행하지 않음")
     void generatePendingSummaries_noTargets() {
         // given
-        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any()))
+        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any(), any()))
                 .willReturn(List.of());
 
         // when
@@ -178,7 +178,7 @@ class SummaryServiceTest {
         // given
         NewsCluster cluster = createCluster(10L, 2, SummaryStatus.STALE);
 
-        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any()))
+        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any(), any()))
                 .willReturn(List.of(cluster));
         given(outlierDetectionService.removeOutliers(cluster))
                 .willReturn(0);
@@ -208,7 +208,7 @@ class SummaryServiceTest {
         // given
         NewsCluster cluster = createCluster(10L, 5, SummaryStatus.PENDING);
 
-        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any()))
+        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any(), any()))
                 .willReturn(List.of(cluster));
         given(outlierDetectionService.removeOutliers(cluster))
                 .willReturn(2); // 2건 제거
@@ -240,7 +240,7 @@ class SummaryServiceTest {
         // given
         NewsCluster cluster = createCluster(10L, 3, SummaryStatus.PENDING);
 
-        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any()))
+        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any(), any()))
                 .willReturn(List.of(cluster));
         given(outlierDetectionService.removeOutliers(cluster))
                 .willReturn(3);
@@ -263,7 +263,7 @@ class SummaryServiceTest {
         // given
         NewsCluster cluster = createCluster(10L, 2, SummaryStatus.PENDING);
 
-        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any()))
+        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any(), any()))
                 .willReturn(List.of(cluster));
         given(outlierDetectionService.removeOutliers(cluster))
                 .willReturn(0);

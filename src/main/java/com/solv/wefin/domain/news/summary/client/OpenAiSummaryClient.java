@@ -27,6 +27,9 @@ public class OpenAiSummaryClient {
 
     private static final int MAX_ARTICLE_LENGTH = 2000;
 
+    // 클러스터당 프롬프트에 포함할 최대 기사 수
+    private static final int MAX_ARTICLES_PER_CLUSTER = 10;
+
     private static final String SYSTEM_PROMPT = """
             당신은 금융 뉴스 전문 에디터입니다.
             여러 관련 기사를 종합하여 하나의 브리핑을 작성하세요.
@@ -114,12 +117,16 @@ public class OpenAiSummaryClient {
 
     /**
      * 기사 목록을 OpenAI user 메시지 한 건으로 직렬화한다.
+     *
+     * 기사당 {@link #MAX_ARTICLE_LENGTH}자 + 클러스터당 최대 {@link #MAX_ARTICLES_PER_CLUSTER}건의
+     * 이중 상한을 적용하여 프롬프트 크기가 컨텍스트 한도를 넘지 않도록 보장한다.
      */
     private String buildUserMessage(List<String> articles) {
+        int limit = Math.min(articles.size(), MAX_ARTICLES_PER_CLUSTER);
         StringBuilder sb = new StringBuilder();
-        sb.append("아래 ").append(articles.size()).append("건의 관련 기사를 종합하여 브리핑을 작성하세요.\n\n");
+        sb.append("아래 ").append(limit).append("건의 관련 기사를 종합하여 브리핑을 작성하세요.\n\n");
 
-        for (int i = 0; i < articles.size(); i++) {
+        for (int i = 0; i < limit; i++) {
             String article = articles.get(i);
             String truncated = article.length() > MAX_ARTICLE_LENGTH
                     ? article.substring(0, MAX_ARTICLE_LENGTH) : article;
