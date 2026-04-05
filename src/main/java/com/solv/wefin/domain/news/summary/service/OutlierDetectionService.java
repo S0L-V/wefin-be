@@ -173,8 +173,6 @@ public class OutlierDetectionService {
                 .toList();
 
         // 남은 기사 없으면 집계를 초기화하고 클러스터를 INACTIVE로 내려 재조회 대상에서 제외한다.
-        // (INACTIVE로 두지 않으면 SummaryService가 FAILED 상태의 빈 클러스터를 매 배치마다
-        // 계속 집어와서 무의미한 재처리가 반복된다.)
         if (remainingArticleIds.isEmpty()) {
             cluster.recalculateAfterOutlierRemoval(0, null, null, null, null);
             cluster.deactivate();

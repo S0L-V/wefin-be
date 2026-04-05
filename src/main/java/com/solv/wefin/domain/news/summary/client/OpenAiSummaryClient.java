@@ -74,8 +74,6 @@ public class OpenAiSummaryClient {
      * @return 생성된 title + summary
      */
     public SummaryResult generateSummary(List<String> articles) {
-        // 입력 사전 검증 — 호출자는 다건(>=2) 기사 리스트를 넘긴다는 전제.
-        // 빈 리스트/null로 호출되면 의미 있는 요약을 만들 수 없으므로 즉시 실패 처리한다.
         if (articles == null || articles.isEmpty()) {
             throw new IllegalArgumentException("articles는 null이거나 비어있을 수 없습니다");
         }
@@ -138,8 +136,6 @@ public class OpenAiSummaryClient {
         sb.append("아래 ").append(limit).append("건의 관련 기사를 종합하여 브리핑을 작성하세요.\n\n");
 
         for (int i = 0; i < limit; i++) {
-            // null 원소는 빈 문자열로 취급하여 NPE를 방지한다
-            // (호출자가 null을 넣을 일은 없지만 방어적 처리).
             String article = articles.get(i) != null ? articles.get(i) : "";
             String truncated = article.length() > MAX_ARTICLE_LENGTH
                     ? article.substring(0, MAX_ARTICLE_LENGTH) : article;
