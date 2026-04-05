@@ -152,6 +152,13 @@ public class AuthService {
 
         UUID userId = jwtProvider.getUserId(refreshToken);
 
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_INVALID_TOKEN));
+
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
+        }
+
         RefreshToken savedToken = refreshTokenRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_INVALID_TOKEN));
 
@@ -161,7 +168,7 @@ public class AuthService {
         }
 
         // 만료 체크
-        if (savedToken.getExpiresAt().isBefore(OffsetDateTime.now())) {
+        if (!savedToken.getExpiresAt().isAfter(OffsetDateTime.now())) {
             throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
         }
 

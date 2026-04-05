@@ -37,7 +37,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = authorizationHeader.substring(BEARER_PREFIX.length());
 
-        if (!jwtProvider.isValid(token) || !jwtProvider.isAccessToken(token)) {
+        boolean validAccessToken;
+        try {
+            validAccessToken = jwtProvider.isValid(token) && jwtProvider.isAccessToken(token);
+        } catch (RuntimeException e) {
+            validAccessToken = false;
+        }
+
+        if (!validAccessToken) {
             request.setAttribute("authException", "INVALID_TOKEN");
             filterChain.doFilter(request, response);
             return;
