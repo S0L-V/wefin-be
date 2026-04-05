@@ -13,6 +13,10 @@ public enum ErrorCode {
     // Group
     GROUP_NOT_FOUND(404, "그룹을 찾을 수 없습니다."),
     GROUP_MEMBER_FORBIDDEN(403, "해당 그룹의 멤버만 조회할 수 있습니다."),
+    GROUP_INVITE_FORBIDDEN(403, "해당 그룹의 초대 코드를 생성할 권한이 없습니다."),
+    GROUP_INVITE_NOT_FOUND(404, "초대 코드를 찾을 수 없습니다."),
+    GROUP_INVITE_EXPIRED(400, "만료된 초대 코드입니다."),
+    GROUP_INVITE_ALREADY_USED(400, "이미 사용된 초대 코드입니다."),
 
     // Chat
     CHAT_MESSAGE_EMPTY(400, "메시지 내용은 비어 있을 수 없습니다."),

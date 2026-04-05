@@ -1,9 +1,13 @@
 package com.solv.wefin.domain.group.service;
 
 import com.solv.wefin.domain.auth.entity.User;
+import com.solv.wefin.domain.auth.repository.UserRepository;
+import com.solv.wefin.domain.group.dto.GroupInviteInfo;
 import com.solv.wefin.domain.group.dto.GroupMemberInfo;
 import com.solv.wefin.domain.group.entity.Group;
+import com.solv.wefin.domain.group.entity.GroupInvite;
 import com.solv.wefin.domain.group.entity.GroupMember;
+import com.solv.wefin.domain.group.repository.GroupInviteRepository;
 import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.domain.group.repository.GroupRepository;
 import com.solv.wefin.global.error.BusinessException;
@@ -35,6 +39,12 @@ class GroupServiceTest {
 
     @Mock
     private GroupMemberRepository groupMemberRepository;
+
+    @Mock
+    private GroupInviteRepository groupInviteRepository;
+
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private GroupService groupService;
@@ -122,6 +132,91 @@ class GroupServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("createInviteCode")
+    class CreateInviteCodeTest {
+
+        @Test
+        @DisplayName("그룹의 ACTIVE 멤버면 초대 코드를 생성한다")
+        void createInviteCode_success() throws Exception {
+            // given
+            UUID userId = UUID.randomUUID();
+
+            Group group = createGroup(1L, "테스트 그룹");
+            User user = createUser(
+                    userId,
+                    "leader@test.com",
+                    "리더",
+                    "encoded-password"
+            );
+
+            GroupInvite invite = createGroupInvite(
+                    10L,
+                    group,
+                    user,
+                    UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+                    GroupInvite.InviteStatus.PENDING
+            );
+
+            when(groupRepository.findById(1L)).thenReturn(Optional.of(group));
+            when(groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
+                    userId,
+                    group,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            )).thenReturn(true);
+            when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+            when(groupInviteRepository.save(any(GroupInvite.class))).thenReturn(invite);
+
+            // when
+            GroupInviteInfo result = groupService.createInviteCode(1L, userId);
+
+            // then
+            assertAll(
+                    () -> assertThat(result.getCodeId()).isEqualTo(10L),
+                    () -> assertThat(result.getGroupId()).isEqualTo(1L),
+                    () -> assertThat(result.getInviteCode()).isEqualTo(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")),
+                    () -> assertThat(result.getStatus()).isEqualTo("PENDING"),
+                    () -> assertThat(result.getExpiredAt()).isNotNull()
+            );
+
+            verify(groupRepository).findById(1L);
+            verify(groupMemberRepository).existsByUser_UserIdAndGroupAndStatus(
+                    userId,
+                    group,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            );
+            verify(userRepository).findById(userId);
+            verify(groupInviteRepository).save(any(GroupInvite.class));
+        }
+
+        @Test
+        @DisplayName("그룹의 멤버가 아니면 예외가 발생한다")
+        void createInviteCode_fail_when_not_member() {
+            // given
+            UUID userId = UUID.randomUUID();
+            Group group = mock(Group.class);
+
+            when(groupRepository.findById(1L)).thenReturn(Optional.of(group));
+            when(groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
+                    userId,
+                    group,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            )).thenReturn(false);
+
+            // when
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> groupService.createInviteCode(1L, userId)
+            );
+
+            // then
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_INVITE_FORBIDDEN);
+
+            verify(userRepository, never()).findById(any());
+            verify(groupInviteRepository, never()).save(any());
+        }
+    }
+
     private Group createGroup(Long id, String name) throws Exception {
         Constructor<Group> constructor = Group.class.getDeclaredConstructor(String.class);
         constructor.setAccessible(true);
@@ -167,5 +262,36 @@ class GroupServiceTest {
         idField.set(groupMember, id);
 
         return groupMember;
+    }
+
+    private GroupInvite createGroupInvite(
+            Long id,
+            Group group,
+            User createdBy,
+            UUID inviteCode,
+            GroupInvite.InviteStatus status
+    ) throws Exception {
+        Constructor<GroupInvite> constructor = GroupInvite.class.getDeclaredConstructor(
+                Group.class,
+                User.class,
+                UUID.class,
+                GroupInvite.InviteStatus.class,
+                java.time.OffsetDateTime.class
+        );
+        constructor.setAccessible(true);
+
+        GroupInvite groupInvite = constructor.newInstance(
+                group,
+                createdBy,
+                inviteCode,
+                status,
+                java.time.OffsetDateTime.now().plusHours(24)
+        );
+
+        Field idField = GroupInvite.class.getDeclaredField("id");
+        idField.setAccessible(true);
+        idField.set(groupInvite, id);
+
+        return groupInvite;
     }
 }

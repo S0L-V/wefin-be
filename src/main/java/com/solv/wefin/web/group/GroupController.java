@@ -1,15 +1,16 @@
 package com.solv.wefin.web.group;
 
+import com.solv.wefin.domain.group.dto.GroupInviteInfo;
 import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.global.common.ApiResponse;
+import com.solv.wefin.web.group.dto.CreateGroupInviteResponse;
 import com.solv.wefin.web.group.dto.GroupMemberResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -25,5 +26,14 @@ public class GroupController {
                 .toList();
 
         return ApiResponse.success(responses);
+    }
+
+    @PostMapping("/{groupId}/invite-codes")
+    public ApiResponse<CreateGroupInviteResponse> createInviteCode(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal UUID userId
+    ) {
+        GroupInviteInfo inviteInfo = groupService.createInviteCode(groupId, userId);
+        return ApiResponse.success(CreateGroupInviteResponse.from(inviteInfo));
     }
 }
