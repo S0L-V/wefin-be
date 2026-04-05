@@ -1,16 +1,22 @@
 package com.solv.wefin.domain.trading.market.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.solv.wefin.domain.trading.market.dto.TradeResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.WebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import java.math.BigDecimal;
+import java.util.Map;
 
 /**
  * 한투 WebSocket 연결/재연결 클라이언트
@@ -26,6 +32,8 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
     private final WebSocketClient hantuWsClient;
     private final HantuWebSocketKeyManager hantuWebSocketKeyManager;
     private WebSocketSession session;
+    private final ObjectMapper objectMapper;
+    private final SimpMessagingTemplate messagingTemplate;
 
     // 한투 WS에 연결
     @EventListener(ApplicationReadyEvent.class)
@@ -57,5 +65,19 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
             Thread.currentThread().interrupt();
             log.error("한투 웹소켓 재연결 중 인터럽트 발생");
         }
+    }
+
+    // 종목 구독 요청
+    public void sendSubscribe(String stockCode) {
+        // WEF-356에서 구현
+    }
+
+    // 종목 구독 해제 요청
+    public void sendUnsubscribe(String stockCode) {
+        // WEF-356에서 구현
+    }
+
+    private void sendMessage(String stockCode, String trType) {
+        // WEF-356에서 구현
     }
 }
