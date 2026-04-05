@@ -202,4 +202,29 @@ public class NewsCluster extends BaseEntity {
     public void markSummaryFailed() {
         this.summaryStatus = SummaryStatus.FAILED;
     }
+
+    /**
+     * 이상치 제거 후 클러스터 집계 상태를 재계산한다.
+     *
+     * @param newArticleCount 남은 기사 수
+     * @param newCentroid 재계산된 centroid (남은 기사 없으면 null)
+     * @param newRepresentativeArticleId 새 대표 기사 ID (null이면 변경 안 함)
+     * @param newPublishedAt 새 대표 기사 발행 시각
+     * @param newThumbnailUrl 새 대표 기사 썸네일
+     */
+    public void recalculateAfterOutlierRemoval(int newArticleCount, float[] newCentroid,
+                                                Long newRepresentativeArticleId,
+                                                OffsetDateTime newPublishedAt,
+                                                String newThumbnailUrl) {
+        this.articleCount = newArticleCount;
+        this.centroidVector = newCentroid != null ? newCentroid.clone() : null;
+
+        if (newRepresentativeArticleId != null) {
+            this.representativeArticleId = newRepresentativeArticleId;
+            this.publishedAt = newPublishedAt;
+            if (newThumbnailUrl != null && !newThumbnailUrl.isBlank()) {
+                this.thumbnailUrl = newThumbnailUrl;
+            }
+        }
+    }
 }
