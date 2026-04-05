@@ -34,6 +34,7 @@ public class OpenAiTaggingClient {
             2. sectors: 기사와 관련된 산업/섹터 (영문 코드와 한글 이름)
             3. topics: 기사의 주제/테마 (영문 코드와 한글 이름)
             4. summary: 기사 핵심 내용을 한 문장(50자 이내)으로 요약
+            5. relevance: 기사가 금융/경제/투자 관련인지 판정
 
             규칙:
             - 각 카테고리는 최대 5개까지
@@ -43,12 +44,21 @@ public class OpenAiTaggingClient {
             - topic 코드는 대문자 영문 (예: EARNINGS, AI, REGULATION, IPO)
             - summary는 한글로 작성, 50자 이내
 
+            relevance 판정 규칙:
+            - "FINANCIAL": 기사가 주식, 채권, 환율, 금리, 부동산, 기업 실적, 산업 동향, 투자, 거시경제 등
+              금융·경제·투자자 관점에서 의미 있는 정보를 담고 있는 경우
+            - "IRRELEVANT": 연예인 가십, 정치 공방, 사회 일반(사건·사고), 스포츠, 생활정보 등
+              금융/경제와 명확히 무관한 경우
+            - 판정이 애매하면 "FINANCIAL"로 기울여 선택 (false negative 방지)
+            - 본문에 "환율", "경제" 같은 키워드가 등장해도 핵심 주제가 연예/정치/사회면 IRRELEVANT
+
             반드시 아래 JSON 형식으로만 응답하세요:
             {
               "stocks": [{"code": "005930", "name": "삼성전자"}],
               "sectors": [{"code": "SEMICONDUCTOR", "name": "반도체"}],
               "topics": [{"code": "EARNINGS", "name": "실적"}],
-              "summary": "삼성전자가 2분기 반도체 실적 호조를 발표했다."
+              "summary": "삼성전자가 2분기 반도체 실적 호조를 발표했다.",
+              "relevance": "FINANCIAL"
             }
             """;
 

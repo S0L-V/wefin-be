@@ -15,6 +15,11 @@ public class TaggingResult {
     private List<TagItem> topics;
     private String summary;
 
+    /**
+     * 금융 관련성 판정
+     */
+    private String relevance;
+
     public TaggingResult() {
         this.stocks = List.of();
         this.sectors = List.of();
