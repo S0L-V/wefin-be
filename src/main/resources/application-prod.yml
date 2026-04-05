@@ -51,6 +51,10 @@ clustering:
   collect:
     cron: "0 */30 * * * *"
 
+summary:
+  collect:
+    cron: "0 */30 * * * *"
+
 websocket:
   allowed-origins:
     - https://wefin.ai.kr
