@@ -1,7 +1,6 @@
 package com.solv.wefin.domain.trading.market.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.solv.wefin.domain.trading.market.dto.TradeResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
