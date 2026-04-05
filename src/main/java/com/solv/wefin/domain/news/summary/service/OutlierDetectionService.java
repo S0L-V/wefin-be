@@ -172,9 +172,12 @@ public class OutlierDetectionService {
                 .filter(id -> !outlierArticleIds.contains(id))
                 .toList();
 
-        // 남은 기사 없으면 클러스터 초기화 (요약 단계에서 FAILED 처리)
+        // 남은 기사 없으면 집계를 초기화하고 클러스터를 INACTIVE로 내려 재조회 대상에서 제외한다.
+        // (INACTIVE로 두지 않으면 SummaryService가 FAILED 상태의 빈 클러스터를 매 배치마다
+        // 계속 집어와서 무의미한 재처리가 반복된다.)
         if (remainingArticleIds.isEmpty()) {
             cluster.recalculateAfterOutlierRemoval(0, null, null, null, null);
+            cluster.deactivate();
             return;
         }
 
@@ -186,19 +189,22 @@ public class OutlierDetectionService {
 
         float[] newCentroid = remainingVectors.isEmpty() ? null : averageVectors(remainingVectors);
 
-        // 3. 대표 기사 재선정 (가장 최신 기사)
-        var latestArticle = newsArticleRepository.findAllById(remainingArticleIds).stream()
+        // 3. 대표 기사 재선정. 기본은 최신 기사(publishedAt 최댓값).
+        //    모든 기사의 publishedAt이 null이면 대표 메타데이터가 사라지는 걸 막기 위해
+        //    남은 기사 중 임의의 한 건을 fallback으로 사용한다.
+        List<NewsArticle> remainingArticles = newsArticleRepository.findAllById(remainingArticleIds);
+        NewsArticle representative = remainingArticles.stream()
                 .filter(a -> a.getPublishedAt() != null)
                 .max((a, b) -> a.getPublishedAt().compareTo(b.getPublishedAt()))
-                .orElse(null);
+                .orElseGet(() -> remainingArticles.stream().findAny().orElse(null));
 
         // 4. 클러스터 상태 업데이트
         cluster.recalculateAfterOutlierRemoval(
                 remainingArticleIds.size(),
                 newCentroid,
-                latestArticle != null ? latestArticle.getId() : null,
-                latestArticle != null ? latestArticle.getPublishedAt() : null,
-                latestArticle != null ? latestArticle.getThumbnailUrl() : null
+                representative != null ? representative.getId() : null,
+                representative != null ? representative.getPublishedAt() : null,
+                representative != null ? representative.getThumbnailUrl() : null
         );
     }
 

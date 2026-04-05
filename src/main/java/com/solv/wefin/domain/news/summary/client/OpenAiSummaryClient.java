@@ -74,6 +74,12 @@ public class OpenAiSummaryClient {
      * @return 생성된 title + summary
      */
     public SummaryResult generateSummary(List<String> articles) {
+        // 입력 사전 검증 — 호출자는 다건(>=2) 기사 리스트를 넘긴다는 전제.
+        // 빈 리스트/null로 호출되면 의미 있는 요약을 만들 수 없으므로 즉시 실패 처리한다.
+        if (articles == null || articles.isEmpty()) {
+            throw new IllegalArgumentException("articles는 null이거나 비어있을 수 없습니다");
+        }
+
         // 기사 목록을 하나의 user 메시지로 직렬화
         // 기사 경계를 "--- 기사 N ---"으로 구분
         String userMessage = buildUserMessage(articles);
@@ -106,7 +112,12 @@ public class OpenAiSummaryClient {
             throw new IllegalStateException("OpenAI Summary API 응답이 비어있습니다");
         }
 
-        OpenAiChatApiResponse.Message message = response.getChoices().get(0).getMessage();
+        OpenAiChatApiResponse.Choice firstChoice = response.getChoices().get(0);
+        if (firstChoice == null) {
+            throw new IllegalStateException("OpenAI Summary API 첫 번째 choice가 비어있습니다");
+        }
+
+        OpenAiChatApiResponse.Message message = firstChoice.getMessage();
         if (message == null || message.getContent() == null) {
             throw new IllegalStateException("OpenAI Summary API 응답 메시지가 비어있습니다");
         }
@@ -127,7 +138,9 @@ public class OpenAiSummaryClient {
         sb.append("아래 ").append(limit).append("건의 관련 기사를 종합하여 브리핑을 작성하세요.\n\n");
 
         for (int i = 0; i < limit; i++) {
-            String article = articles.get(i);
+            // null 원소는 빈 문자열로 취급하여 NPE를 방지한다
+            // (호출자가 null을 넣을 일은 없지만 방어적 처리).
+            String article = articles.get(i) != null ? articles.get(i) : "";
             String truncated = article.length() > MAX_ARTICLE_LENGTH
                     ? article.substring(0, MAX_ARTICLE_LENGTH) : article;
             sb.append("--- 기사 ").append(i + 1).append(" ---\n");
