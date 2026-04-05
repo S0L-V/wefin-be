@@ -30,7 +30,7 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
 
     private final WebSocketClient hantuWsClient;
     private final HantuWebSocketKeyManager hantuWebSocketKeyManager;
-    private WebSocketSession session;
+    private volatile WebSocketSession session;
     private final ObjectMapper objectMapper;
     private final SimpMessagingTemplate messagingTemplate;
 

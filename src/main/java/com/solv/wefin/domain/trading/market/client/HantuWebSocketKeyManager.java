@@ -22,7 +22,7 @@ public class HantuWebSocketKeyManager {
     private final RestClient hantuRestClient;
     private String approvalKey;
 
-    public String getApprovalKey() {
+    public synchronized String getApprovalKey() {
         if (approvalKey == null) {
             fetchApprovalKey();
         }
