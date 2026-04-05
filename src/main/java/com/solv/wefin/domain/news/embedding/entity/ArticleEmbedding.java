@@ -39,7 +39,7 @@ public class ArticleEmbedding extends BaseEntity {
     @Column(name = "token_count", nullable = false)
     private int tokenCount;
 
-    @Column(name = "embedding", nullable = false, columnDefinition = "vector(1536)")
+    @Column(name = "embedding", nullable = false, columnDefinition = "float8[]")
     private float[] embedding;
 
     @Builder
