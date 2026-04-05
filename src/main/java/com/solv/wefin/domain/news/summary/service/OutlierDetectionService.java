@@ -370,7 +370,7 @@ public class OutlierDetectionService {
 
         // 최대 비중 계산
         long maxCount = tagCounts.values().stream().mapToLong(Long::longValue).max().orElse(0);
-        double dominance = (double) maxCount / categoryTags.size();
+        double dominance = (double) maxCount / mappings.size();
 
         // 기준보다 낮으면 경고
         if (dominance < CATEGORY_DOMINANCE_THRESHOLD) {

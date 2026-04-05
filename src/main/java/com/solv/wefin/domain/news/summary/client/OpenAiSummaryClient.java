@@ -10,6 +10,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -104,7 +106,19 @@ public class OpenAiSummaryClient {
         );
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-        OpenAiChatApiResponse response = restTemplate.postForObject(OPENAI_CHAT_URL, request, OpenAiChatApiResponse.class);
+
+        OpenAiChatApiResponse response;
+        try {
+            response = restTemplate.postForObject(OPENAI_CHAT_URL, request, OpenAiChatApiResponse.class);
+        } catch (HttpStatusCodeException e) {
+            throw new OpenAiClientException(
+                    "OpenAI Summary API HTTP 오류: " + e.getStatusCode(),
+                    e.getStatusCode(), e);
+        } catch (RestClientException e) {
+            throw new OpenAiClientException(
+                    "OpenAI Summary API 호출 실패: " + e.getMessage(),
+                    null, e);
+        }
 
         if (response == null || response.getChoices() == null || response.getChoices().isEmpty()) {
             throw new IllegalStateException("OpenAI Summary API 응답이 비어있습니다");
