@@ -5,10 +5,7 @@ import com.solv.wefin.domain.auth.dto.SignupCommand;
 import com.solv.wefin.domain.auth.dto.SignupInfo;
 import com.solv.wefin.domain.auth.service.AuthService;
 import com.solv.wefin.global.common.ApiResponse;
-import com.solv.wefin.web.auth.dto.LoginRequest;
-import com.solv.wefin.web.auth.dto.LoginResponse;
-import com.solv.wefin.web.auth.dto.SignupRequest;
-import com.solv.wefin.web.auth.dto.SignupResponse;
+import com.solv.wefin.web.auth.dto.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -54,6 +51,17 @@ public class AuthController {
                 .userId(result.userId())
                 .nickname(result.nickname())
                 .build();
+
+        return ApiResponse.success(response);
+    }
+
+    @PostMapping("/refresh")
+    public ApiResponse<RefreshTokenResponse> refresh(
+            @RequestBody @Valid RefreshTokenRequest request
+    ) {
+        String newAccessToken = authService.refresh(request.refreshToken());
+
+        RefreshTokenResponse response = new RefreshTokenResponse(newAccessToken);
 
         return ApiResponse.success(response);
     }

@@ -80,6 +80,10 @@ public class JwtProvider {
         }
     }
 
+    public boolean isAccessToken(String token) {
+        return "access".equals(getTokenType(token));
+    }
+
     private Claims parseClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(key)

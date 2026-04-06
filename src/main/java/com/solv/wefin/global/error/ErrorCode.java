@@ -13,6 +13,10 @@ public enum ErrorCode {
     // Group
     GROUP_NOT_FOUND(404, "그룹을 찾을 수 없습니다."),
     GROUP_MEMBER_FORBIDDEN(403, "해당 그룹의 멤버만 조회할 수 있습니다."),
+    GROUP_INVITE_FORBIDDEN(403, "해당 그룹의 초대 코드를 생성할 권한이 없습니다."),
+    GROUP_INVITE_NOT_FOUND(404, "초대 코드를 찾을 수 없습니다."),
+    GROUP_INVITE_EXPIRED(400, "만료된 초대 코드입니다."),
+    GROUP_INVITE_ALREADY_USED(400, "이미 사용된 초대 코드입니다."),
 
     // Chat
     CHAT_MESSAGE_EMPTY(400, "메시지 내용은 비어 있을 수 없습니다."),
@@ -36,6 +40,8 @@ public enum ErrorCode {
     // Auth - LOGIN
     AUTH_LOGIN_FAILED(401, "이메일 또는 비밀번호가 올바르지 않습니다."),
     ACCOUNT_LOCKED(423, "계정이 잠금 상태입니다."),
+    AUTH_INVALID_TOKEN(401, "유효하지 않은 인증 토큰입니다."),
+    AUTH_UNAUTHORIZED(401, "인증이 필요합니다."),
 
     // Order - BUY
     ORDER_INSUFFICIENT_BALANCE(400, "예수금이 부족합니다."),
@@ -76,6 +82,10 @@ public enum ErrorCode {
     CLUSTERING_ALREADY_RUNNING(409, "클러스터링이 이미 실행 중입니다."),
     CLUSTERING_ARTICLE_NOT_FOUND(500, "클러스터링 대상 기사를 찾을 수 없습니다."),
     CLUSTERING_NO_EMBEDDING(500, "기사의 임베딩이 존재하지 않습니다."),
+
+    // Summary
+    SUMMARY_ALREADY_RUNNING(409, "요약 생성이 이미 실행 중입니다."),
+    SUMMARY_CLUSTER_NOT_FOUND(500, "요약 대상 클러스터를 찾을 수 없습니다."),
 
     // GameRoom
     ROOM_NOT_FOUND(404,"게임장을 찾을 수 없습니다."),

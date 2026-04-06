@@ -2,8 +2,8 @@ package com.solv.wefin.domain.news.tagging.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.solv.wefin.domain.news.config.dto.OpenAiChatApiResponse;
 import com.solv.wefin.domain.news.tagging.dto.TaggingResult;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -92,13 +92,13 @@ public class OpenAiTaggingClient {
         );
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-        ChatResponse response = restTemplate.postForObject(OPENAI_CHAT_URL, request, ChatResponse.class);
+        OpenAiChatApiResponse response = restTemplate.postForObject(OPENAI_CHAT_URL, request, OpenAiChatApiResponse.class);
 
         if (response == null || response.getChoices() == null || response.getChoices().isEmpty()) {
             throw new IllegalStateException("OpenAI Tagging API 응답이 비어있습니다");
         }
 
-        Message message = response.getChoices().get(0).getMessage();
+        OpenAiChatApiResponse.Message message = response.getChoices().get(0).getMessage();
         if (message == null || message.getContent() == null) {
             throw new IllegalStateException("OpenAI Tagging API 응답 메시지가 비어있습니다");
         }
@@ -122,18 +122,4 @@ public class OpenAiTaggingClient {
                 : content.substring(0, MAX_CONTENT_LENGTH);
     }
 
-    @Getter
-    private static class ChatResponse {
-        private List<Choice> choices;
-    }
-
-    @Getter
-    private static class Choice {
-        private Message message;
-    }
-
-    @Getter
-    private static class Message {
-        private String content;
-    }
 }
