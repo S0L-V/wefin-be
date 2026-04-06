@@ -13,7 +13,7 @@ import java.util.Map;
 @Service
 public class SubscriptionManager {
 
-    private static final int MAX_SUBSCRIPTION = 41;
+    private static final int MAX_SUBSCRIPTION = 20;
 
     private final HantuWebSocketClient hantuWebSocketClient;
     private final Map<String, Integer> subscriptions = new HashMap<>();

@@ -41,7 +41,7 @@ class SubscriptionManagerTest {
 
     @Test
     void 구독_제한_초과시_예외() {
-        for (int i = 1; i <= 41; i++) {
+        for (int i = 1; i <= 20; i++) {
             subscriptionManager.subscribe(String.format("%06d", i));
         }
 
@@ -53,7 +53,7 @@ class SubscriptionManagerTest {
 
     @Test
     void 이미_구독중인_종목은_제한에_안걸림() {
-        for (int i = 1; i <= 41; i++) {
+        for (int i = 1; i <= 20; i++) {
             subscriptionManager.subscribe(String.format("%06d", i));
         }
 
