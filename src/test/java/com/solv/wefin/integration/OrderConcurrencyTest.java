@@ -9,6 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
@@ -120,7 +121,7 @@ public class OrderConcurrencyTest extends IntegrationTestBase {
 		}
 
 		// 전부 끝날 때까지 대기
-		latch.await();
+		latch.await(10, TimeUnit.SECONDS);
 		executor.shutdown();
 
 		// then - 검증
@@ -179,7 +180,7 @@ public class OrderConcurrencyTest extends IntegrationTestBase {
 			});
 		}
 
-		latch.await();
+		latch.await(10, TimeUnit.SECONDS);
 		executor.shutdown();
 
 		// then
@@ -247,7 +248,7 @@ public class OrderConcurrencyTest extends IntegrationTestBase {
 			});
 		}
 
-		latch.await();
+		latch.await(10, TimeUnit.SECONDS);
 		executor.shutdown();
 
 		// then
