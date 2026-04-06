@@ -14,8 +14,6 @@ import java.util.UUID;
 
 public interface StockDailyRepository extends JpaRepository<StockDaily, UUID> {
 
-    boolean existsByStockInfoAndTradeDate(StockInfo stockInfo, LocalDate tradeDate);
-
     List<StockDaily> findByStockInfoAndTradeDateBetweenOrderByTradeDateAsc(
             StockInfo stockInfo, LocalDate startDate, LocalDate endDate);
 
