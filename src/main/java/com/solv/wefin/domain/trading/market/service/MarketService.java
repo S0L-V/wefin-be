@@ -13,6 +13,7 @@ import com.solv.wefin.domain.trading.stock.service.StockService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class MarketService implements MarketPriceProvider, ExchangeRateProvider {
@@ -146,13 +148,16 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
         }
 
         HantuCandleApiResponse response = hantuMarketClient.fetchPeriodPrice(stockCode, start, end, periodCode);
+        log.info("캔들 API 응답: {}", response);
 
         if (response == null) {
             return List.of();
         }
 
         // 한투 API 응답 코드 검증 (rt_cd "0"이면 정상)
-        if (!"0".equals(response.output1().rt_cd())) {
+        if (response.output1() != null && response.output1().rt_cd()
+                != null
+                && !"0".equals(response.output1().rt_cd())) {
             throw new BusinessException(ErrorCode.MARKET_API_FAILED);
         }
 
