@@ -22,6 +22,8 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -44,6 +46,7 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
     private final ObjectMapper objectMapper;
     private final SimpMessagingTemplate messagingTemplate;
     private final MarketService marketService;
+    private final Set<String> subscribedStocks = ConcurrentHashMap.newKeySet();
 
     // 한투 WS에 연결
     @EventListener(ApplicationReadyEvent.class)
@@ -62,6 +65,13 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) {
         this.session = session;
         log.info("한투 웹소켓 연결에 성공했습니다.");
+
+        // sendSubscribe() 호출x (subscribedStocks.add() 중복 실행 방지)
+        subscribedStocks.forEach(stockCode -> {
+            sendMessage("H0STCNT0", stockCode, "1");
+            sendMessage("H0STASP0", stockCode, "1");
+            log.info("종목 재구독: {}", stockCode);
+        });
     }
 
     // 메시지 수신 시
@@ -98,11 +108,13 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
 
     // 종목 구독 요청
     public void sendSubscribe(String trId, String stockCode) {
+        subscribedStocks.add(stockCode);
         sendMessage(trId, stockCode, "1");
     }
 
     // 종목 구독 해제 요청
     public void sendUnsubscribe(String trId, String stockCode) {
+        subscribedStocks.remove(stockCode);
         sendMessage(trId, stockCode, "2");
     }
 
