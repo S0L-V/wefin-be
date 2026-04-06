@@ -19,7 +19,8 @@ import java.util.Map;
 @Component
 public class OpenAiChatClient {
 
-    private static final String OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
+    @Value("${openai.chat.url}")
+    private String openAiChatUrl;
 
     private final RestTemplate restTemplate;
     private final String apiKey;
@@ -57,7 +58,7 @@ public class OpenAiChatClient {
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
             ChatResponse response = restTemplate.postForObject(
-                    OPENAI_CHAT_URL,
+                    openAiChatUrl,
                     request,
                     ChatResponse.class
             );

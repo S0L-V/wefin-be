@@ -7,6 +7,7 @@ import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.chat.aiChat.dto.request.AiChatRequest;
 import com.solv.wefin.web.chat.aiChat.dto.response.AiChatResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,7 +22,7 @@ public class AiChatController {
     private final AiChatService aiChatService;
 
     @PostMapping("/messages")
-    public ApiResponse<AiChatResponse> sendMessage(@RequestBody AiChatRequest request) {
+    public ApiResponse<AiChatResponse> sendMessage(@Valid @RequestBody AiChatRequest request) {
 
         if (request == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
