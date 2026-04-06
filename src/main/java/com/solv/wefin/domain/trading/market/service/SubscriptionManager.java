@@ -1,22 +1,30 @@
 package com.solv.wefin.domain.trading.market.service;
 
 import com.solv.wefin.domain.trading.market.client.HantuWebSocketClient;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @RequiredArgsConstructor
 @Service
 public class SubscriptionManager {
 
+    private static final int MAX_SUBSCRIPTION = 41;
+
     private final HantuWebSocketClient hantuWebSocketClient;
     private final Map<String, Integer> subscriptions = new HashMap<>();
 
     public synchronized void subscribe(String stockCode) {
+        boolean isNew = !subscriptions.containsKey(stockCode);
+
+        if (isNew && subscriptions.size() >= MAX_SUBSCRIPTION) {
+            throw new BusinessException(ErrorCode.MARKET_SUBSCRIPTION_LIMIT_EXCEEDED);
+        }
+
         int count = subscriptions.merge(stockCode, 1, Integer::sum);
 
         if (count == 1) {
