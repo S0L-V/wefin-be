@@ -1,11 +1,15 @@
 package com.solv.wefin.domain.group.service;
 
 import com.solv.wefin.domain.auth.entity.User;
+import com.solv.wefin.domain.auth.repository.UserRepository;
+import com.solv.wefin.domain.group.dto.GroupInviteInfo;
+import com.solv.wefin.domain.group.dto.GroupMemberInfo;
 import com.solv.wefin.domain.group.entity.Group;
+import com.solv.wefin.domain.group.entity.GroupInvite;
 import com.solv.wefin.domain.group.entity.GroupMember;
+import com.solv.wefin.domain.group.repository.GroupInviteRepository;
 import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.domain.group.repository.GroupRepository;
-import com.solv.wefin.domain.group.dto.GroupMemberInfo;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +25,8 @@ import java.util.List;
 public class GroupService {
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
+    private final GroupInviteRepository groupInviteRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public void createDefaultGroup(User user) {
@@ -48,5 +55,29 @@ public class GroupService {
                 ).stream()
                 .map(GroupMemberInfo::from)
                 .toList();
+    }
+
+    @Transactional
+    public GroupInviteInfo createInviteCode(Long groupId, UUID userId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
+
+        boolean isMember = groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
+                userId,
+                group,
+                GroupMember.GroupMemberStatus.ACTIVE
+        );
+
+        if (!isMember) {
+            throw new BusinessException(ErrorCode.GROUP_INVITE_FORBIDDEN);
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        GroupInvite invite = GroupInvite.create(group, user);
+        GroupInvite saved = groupInviteRepository.save(invite);
+
+        return GroupInviteInfo.from(saved);
     }
 }
