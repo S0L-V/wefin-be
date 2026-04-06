@@ -92,10 +92,14 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
         String trId = parts[1];
         String data = parts[3];
 
-        if ("H0STCNT0".equals(trId)) {
-            parseAndSendTrade(data, Integer.parseInt(parts[2]));
-        } else if ("H0STASP0".equals(trId)) {
-            parseAndSendOrderbook(data);
+        try {
+            if ("H0STCNT0".equals(trId)) {
+                parseAndSendTrade(data, Integer.parseInt(parts[2]));
+            } else if ("H0STASP0".equals(trId)) {
+                parseAndSendOrderbook(data);
+            }
+        } catch (Exception e) {
+            log.error("한투 실시간 데이터 파싱 실패 [trId={}, data={}]", trId, data, e);
         }
     }
 
@@ -119,6 +123,11 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
     }
 
     private void sendMessage(String trId, String stockCode, String trType) {
+        if (session == null || !session.isOpen()) {
+            log.warn("한투 웹소켓 미연결 상태. 메시지 전송 스킵: {}", stockCode);
+            return;
+        }
+
         try {
             Map<String, Object> message = Map.of(
                     "header", Map.of(
@@ -148,6 +157,7 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
         for (int i = 0; i < recordCount; i++) {
             int offset = i * fieldCount;
             TradeResponse response = new TradeResponse(
+                    "TRADE",
                     fields[offset],                           // stockCode
                     new BigDecimal(fields[offset + 2]),       // currentPrice
                     new BigDecimal(fields[offset + 4]),       // changePrice
@@ -191,6 +201,7 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
         }
 
         OrderbookResponse response = new OrderbookResponse(
+                "ORDERBOOK",
                 asks, bids,
                 Long.parseLong(fields[43]),                // TOTAL_ASKP_RSQN
                 Long.parseLong(fields[44])                 // TOTAL_BIDP_RSQN
