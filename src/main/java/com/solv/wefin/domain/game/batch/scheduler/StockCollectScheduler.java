@@ -17,12 +17,6 @@ public class StockCollectScheduler {
 
     private static final int BATCH_SIZE = 320;
 
-    // TODO: 테스트 후 삭제
-    @Scheduled(cron = "0 37 12 * * *")
-    public void collectTestTemp() {
-        runCollect("TEST-12:37");
-    }
-
     /**
      * 하루 5회 × 320종목 = 1,600종목/일 → 2일이면 전 종목 완료
      */
