@@ -171,4 +171,9 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
             throw new BusinessException(ErrorCode.MARKET_STOCK_NOT_FOUND);
         }
     }
+
+    public void updatePriceCache(String stockCode, PriceResponse response) {
+        priceCache.put(stockCode, response);
+        priceCacheTimestamp.put(stockCode, System.currentTimeMillis());
+    }
 }
