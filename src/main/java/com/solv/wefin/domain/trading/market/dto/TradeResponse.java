@@ -6,6 +6,7 @@ import java.math.BigDecimal;
  * 실시간 체결가 WebSocket push 응답
  */
 public record TradeResponse(
+        String type,
         String stockCode,
         BigDecimal currentPrice,
         BigDecimal changePrice,
