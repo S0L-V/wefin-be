@@ -172,11 +172,11 @@ class GroupServiceTest {
 
             // then
             assertAll(
-                    () -> assertThat(result.getCodeId()).isEqualTo(10L),
-                    () -> assertThat(result.getGroupId()).isEqualTo(1L),
-                    () -> assertThat(result.getInviteCode()).isEqualTo(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")),
-                    () -> assertThat(result.getStatus()).isEqualTo("PENDING"),
-                    () -> assertThat(result.getExpiredAt()).isNotNull()
+                    () -> assertThat(result.codeId()).isEqualTo(10L),
+                    () -> assertThat(result.groupId()).isEqualTo(1L),
+                    () -> assertThat(result.inviteCode()).isEqualTo(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")),
+                    () -> assertThat(result.status()).isEqualTo(GroupInvite.InviteStatus.PENDING),
+                    () -> assertThat(result.expiredAt()).isNotNull()
             );
 
             verify(groupRepository).findById(1L);

@@ -14,11 +14,11 @@ public record CreateGroupInviteResponse(
 ) {
     public static CreateGroupInviteResponse from(GroupInviteInfo info) {
         return new CreateGroupInviteResponse(
-                info.getCodeId(),
-                info.getGroupId(),
-                info.getInviteCode(),
-                info.getStatus(),
-                info.getExpiredAt()
+                info.codeId(),
+                info.groupId(),
+                info.inviteCode(),
+                info.status().name(),
+                info.expiredAt()
         );
     }
 }

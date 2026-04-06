@@ -2,6 +2,7 @@ package com.solv.wefin.web.group;
 
 import com.solv.wefin.domain.group.dto.GroupInviteInfo;
 import com.solv.wefin.domain.group.dto.GroupMemberInfo;
+import com.solv.wefin.domain.group.entity.GroupInvite;
 import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.global.config.security.JwtProvider;
 import org.junit.jupiter.api.DisplayName;
@@ -79,13 +80,13 @@ class GroupControllerTest {
         OffsetDateTime expiredAt = OffsetDateTime.now().plusHours(24);
 
         given(groupService.createInviteCode(1L, userId))
-                .willReturn(GroupInviteInfo.builder()
-                        .codeId(10L)
-                        .groupId(1L)
-                        .inviteCode(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
-                        .status("PENDING")
-                        .expiredAt(expiredAt)
-                        .build());
+                .willReturn(new GroupInviteInfo(
+                        10L,
+                        1L,
+                        UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+                        GroupInvite.InviteStatus.PENDING,
+                        expiredAt
+                ));
 
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(userId, null, List.of());
