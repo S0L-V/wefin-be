@@ -20,7 +20,8 @@ public class SubscriptionManager {
                 (stockCode, k -> new AtomicInteger(0));
 
         if (count.incrementAndGet() == 1) {
-            hantuWebSocketClient.sendSubscribe(stockCode);
+            hantuWebSocketClient.sendSubscribe("H0STCNT0", stockCode);
+            hantuWebSocketClient.sendSubscribe("H0STASP0", stockCode);
         }
     }
 
@@ -32,7 +33,8 @@ public class SubscriptionManager {
         }
 
         if (count.decrementAndGet() == 0) {
-            hantuWebSocketClient.sendUnsubscribe(stockCode);
+            hantuWebSocketClient.sendUnsubscribe("H0STCNT0", stockCode);
+            hantuWebSocketClient.sendUnsubscribe("H0STASP0", stockCode);
             subscriptions.remove(stockCode);
         }
 

@@ -1,6 +1,7 @@
 package com.solv.wefin.domain.trading.market.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.solv.wefin.domain.trading.market.dto.TradeResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -60,7 +61,37 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
     // 메시지 수신 시
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) {
+        String payload = message.getPayload();
 
+        // JSON 응답 (구독 확인) → 로그만
+        if (payload.startsWith("{")) {
+            log.info("한투 WS 응답: {}", payload);
+            return;
+        }
+
+        // 실시간 데이터: 0|H0STCNT0|004|데이터
+        String[] parts = payload.split("\\|");
+        if (parts.length < 4) return;
+
+        String[] fields = parts[3].split("\\^");
+        int fieldCount = 46;
+        int recordCount = Integer.parseInt(parts[2]);
+
+        for (int i = 0; i < recordCount; i++) {
+            int offset = i * fieldCount;
+
+            TradeResponse response = new TradeResponse(
+                    fields[offset],                           // stockCode
+                    new BigDecimal(fields[offset + 2]),       // currentPrice
+                    new BigDecimal(fields[offset + 4]),       // changePrice
+                    new BigDecimal(fields[offset + 5]),       // changeRate
+                    Long.parseLong(fields[offset + 12]),      // tradeVolume
+                    Long.parseLong(fields[offset + 13]),      // totalVolume
+                    fields[offset + 1]                        // tradeTime
+            );
+
+            messagingTemplate.convertAndSend("/topic/stocks/" + response.stockCode(), response);
+        }
     }
 
     // 연결 끊겼을 때 → 재연결
@@ -71,16 +102,35 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
     }
 
     // 종목 구독 요청
-    public void sendSubscribe(String stockCode) {
-        // WEF-356에서 구현
+    public void sendSubscribe(String trId, String stockCode) {
+        sendMessage(trId, stockCode, "1");
     }
 
     // 종목 구독 해제 요청
-    public void sendUnsubscribe(String stockCode) {
-        // WEF-356에서 구현
+    public void sendUnsubscribe(String trId, String stockCode) {
+        sendMessage(trId, stockCode, "2");
     }
 
-    private void sendMessage(String stockCode, String trType) {
-        // WEF-356에서 구현
+    private void sendMessage(String trId, String stockCode, String trType) {
+        try {
+            Map<String, Object> message = Map.of(
+                    "header", Map.of(
+                            "approval_key", hantuWebSocketKeyManager.getApprovalKey(),
+                            "custtype", "P",
+                            "tr_type", trType,
+                            "content-type", "utf-8"
+                    ),
+                    "body", Map.of(
+                            "input", Map.of(
+                                    "tr_id", trId,
+                                    "tr_key", stockCode
+                            )
+                    )
+            );
+
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
+        } catch (Exception e) {
+            log.error("한투 웹소켓 메시지 전송 실패: {}", stockCode, e);
+        }
     }
 }
