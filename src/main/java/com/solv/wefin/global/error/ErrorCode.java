@@ -77,6 +77,10 @@ public enum ErrorCode {
     CLUSTERING_ARTICLE_NOT_FOUND(500, "클러스터링 대상 기사를 찾을 수 없습니다."),
     CLUSTERING_NO_EMBEDDING(500, "기사의 임베딩이 존재하지 않습니다."),
 
+    // Summary
+    SUMMARY_ALREADY_RUNNING(409, "요약 생성이 이미 실행 중입니다."),
+    SUMMARY_CLUSTER_NOT_FOUND(500, "요약 대상 클러스터를 찾을 수 없습니다."),
+
     // GameRoom
     ROOM_NOT_FOUND(404,"게임장을 찾을 수 없습니다."),
     ROOM_ALREADY_EXISTS(409, "이미 진행 중이거나 대기 중인 게임방이 있습니다."),

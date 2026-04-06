@@ -2,6 +2,7 @@ package com.solv.wefin.domain.news.cluster.repository;
 
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.ClusterStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.OffsetDateTime;
@@ -18,4 +19,11 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
      * 특정 상태이면서, 마지막 갱신 시각이 기준 시각 이전인 클러스터를 조회한다.
      */
     List<NewsCluster> findByStatusAndUpdatedAtBefore(ClusterStatus status, OffsetDateTime before);
+
+    /**
+     * ACTIVE 클러스터 중 요약 생성이 필요한 클러스터를 조회한다.
+     */
+    List<NewsCluster> findByStatusAndSummaryStatusIn(ClusterStatus status,
+                                                     List<NewsCluster.SummaryStatus> statuses,
+                                                     Pageable pageable);
 }

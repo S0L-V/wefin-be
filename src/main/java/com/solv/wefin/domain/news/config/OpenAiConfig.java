@@ -23,4 +23,12 @@ public class OpenAiConfig {
         factory.setReadTimeout(60000);
         return new RestTemplate(factory);
     }
+
+    @Bean
+    public RestTemplate summaryRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10000);
+        factory.setReadTimeout(90000);
+        return new RestTemplate(factory);
+    }
 }

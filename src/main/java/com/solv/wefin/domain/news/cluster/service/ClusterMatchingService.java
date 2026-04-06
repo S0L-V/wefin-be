@@ -131,7 +131,7 @@ public class ClusterMatchingService {
      *
      * @return -1.0 ~ 1.0 사이의 유사도 값
      */
-    double cosineSimilarity(float[] a, float[] b) {
+    public double cosineSimilarity(float[] a, float[] b) {
         if (a == null || b == null || a.length != b.length) {
             return 0.0;
         }

@@ -55,6 +55,10 @@ clustering:
   collect:
     cron: ${CLUSTERING_COLLECT_CRON:-}
 
+summary:
+  collect:
+    cron: ${SUMMARY_COLLECT_CRON:-}
+
 websocket:
   allowed-origins:
     - http://localhost:5173

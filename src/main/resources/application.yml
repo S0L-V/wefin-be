@@ -16,6 +16,8 @@ openai:
     version: v1
   tagging:
     model: gpt-4o-mini
+  summary:
+    model: gpt-4o-mini
 
 embedding:
   collect:
@@ -34,6 +36,10 @@ clustering:
   score:
     reject-cutoff: 70
     suspicious-cutoff: 80
+  collect:
+    cron: "0 */30 * * * *"
+
+summary:
   collect:
     cron: "0 */30 * * * *"
 
