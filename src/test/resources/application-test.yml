@@ -40,6 +40,8 @@ openai:
     version: v1
   tagging:
     model: gpt-4o-mini
+  chat:
+    model: gpt-4o-mini
 
 embedding:
   collect:
