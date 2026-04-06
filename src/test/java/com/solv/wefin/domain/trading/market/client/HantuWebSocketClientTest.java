@@ -15,7 +15,6 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.WebSocketClient;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatCode;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -50,7 +49,7 @@ class HantuWebSocketClientTest {
     }
 
     @Test
-    void 체결_데이터_수신시_올바른_TradeResponse_전송() throws Exception {
+    void 체결_데이터_수신시_올바른_TradeResponse_전송() {
         // 46개 필드: [0]종목코드, [1]체결시간, [2]현재가, [4]전일대비, [5]등락률,
         //           [7]시가, [8]고가, [9]저가, [12]체결거래량, [13]누적거래량
         String[] fields = new String[46];
@@ -87,7 +86,7 @@ class HantuWebSocketClientTest {
     }
 
     @Test
-    void 호가_데이터_수신시_올바른_OrderbookResponse_전송() throws Exception {
+    void 호가_데이터_수신시_올바른_OrderbookResponse_전송() {
         // [0]종목코드, [3~12]매도호가1~10, [13~22]매수호가1~10,
         // [23~32]매도잔량1~10, [33~42]매수잔량1~10, [43]총매도잔량, [44]총매수잔량
         String[] fields = new String[45];
@@ -126,7 +125,7 @@ class HantuWebSocketClientTest {
     }
 
     @Test
-    void 잘못된_데이터_수신시_예외없이_처리() throws Exception {
+    void 잘못된_데이터_수신시_예외없이_처리() {
         String payload = "0|H0STCNT0|001|잘못된데이터";
 
         assertThatCode(() -> client.handleTextMessage(session, new TextMessage(payload)))
