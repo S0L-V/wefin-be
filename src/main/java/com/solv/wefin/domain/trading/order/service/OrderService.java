@@ -127,8 +127,8 @@ public class OrderService {
 
 		// 9. Order 생성 + 저장
 		Order order = orderRepository.save(
-			new Order(virtualAccountId, stockId, OrderType.MARKET, OrderSide.SELL, quantity
-				, null, Currency.KRW, null, fee, tax));
+			new Order(virtualAccountId, stockId, OrderType.MARKET, OrderSide.SELL, quantity,
+				null, Currency.KRW, null, fee, tax));
 
 		// 10. Trade 생성 + 저장
 		tradeService.createSellTrade(order.getOrderId(), virtualAccountId, stockId, quantity, currentPrice,
