@@ -4,6 +4,8 @@ import com.solv.wefin.domain.trading.market.client.HantuWebSocketClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -12,31 +14,30 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SubscriptionManager {
 
     private final HantuWebSocketClient hantuWebSocketClient;
-    private final ConcurrentHashMap<String, AtomicInteger> subscriptions = new ConcurrentHashMap<>();
+    private final Map<String, Integer> subscriptions = new HashMap<>();
 
-    public void subscribe(String stockCode) {
+    public synchronized void subscribe(String stockCode) {
+        int count = subscriptions.merge(stockCode, 1, Integer::sum);
 
-        AtomicInteger count = subscriptions.computeIfAbsent
-                (stockCode, k -> new AtomicInteger(0));
-
-        if (count.incrementAndGet() == 1) {
+        if (count == 1) {
             hantuWebSocketClient.sendSubscribe("H0STCNT0", stockCode);
             hantuWebSocketClient.sendSubscribe("H0STASP0", stockCode);
         }
     }
 
-    public void unsubscribe(String stockCode) {
-        AtomicInteger count = subscriptions.get(stockCode);
+    public synchronized void unsubscribe(String stockCode) {
+        Integer count = subscriptions.get(stockCode);
 
-        if (count == null) {
+        if (count == null || count <= 0) {
             return;
         }
 
-        if (count.decrementAndGet() == 0) {
+        if (count == 1) {
             hantuWebSocketClient.sendUnsubscribe("H0STCNT0", stockCode);
             hantuWebSocketClient.sendUnsubscribe("H0STASP0", stockCode);
             subscriptions.remove(stockCode);
+        } else {
+            subscriptions.put(stockCode, count - 1);
         }
-
     }
 }
