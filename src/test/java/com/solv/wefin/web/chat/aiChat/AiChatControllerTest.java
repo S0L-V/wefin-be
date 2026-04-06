@@ -82,7 +82,7 @@ public class AiChatControllerTest {
     }
 
     @Test
-    @DisplayName("AI 응답 시간이 초과되면 500를 반환한다.")
+    @DisplayName("AI 응답 시간이 초과되면 504를 반환한다.")
     void sendMessage_fail_timeout() throws Exception {
         // given
         AiChatRequest request = new AiChatRequest("질문");

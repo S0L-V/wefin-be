@@ -14,7 +14,13 @@ public class AiChatService {
 
     private final OpenAiChatClient openAiChatClient;
 
+    private static final int MAX_MESSAGE_LENGTH = 1000;
+
     public AiChatInfo sendMessage(AiChatCommand command) {
+        if (command == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+
         validateMessage(command.message());
 
         String answer = openAiChatClient.ask(command.message());
@@ -25,6 +31,10 @@ public class AiChatService {
     private void validateMessage(String message) {
         if (message == null || message.isBlank()) {
             throw new BusinessException(ErrorCode.CHAT_MESSAGE_EMPTY);
+        }
+
+        if (message.length() > MAX_MESSAGE_LENGTH) {
+            throw new BusinessException(ErrorCode.CHAT_MESSAGE_TOO_LONG);
         }
     }
 }
