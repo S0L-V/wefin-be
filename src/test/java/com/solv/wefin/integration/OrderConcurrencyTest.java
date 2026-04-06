@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Propagation;
@@ -206,8 +207,9 @@ public class OrderConcurrencyTest extends IntegrationTestBase {
 				"SELECT quantity FROM portfolio WHERE virtual_account_id = ? AND stock_id = ?",
 				Integer.class, accountId, stockId
 			);
-		} catch (Exception e) {
+		} catch (EmptyResultDataAccessException e) {
 			finalQuantity = 0;
+			log.info("포트폴리오 행 없음 - 전량 매도 완료로 판단, 수량 0 처리");
 		}
 
 		int expectedQuantity = startQuantity + buySuccess.get() - sellSuccess.get();
@@ -255,10 +257,10 @@ public class OrderConcurrencyTest extends IntegrationTestBase {
 			finalQuantity = jdbcTemplate.queryForObject(
 				"SELECT quantity FROM portfolio WHERE virtual_account_id = ? AND stock_id = ?",
 				Integer.class, accountId, stockId
-
 			);
-		} catch (Exception e) {
+		} catch (EmptyResultDataAccessException e) {
 			finalQuantity = 0;
+			log.info("포트폴리오 행 없음 - 전량 매도 완료로 판단, 수량 0 처리");
 		}
 
 		assertThat(finalQuantity).isGreaterThanOrEqualTo(0);

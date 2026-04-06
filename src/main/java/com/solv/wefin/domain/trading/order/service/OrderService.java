@@ -141,11 +141,10 @@ public class OrderService {
 		portfolioService.deductQuantity(virtualAccountId, stockId, quantity);
 
 		// 13. 예수금 입금
-		account = virtualAccountService.depositBalance(virtualAccountId,
-			totalAmount.subtract(fee).subtract(tax));
+		account.deposit(totalAmount.subtract(fee).subtract(tax));
 
 		// 14. 실현손익 누적
-		virtualAccountService.addRealizedProfit(virtualAccountId, realizedAmount);
+		account.addProfit(realizedAmount);
 
 		// 15. 이벤트 발행
 		eventPublisher.publishEvent(OrderMatchedEvent.ofSell(
