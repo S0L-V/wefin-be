@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.Locale;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -139,6 +140,40 @@ public class AuthService {
                 accessToken,
                 refreshTokenValue
         );
+    }
+
+    @Transactional
+    public String refresh(String refreshToken) {
+
+        // 토큰 유효성 검증
+        if (!jwtProvider.isValid(refreshToken) || !"refresh".equals(jwtProvider.getTokenType(refreshToken))) {
+            throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
+        }
+
+        UUID userId = jwtProvider.getUserId(refreshToken);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_INVALID_TOKEN));
+
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
+        }
+
+        RefreshToken savedToken = refreshTokenRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_INVALID_TOKEN));
+
+        // 토큰 일치 여부 확인
+        if (!savedToken.getToken().equals(refreshToken) || savedToken.isRevoked()) {
+            throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
+        }
+
+        // 만료 체크
+        if (!savedToken.getExpiresAt().isAfter(OffsetDateTime.now())) {
+            throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
+        }
+
+        // 새 access token 발급
+        return jwtProvider.generateAccessToken(userId);
     }
 
     private BusinessException mapConstraintViolation(DataIntegrityViolationException e) {

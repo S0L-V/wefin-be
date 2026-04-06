@@ -19,7 +19,8 @@ openai:
   chat:
     url: https://api.openai.com/v1/chat/completions
     model: gpt-4o-mini
-
+  summary:
+    model: gpt-4o-mini
 
 embedding:
   collect:
@@ -28,6 +29,14 @@ embedding:
 tagging:
   collect:
     cron: "0 */30 * * * *"
+kis:
+  app-key: ${KIS_APP_KEY:}
+  app-secret: ${KIS_APP_SECRET:}
+  base-url: ${KIS_BASE_URL:https://openapi.koreainvestment.com:9443}
+
+stock:
+  collect:
+    enabled: true
 
 clustering:
   threshold: 0.80
@@ -38,6 +47,10 @@ clustering:
   score:
     reject-cutoff: 70
     suspicious-cutoff: 80
+  collect:
+    cron: "0 */30 * * * *"
+
+summary:
   collect:
     cron: "0 */30 * * * *"
 
@@ -54,3 +67,6 @@ hantu:
     baseUrl: https://openapivts.koreainvestment.com:29443
     appkey: ${HANTU_APPKEY:}
     appsecret: ${HANTU_APPSECRET:}
+
+  ws:
+    url: ws://ops.koreainvestment.com:31000

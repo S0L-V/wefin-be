@@ -19,6 +19,12 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             GroupMember.GroupMemberStatus status
     );
 
+    boolean existsByUser_UserIdAndGroupAndStatus(
+            UUID userId,
+            Group group,
+            GroupMember.GroupMemberStatus status
+    );
+
     @Query("""
             select gm
             from GroupMember gm

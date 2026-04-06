@@ -42,6 +42,8 @@ openai:
     model: gpt-4o-mini
   chat:
     model: gpt-4o-mini
+  summary:
+    model: gpt-4o-mini
 
 embedding:
   collect:
@@ -60,5 +62,9 @@ clustering:
   score:
     reject-cutoff: 70
     suspicious-cutoff: 80
+  collect:
+    cron: "-"
+
+summary:
   collect:
     cron: "-"
