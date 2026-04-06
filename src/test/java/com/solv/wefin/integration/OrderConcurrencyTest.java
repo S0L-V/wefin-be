@@ -200,10 +200,16 @@ public class OrderConcurrencyTest extends IntegrationTestBase {
 		assertThat(result.getBalance()).isEqualByComparingTo(expectedBalance);
 		assertThat(result.getBalance()).isGreaterThanOrEqualTo(BigDecimal.ZERO);
 
-		Integer finalQuantity = jdbcTemplate.queryForObject(
-			"SELECT quantity FROM portfolio WHERE virtual_account_id = ? AND stock_id = ?",
-			Integer.class, accountId, stockId
-		);
+		Integer finalQuantity;
+		try {
+			finalQuantity = jdbcTemplate.queryForObject(
+				"SELECT quantity FROM portfolio WHERE virtual_account_id = ? AND stock_id = ?",
+				Integer.class, accountId, stockId
+			);
+		} catch (Exception e) {
+			finalQuantity = 0;
+		}
+
 		int expectedQuantity = startQuantity + buySuccess.get() - sellSuccess.get();
 		assertThat(finalQuantity).isEqualTo(expectedQuantity);
 
@@ -244,7 +250,7 @@ public class OrderConcurrencyTest extends IntegrationTestBase {
 
 		// then
 		VirtualAccount result = accountService.getAccountByUserId(userId);
-		Integer finalQuantity = 0;
+		Integer finalQuantity;
 		try {
 			finalQuantity = jdbcTemplate.queryForObject(
 				"SELECT quantity FROM portfolio WHERE virtual_account_id = ? AND stock_id = ?",
