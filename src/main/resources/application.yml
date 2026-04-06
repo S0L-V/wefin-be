@@ -56,3 +56,6 @@ hantu:
     baseUrl: https://openapivts.koreainvestment.com:29443
     appkey: ${HANTU_APPKEY:}
     appsecret: ${HANTU_APPSECRET:}
+
+  ws:
+    url: ws://ops.koreainvestment.com:31000
