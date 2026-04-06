@@ -10,6 +10,8 @@ import com.solv.wefin.domain.game.stock.entity.StockInfo;
 import com.solv.wefin.domain.game.stock.repository.StockDailyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,7 +47,7 @@ public class StockCollectService {
      * 서버 시작 시 IN_PROGRESS 상태를 PENDING으로 복구한다.
      * 이전 수집 도중 서버가 죽으면 IN_PROGRESS가 영구 누락되기 때문.
      */
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void recoverInProgressOnStartup() {
         List<BatchProgress> stuckList = batchProgressRepository.findByStatus(BatchStatus.IN_PROGRESS);
@@ -135,7 +137,12 @@ public class StockCollectService {
         updateStatus(progress, BatchStatus.IN_PROGRESS, null);
 
         try {
-            LocalDate from = progress.getLastCollectedDate().plusDays(1);
+            LocalDate lastCollected = progress.getLastCollectedDate();
+            if (lastCollected == null) {
+                lastCollected = COLLECT_START.minusDays(1);
+                log.warn("[lastCollectedDate null] 종목={}, 기본값 사용={}", symbol, lastCollected);
+            }
+            LocalDate from = lastCollected.plusDays(1);
 
             if (!from.isBefore(COLLECT_END)) {
                 log.info("[이미 완료] 종목={}", symbol);
