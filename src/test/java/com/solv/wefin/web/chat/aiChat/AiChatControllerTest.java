@@ -13,9 +13,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -36,10 +36,10 @@ public class AiChatControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private AiChatService aiChatService;
 
-    @MockBean
+    @MockitoBean
     private JwtProvider jwtProvider;
 
     @Test
@@ -62,7 +62,7 @@ public class AiChatControllerTest {
     }
 
     @Test
-    @DisplayName("입력 메시지가 비어 있으면 400을 반환한다.")
+    @DisplayName("입력 메시지가 비어 있으면 INVALID_INPUT으로 400을 반환한다.")
     void sendMessage_fail_blank() throws Exception {
         // given
         AiChatRequest request = new AiChatRequest(" ");
@@ -78,7 +78,7 @@ public class AiChatControllerTest {
                     .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.code").value("CHAT_MESSAGE_EMPTY"));
+                .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
     }
 
     @Test
