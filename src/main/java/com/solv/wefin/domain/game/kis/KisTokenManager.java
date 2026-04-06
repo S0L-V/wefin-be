@@ -69,6 +69,7 @@ public class KisTokenManager {
                     Thread.sleep(1000);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
+                    throw new RuntimeException("KIS 토큰 발급 중 인터럽트", ie);
                 }
             }
         }

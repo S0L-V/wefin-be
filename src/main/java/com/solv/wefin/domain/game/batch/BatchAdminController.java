@@ -9,6 +9,7 @@ import com.solv.wefin.global.common.ApiResponse;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/admin/batch")
 @RequiredArgsConstructor
+@Profile({"local", "dev"})
 public class BatchAdminController {
 
     private final StockInitService stockInitService;
@@ -47,7 +49,7 @@ public class BatchAdminController {
             @RequestParam(defaultValue = "320") @Min(1) @Max(500) int size) {
         stockCollectService.collectBatchAsync(size);
         return ResponseEntity.accepted().body(ApiResponse.success(Map.of(
-                "message", "수집이 시작되었습니다. GET /api/admin/batch/status로 ���행 상태를 확인하세요.",
+                "message", "수집이 시작되었습니다. GET /api/admin/batch/status로 진행 상태를 확인하세요.",
                 "batchSize", size
         )));
     }

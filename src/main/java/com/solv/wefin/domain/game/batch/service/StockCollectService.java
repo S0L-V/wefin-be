@@ -14,12 +14,15 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.annotation.PostConstruct;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Service
@@ -36,6 +39,25 @@ public class StockCollectService {
     private static final long API_DELAY_MS = 1000;
     private static final DateTimeFormatter KIS_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
+    private final AtomicBoolean running = new AtomicBoolean(false);
+
+    /**
+     * 서버 시작 시 IN_PROGRESS 상태를 PENDING으로 복구한다.
+     * 이전 수집 도중 서버가 죽으면 IN_PROGRESS가 영구 누락되기 때문.
+     */
+    @PostConstruct
+    @Transactional
+    public void recoverInProgressOnStartup() {
+        List<BatchProgress> stuckList = batchProgressRepository.findByStatus(BatchStatus.IN_PROGRESS);
+        for (BatchProgress bp : stuckList) {
+            bp.retry();
+            batchProgressRepository.save(bp);
+        }
+        if (!stuckList.isEmpty()) {
+            log.info("[IN_PROGRESS 복구] {}종목을 PENDING으로 전환", stuckList.size());
+        }
+    }
+
     /**
      * 비동기로 수집을 실행한다. Controller에서 호출하는 진입점.
      * HTTP 응답을 즉시 반환하고 백그라운드에서 수집 진행.
@@ -46,11 +68,23 @@ public class StockCollectService {
     }
 
     /**
-     * PENDING 또는 FAILED 상태인 종목을 batchSize만큼 수집한다.
-     * 스케줄러에서 직접 호출하는 동기 메서드.
-     * 트랜잭션 없이 실행 — 종목 단위로 개별 트랜잭션 처리.
+     * FAILED 우선, 부족하면 PENDING 추가하여 batchSize만큼 수집한다.
+     * 스케줄러와 수동 트리거 모두 이 메서드를 사용하므로 AtomicBoolean으로 동시 실행 방지.
      */
     public int collectBatch(int batchSize) {
+        if (!running.compareAndSet(false, true)) {
+            log.warn("[수집 스킵] 이미 수집이 진행 중입니다");
+            return 0;
+        }
+
+        try {
+            return doCollectBatch(batchSize);
+        } finally {
+            running.set(false);
+        }
+    }
+
+    private int doCollectBatch(int batchSize) {
         // FAILED 우선 재시도, 부족하면 PENDING 추가
         List<BatchProgress> targets = new ArrayList<>(batchProgressRepository.findByStatus(BatchStatus.FAILED));
 
