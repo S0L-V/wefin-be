@@ -104,9 +104,9 @@ class OrderServiceTest {
 			.willReturn(new BigDecimal("178000"));
 
 		VirtualAccount mockAccount = mock(VirtualAccount.class);
-		given(mockAccount.getBalance()).willReturn(new BigDecimal("9000000"));
-		given(virtualAccountService.depositBalance(eq(1L), any()))
+		given(virtualAccountService.getAccountWithLock(1L))
 			.willReturn(mockAccount);
+		given(mockAccount.getBalance()).willReturn(new BigDecimal("9000000"));
 
 		Portfolio mockPortfolio = mock(Portfolio.class);
 		given(mockPortfolio.getAvgPrice()).willReturn(new BigDecimal("170000"));
@@ -124,8 +124,6 @@ class OrderServiceTest {
 		verify(tradeService).createSellTrade(any(), eq(1L), eq(1L), eq(10),
 			any(), any(), any(), any(), any(), any(), any());
 		verify(portfolioService).deductQuantity(eq(1L), eq(1L), eq(10));
-		verify(virtualAccountService).depositBalance(eq(1L), any());
-		verify(virtualAccountService).addRealizedProfit(eq(1L), any());
 		verify(eventPublisher).publishEvent(any(OrderMatchedEvent.class));
 	}
 
@@ -139,6 +137,8 @@ class OrderServiceTest {
 			.willReturn(new BigDecimal("178000"));
 		given(portfolioService.getPortfolioForUpdate(1L, 1L))
 			.willThrow(new BusinessException(ErrorCode.ORDER_STOCK_NOT_HELD));
+		given(virtualAccountService.getAccountWithLock(1L))
+			.willReturn(mock(VirtualAccount.class));
 
 		// when & then
 		assertThatThrownBy(() -> orderService.sellMarket(1L, 1L, 10))
@@ -153,6 +153,8 @@ class OrderServiceTest {
 		given(mockStock.getStockCode()).willReturn("005630");
 		given(marketPriceProvider.getCurrentPrice("005630"))
 			.willReturn(new BigDecimal("178000"));
+		given(virtualAccountService.getAccountWithLock(1L))
+			.willReturn(mock(VirtualAccount.class));
 
 		Portfolio mockPortfolio = mock(Portfolio.class);
 		given(mockPortfolio.getQuantity()).willReturn(20);

@@ -36,7 +36,7 @@ kis:
 
 stock:
   collect:
-    enabled: true
+    enabled: false
 
 clustering:
   threshold: 0.80

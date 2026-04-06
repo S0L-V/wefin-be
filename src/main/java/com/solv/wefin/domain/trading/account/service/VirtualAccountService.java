@@ -100,4 +100,11 @@ public class VirtualAccountService {
 		return accountRepository.findByIdForUpdate(virtualAccountId)
 			.orElseThrow(() -> new BusinessException(ErrorCode.ACCOUNT_NOT_FOUND));
 	}
+
+	/**
+	 * 락을 잡고 계좌 조회 (락 순서 보장용)
+	 */
+	public VirtualAccount getAccountWithLock(Long virtualAccountId) {
+		return getAccountForUpdate(virtualAccountId);
+	}
 }

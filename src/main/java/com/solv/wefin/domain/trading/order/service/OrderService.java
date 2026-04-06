@@ -103,6 +103,9 @@ public class OrderService {
 			throw new BusinessException(ErrorCode.MARKET_API_FAILED);
 		}
 
+		// 계좌 락 선점
+		VirtualAccount account = virtualAccountService.getAccountWithLock(virtualAccountId);
+
 		// 4. 보유 종목 확인
 		Portfolio portfolio = portfolioService.getPortfolioForUpdate(virtualAccountId, stockId);
 		if (portfolio.getQuantity() < quantity) {
@@ -124,8 +127,8 @@ public class OrderService {
 
 		// 9. Order 생성 + 저장
 		Order order = orderRepository.save(
-			new Order(virtualAccountId, stockId, OrderType.MARKET, OrderSide.SELL, quantity
-				, null, Currency.KRW, null, fee, tax));
+			new Order(virtualAccountId, stockId, OrderType.MARKET, OrderSide.SELL, quantity,
+				null, Currency.KRW, null, fee, tax));
 
 		// 10. Trade 생성 + 저장
 		tradeService.createSellTrade(order.getOrderId(), virtualAccountId, stockId, quantity, currentPrice,
@@ -138,11 +141,10 @@ public class OrderService {
 		portfolioService.deductQuantity(virtualAccountId, stockId, quantity);
 
 		// 13. 예수금 입금
-		VirtualAccount account = virtualAccountService.depositBalance(virtualAccountId,
-			totalAmount.subtract(fee).subtract(tax));
+		account.deposit(totalAmount.subtract(fee).subtract(tax));
 
 		// 14. 실현손익 누적
-		virtualAccountService.addRealizedProfit(virtualAccountId, realizedAmount);
+		account.addProfit(realizedAmount);
 
 		// 15. 이벤트 발행
 		eventPublisher.publishEvent(OrderMatchedEvent.ofSell(
