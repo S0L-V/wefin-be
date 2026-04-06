@@ -16,6 +16,9 @@ openai:
     version: v1
   tagging:
     model: gpt-4o-mini
+  chat:
+    url: https://api.openai.com/v1/chat/completions
+    model: gpt-4o-mini
   summary:
     model: gpt-4o-mini
 

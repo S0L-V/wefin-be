@@ -24,6 +24,8 @@ public enum ErrorCode {
     CHAT_SPAM_DETECTED(429, "메시지를 너무 빠르게 전송하고 있습니다."),
     INVALID_PROFIT_AMOUNT(400, "손익 금액은 0이 될 수 없습니다."),
     CHAT_MESSAGE_NOT_FOUND(404, "채팅 메시지를 찾을 수 없습니다."),
+    AI_CHAT_REQUEST_FAILED(503, "AI 응답 생성에 실패했습니다."),
+    AI_CHAT_TIMEOUT(504, "AI 응답 시간이 초과되었습니다."),
 
     // Common
     INVALID_INPUT(400, "잘못된 입력입니다."),
