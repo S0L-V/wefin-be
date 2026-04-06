@@ -26,6 +26,14 @@ embedding:
 tagging:
   collect:
     cron: "0 */30 * * * *"
+kis:
+  app-key: ${KIS_APP_KEY:}
+  app-secret: ${KIS_APP_SECRET:}
+  base-url: ${KIS_BASE_URL:https://openapi.koreainvestment.com:9443}
+
+stock:
+  collect:
+    enabled: true
 
 clustering:
   threshold: 0.80
