@@ -103,6 +103,9 @@ public class OrderService {
 			throw new BusinessException(ErrorCode.MARKET_API_FAILED);
 		}
 
+		// 계좌 락 선점
+		VirtualAccount account = virtualAccountService.getAccountWithLock(virtualAccountId);
+
 		// 4. 보유 종목 확인
 		Portfolio portfolio = portfolioService.getPortfolioForUpdate(virtualAccountId, stockId);
 		if (portfolio.getQuantity() < quantity) {
@@ -138,7 +141,7 @@ public class OrderService {
 		portfolioService.deductQuantity(virtualAccountId, stockId, quantity);
 
 		// 13. 예수금 입금
-		VirtualAccount account = virtualAccountService.depositBalance(virtualAccountId,
+		account = virtualAccountService.depositBalance(virtualAccountId,
 			totalAmount.subtract(fee).subtract(tax));
 
 		// 14. 실현손익 누적
