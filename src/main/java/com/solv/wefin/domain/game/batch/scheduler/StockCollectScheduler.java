@@ -1,21 +1,26 @@
 package com.solv.wefin.domain.game.batch.scheduler;
 
 import com.solv.wefin.domain.game.batch.service.StockCollectService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 @ConditionalOnProperty(name = "stock.collect.enabled", havingValue = "true")
 public class StockCollectScheduler {
 
     private final StockCollectService stockCollectService;
+    private final int batchSize;
 
-    private static final int BATCH_SIZE = 320;
+    public StockCollectScheduler(
+            StockCollectService stockCollectService,
+            @Value("${stock.collect.batch-size:320}") int batchSize) {
+        this.stockCollectService = stockCollectService;
+        this.batchSize = batchSize;
+    }
 
     /**
      * 하루 5회 × 320종목 = 1,600종목/일 → 2일이면 전 종목 완료
@@ -46,9 +51,9 @@ public class StockCollectScheduler {
     }
 
     private void runCollect(String scheduleLabel) {
-        log.info("[주가 수집 시작] 스케줄={}, 배치크기={}", scheduleLabel, BATCH_SIZE);
+        log.info("[주가 수집 시작] 스케줄={}, 배치크기={}", scheduleLabel, batchSize);
         try {
-            int successCount = stockCollectService.collectBatch(BATCH_SIZE);
+            int successCount = stockCollectService.collectBatch(batchSize);
             log.info("[주가 수집 종료] 스케줄={}, 성공={}종목", scheduleLabel, successCount);
         } catch (Exception e) {
             log.error("[주가 수집 에러] 스케줄={}", scheduleLabel, e);

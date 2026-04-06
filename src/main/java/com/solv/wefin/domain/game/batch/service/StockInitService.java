@@ -11,6 +11,8 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.dao.DataIntegrityViolationException;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -24,6 +26,7 @@ public class StockInitService {
 
     private final StockInfoRepository stockInfoRepository;
     private final BatchProgressRepository batchProgressRepository;
+    private final StockInitTxService txService;
 
     private static final String CSV_PATH = "data/stocks.csv";
     private static final BatchType BATCH_TYPE = BatchType.DAILY;
@@ -34,7 +37,6 @@ public class StockInitService {
      *
      * @return 신규 등록된 종목 수, 스킵된 종목 수
      */
-    @Transactional
     public Map<String, Integer> initFromCsv() {
         int created = 0;
         int skipped = 0;
@@ -44,7 +46,6 @@ public class StockInitService {
                         new ClassPathResource(CSV_PATH).getInputStream(),
                         StandardCharsets.UTF_8))) {
 
-            // 첫 줄(헤더) 스킵
             String header = reader.readLine();
             if (header == null) {
                 throw new IllegalStateException("CSV 파일이 비어있습니다: " + CSV_PATH);
@@ -65,21 +66,18 @@ public class StockInitService {
                 String stockName = parts[1].trim();
                 String market = parts[2].trim();
 
-                // 이미 존재하는 종목이면 스킵
-                if (stockInfoRepository.existsById(symbol)) {
+                try {
+                    boolean saved = txService.saveOneStock(symbol, stockName, market);
+                    if (saved) {
+                        created++;
+                    } else {
+                        skipped++;
+                    }
+                } catch (DataIntegrityViolationException e) {
+                    // 동시 요청으로 유니크 충돌 → 이미 다른 요청이 저장함, 스킵
+                    log.debug("[유니크 충돌 스킵] 종목={}", symbol);
                     skipped++;
-                    continue;
                 }
-
-                // stock_info 저장 후 flush (BatchProgress가 FK 참조하므로 먼저 DB 반영)
-                StockInfo stockInfo = StockInfo.create(symbol, stockName, market, null);
-                stockInfoRepository.saveAndFlush(stockInfo);
-
-                // batch_progress 초기화 (PENDING)
-                BatchProgress progress = BatchProgress.create(stockInfo, BATCH_TYPE);
-                batchProgressRepository.save(progress);
-
-                created++;
             }
 
         } catch (IOException e) {
@@ -89,4 +87,5 @@ public class StockInitService {
         log.info("[초기화 완료] 신규={}, 스킵={}", created, skipped);
         return Map.of("created", created, "skipped", skipped);
     }
+
 }

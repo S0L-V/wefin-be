@@ -18,6 +18,9 @@ public interface BatchProgressRepository extends JpaRepository<BatchProgress, UU
     @Query("SELECT bp FROM BatchProgress bp JOIN FETCH bp.stockInfo WHERE bp.status = :status")
     List<BatchProgress> findByStatus(BatchStatus status);
 
+    @Query("SELECT bp FROM BatchProgress bp JOIN FETCH bp.stockInfo WHERE bp.status = 'FAILED' AND bp.retryCount < :maxRetries")
+    List<BatchProgress> findRetryableFailures(int maxRetries);
+
     List<BatchProgress> findByBatchType(BatchType batchType);
 
     long countByBatchTypeAndStatus(BatchType batchType, BatchStatus status);

@@ -5,25 +5,19 @@ import com.solv.wefin.domain.game.batch.entity.BatchStatus;
 import com.solv.wefin.domain.game.batch.repository.BatchProgressRepository;
 import com.solv.wefin.domain.game.kis.KisCandleResponse;
 import com.solv.wefin.domain.game.kis.KisStockClient;
-import com.solv.wefin.domain.game.stock.entity.StockDaily;
 import com.solv.wefin.domain.game.stock.entity.StockInfo;
-import com.solv.wefin.domain.game.stock.repository.StockDailyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.annotation.PostConstruct;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
@@ -32,14 +26,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class StockCollectService {
 
     private final KisStockClient kisStockClient;
-    private final StockDailyRepository stockDailyRepository;
     private final BatchProgressRepository batchProgressRepository;
+    private final StockCollectTxService txService;
 
     private static final LocalDate COLLECT_START = LocalDate.of(2020, 1, 2);
     private static final LocalDate COLLECT_END = LocalDate.of(2024, 12, 31);
     private static final int KIS_MAX_ROWS = 100;
     private static final long API_DELAY_MS = 1000;
-    private static final DateTimeFormatter KIS_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final int MAX_RETRIES = 3;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
 
@@ -87,8 +81,7 @@ public class StockCollectService {
     }
 
     private int doCollectBatch(int batchSize) {
-        // FAILED 우선 재시도, 부족하면 PENDING 추가
-        List<BatchProgress> targets = new ArrayList<>(batchProgressRepository.findByStatus(BatchStatus.FAILED));
+        List<BatchProgress> targets = new ArrayList<>(batchProgressRepository.findRetryableFailures(MAX_RETRIES));
 
         if (targets.size() < batchSize) {
             targets.addAll(batchProgressRepository.findByStatus(BatchStatus.PENDING));
@@ -107,7 +100,6 @@ public class StockCollectService {
                         progress.getStockInfo().getSymbol(), e.getMessage());
             }
 
-            // 종목 간 1초 딜레이 (마지막 종목 제외)
             if (i < limit - 1) {
                 try {
                     Thread.sleep(API_DELAY_MS);
@@ -127,14 +119,14 @@ public class StockCollectService {
      * 1종목의 5년치 일봉을 수집하여 DB에 저장한다.
      * 100일씩 끊어서 KIS API를 호출하고, 각 호출 사이에 1초 딜레이를 둔다.
      * Thread.sleep이 포함되므로 @Transactional을 걸지 않고,
-     * DB 저장은 saveChunk()에서 개별 트랜잭션으로 처리한다.
+     * DB 저장은 StockCollectTxService를 통해 별도 트랜잭션으로 처리한다.
      */
     public void collectOneStock(BatchProgress progress) {
         StockInfo stockInfo = progress.getStockInfo();
         String symbol = stockInfo.getSymbol();
         String marketCode = resolveMarketCode(stockInfo.getMarket());
 
-        updateStatus(progress, BatchStatus.IN_PROGRESS, null);
+        txService.updateStatus(progress, BatchStatus.IN_PROGRESS);
 
         try {
             LocalDate lastCollected = progress.getLastCollectedDate();
@@ -144,15 +136,15 @@ public class StockCollectService {
             }
             LocalDate from = lastCollected.plusDays(1);
 
-            if (!from.isBefore(COLLECT_END)) {
+            if (from.isAfter(COLLECT_END)) {
                 log.info("[이미 완료] 종목={}", symbol);
-                completeProgress(progress, COLLECT_END);
+                txService.completeProgress(progress, COLLECT_END);
                 return;
             }
 
             int totalSaved = 0;
 
-            while (from.isBefore(COLLECT_END) || from.isEqual(COLLECT_END)) {
+            while (!from.isAfter(COLLECT_END)) {
                 LocalDate to = from.plusDays(KIS_MAX_ROWS - 1);
                 if (to.isAfter(COLLECT_END)) {
                     to = COLLECT_END;
@@ -161,109 +153,37 @@ public class StockCollectService {
                 KisCandleResponse response = kisStockClient.fetchDailyPrice(symbol, marketCode, from, to);
 
                 if (response != null && response.output2() != null) {
-                    int saved = saveChunk(stockInfo, response.output2());
+                    int saved = txService.saveChunk(stockInfo, response.output2());
                     totalSaved += saved;
                 }
 
+                txService.updateLastCollectedDate(progress, to);
+
                 from = to.plusDays(1);
 
-                // API 호출 간 1초 딜레이
-                if (from.isBefore(COLLECT_END) || from.isEqual(COLLECT_END)) {
+                if (!from.isAfter(COLLECT_END)) {
                     Thread.sleep(API_DELAY_MS);
                 }
             }
 
-            completeProgress(progress, COLLECT_END);
+            txService.completeProgress(progress, COLLECT_END);
             log.info("[수집 완료] 종목={}, 저장={}건", symbol, totalSaved);
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            failProgress(progress, "수집 중 인터럽트 발생");
+            txService.failProgress(progress, "수집 중 인터럽트 발생");
             throw new RuntimeException("수집 중 인터럽트", e);
         } catch (Exception e) {
-            failProgress(progress, truncateMessage(e.getMessage(), 500));
+            txService.failProgress(progress, truncateMessage(e.getMessage(), 500));
             throw e;
         }
     }
 
-    /**
-     * 시장명(KOSPI/KOSDAQ)을 KIS API 시장코드(J/Q)로 변환한다.
-     */
     private String resolveMarketCode(String market) {
         if ("KOSDAQ".equalsIgnoreCase(market)) {
             return "Q";
         }
         return "J";
-    }
-
-    /**
-     * KIS API 응답 1청크를 트랜잭션 단위로 저장한다.
-     * 이미 존재하는 날짜는 스킵 (중복 방지).
-     */
-    @Transactional
-    public int saveChunk(StockInfo stockInfo, List<KisCandleResponse.Output2> candles) {
-        // 청크 내 모든 날짜를 한 번에 조회 (N+1 방지)
-        List<LocalDate> allDates = candles.stream()
-                .map(c -> LocalDate.parse(c.stck_bsop_date(), KIS_DATE_FORMAT))
-                .toList();
-        Set<LocalDate> existingDates = stockDailyRepository.findExistingDates(stockInfo, allDates);
-
-        int savedCount = 0;
-
-        for (KisCandleResponse.Output2 candle : candles) {
-            LocalDate tradeDate = LocalDate.parse(candle.stck_bsop_date(), KIS_DATE_FORMAT);
-
-            if (existingDates.contains(tradeDate)) {
-                continue;
-            }
-
-            BigDecimal changeRate = parseBigDecimalOrNull(candle.prdy_ctrt());
-
-            StockDaily daily = StockDaily.create(
-                    stockInfo,
-                    tradeDate,
-                    new BigDecimal(candle.stck_oprc()),
-                    new BigDecimal(candle.stck_hgpr()),
-                    new BigDecimal(candle.stck_lwpr()),
-                    new BigDecimal(candle.stck_clpr()),
-                    new BigDecimal(candle.acml_vol()),
-                    changeRate
-            );
-
-            stockDailyRepository.save(daily);
-            savedCount++;
-        }
-
-        return savedCount;
-    }
-
-    @Transactional
-    public void updateStatus(BatchProgress progress, BatchStatus status, String errorMessage) {
-        if (status == BatchStatus.IN_PROGRESS) {
-            progress.startProgress();
-        }
-        batchProgressRepository.save(progress);
-    }
-
-    @Transactional
-    public void completeProgress(BatchProgress progress, LocalDate lastDate) {
-        progress.complete(lastDate);
-        batchProgressRepository.save(progress);
-    }
-
-    @Transactional
-    public void failProgress(BatchProgress progress, String errorMessage) {
-        progress.fail(errorMessage);
-        batchProgressRepository.save(progress);
-    }
-
-    private BigDecimal parseBigDecimalOrNull(String value) {
-        if (value == null || value.isBlank()) return null;
-        try {
-            return new BigDecimal(value);
-        } catch (NumberFormatException e) {
-            return null;
-        }
     }
 
     private String truncateMessage(String message, int maxLength) {

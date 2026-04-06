@@ -81,6 +81,11 @@ public class BatchProgress {
         this.updatedAt = OffsetDateTime.now();
     }
 
+    public void updateLastCollectedDate(LocalDate lastDate) {
+        this.lastCollectedDate = lastDate;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
     public void retry() {
         this.status = BatchStatus.PENDING;
         this.updatedAt = OffsetDateTime.now();
