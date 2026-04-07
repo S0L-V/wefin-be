@@ -26,6 +26,8 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import org.mockito.ArgumentCaptor;
+
 @ExtendWith(MockitoExtension.class)
 class BriefingServiceTest {
 
@@ -89,7 +91,12 @@ class BriefingServiceTest {
         assertThat(result).isEqualTo(expectedBriefing);
         verify(newsCrawlService).crawlAndSave(TEST_DATE);
         verify(openAiBriefingClient).generateBriefing(eq(TEST_DATE), anyList());
-        verify(briefingCacheRepository).save(any(BriefingCache.class));
+
+        ArgumentCaptor<BriefingCache> captor = ArgumentCaptor.forClass(BriefingCache.class);
+        verify(briefingCacheRepository).save(captor.capture());
+        BriefingCache savedCache = captor.getValue();
+        assertThat(savedCache.getTargetDate()).isEqualTo(TEST_DATE);
+        assertThat(savedCache.getBriefingText()).isEqualTo(expectedBriefing);
     }
 
     // === 뉴스 없을 때 기본 브리핑 ===

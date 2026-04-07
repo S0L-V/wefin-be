@@ -17,6 +17,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -146,22 +147,22 @@ class NewsBatchServiceTest {
             firstResult.set(newsBatchService.collectBatch(1));
         });
 
-        // 첫 번째 배치가 시작될 때까지 대기
-        firstCallStarted.await();
+        // 첫 번째 배치가 시작될 때까지 대기 (5초 타임아웃)
+        assertThat(firstCallStarted.await(5, TimeUnit.SECONDS)).isTrue();
 
         // 두 번째 배치 시도 (running == true이므로 즉시 0 반환)
         Future<?> second = executor.submit(() -> {
             secondResult.set(newsBatchService.collectBatch(1));
         });
 
-        second.get(); // 두 번째는 즉시 완료
+        second.get(5, TimeUnit.SECONDS); // 두 번째는 즉시 완료
 
         // Then — 두 번째 배치는 0 반환 (스킵)
         assertThat(secondResult.get()).isEqualTo(0);
 
         // 첫 번째 배치 완료 허용
         allowFirstCallToFinish.countDown();
-        first.get();
+        first.get(5, TimeUnit.SECONDS);
 
         // 첫 번째 배치는 정상 처리
         assertThat(firstResult.get()).isEqualTo(1);
