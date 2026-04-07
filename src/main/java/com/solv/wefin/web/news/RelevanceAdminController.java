@@ -5,6 +5,8 @@ import com.solv.wefin.domain.news.tagging.service.RelevanceRejudgeService.Rejudg
 import com.solv.wefin.global.common.ApiResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -47,5 +49,5 @@ public class RelevanceAdminController {
         return ApiResponse.success(summary);
     }
 
-    public record RejudgeRequest(@NotEmpty List<Long> articleIds) {}
+    public record RejudgeRequest(@NotEmpty @Size(max = 500) List<@NotNull Long> articleIds) {}
 }

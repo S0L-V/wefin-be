@@ -59,7 +59,7 @@ public class RelevanceRejudgeService {
     public RejudgeSummary rejudgePending(int limit) {
         validateLimit(limit);
 
-        List<NewsArticle> articles = newsArticleRepository.findByRelevanceOrderByIdAsc(
+        List<NewsArticle> articles = newsArticleRepository.findRejudgeTargets(
                 RelevanceStatus.PENDING, PageRequest.of(0, limit));
         log.info("관련성 재판정 시작(PENDING) — 대상: {}건 (limit: {})", articles.size(), limit);
 

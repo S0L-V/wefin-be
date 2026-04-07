@@ -27,12 +27,14 @@ public class TaggingResult {
     }
 
     /**
-     * 전체 태그가 비어있는지 확인한다.
+     * 응답이 유효한 정보를 담고 있는지 확인한다.
      */
     public boolean isEmpty() {
-        return (stocks == null || stocks.isEmpty())
-                && (sectors == null || sectors.isEmpty())
-                && (topics == null || topics.isEmpty());
+        boolean hasAnyTag = (stocks != null && !stocks.isEmpty())
+                || (sectors != null && !sectors.isEmpty())
+                || (topics != null && !topics.isEmpty());
+        boolean hasRelevance = relevance != null && !relevance.isBlank();
+        return !hasAnyTag && !hasRelevance;
     }
 
     @Getter

@@ -14,10 +14,15 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
     boolean existsByDedupKey(String dedupKey);
 
     /**
-     * 특정 RelevanceStatus의 기사를 id 오름차순으로 조회한다.
+     * 재판정 가능한 PENDING 기사를 id 오름차순으로 조회한다.
      */
-    List<NewsArticle> findByRelevanceOrderByIdAsc(NewsArticle.RelevanceStatus relevance,
-                                                   org.springframework.data.domain.Pageable pageable);
+    @Query("SELECT a FROM NewsArticle a " +
+            "WHERE a.relevance = :relevance " +
+            "AND a.content IS NOT NULL AND TRIM(a.content) <> '' " +
+            "ORDER BY a.id ASC")
+    List<NewsArticle> findRejudgeTargets(
+            @Param("relevance") NewsArticle.RelevanceStatus relevance,
+            Pageable pageable);
 
     List<NewsArticle> findByCrawlStatusInAndCrawlRetryCountLessThanOrderByCollectedAtDesc(
             List<NewsArticle.CrawlStatus> statuses, int maxRetryCount, Pageable pageable);

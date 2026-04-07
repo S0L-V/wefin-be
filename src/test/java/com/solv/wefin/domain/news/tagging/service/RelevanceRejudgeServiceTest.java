@@ -166,7 +166,7 @@ class RelevanceRejudgeServiceTest {
         List<NewsArticle> pending = List.of(
                 createArticle(1L, "t1", "c1"),
                 createArticle(2L, "t2", "c2"));
-        given(newsArticleRepository.findByRelevanceOrderByIdAsc(eq(RelevanceStatus.PENDING), eq(PageRequest.of(0, 50))))
+        given(newsArticleRepository.findRejudgeTargets(eq(RelevanceStatus.PENDING), eq(PageRequest.of(0, 50))))
                 .willReturn(pending);
         given(openAiTaggingClient.analyzeTags(anyString(), anyString()))
                 .willReturn(parseResult("FINANCIAL"));
