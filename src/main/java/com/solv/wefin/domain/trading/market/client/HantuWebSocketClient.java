@@ -169,7 +169,8 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
                     new BigDecimal(fields[offset + 5]),       // changeRate
                     Long.parseLong(fields[offset + 12]),      // tradeVolume
                     Long.parseLong(fields[offset + 13]),      // totalVolume
-                    fields[offset + 1]                        // tradeTime
+                    fields[offset + 1],                       // tradeTime
+                    fields[offset + 21]                       // tradeSide
             );
             messagingTemplate.convertAndSend("/topic/stocks/" + response.stockCode(), response);
 

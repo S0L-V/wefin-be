@@ -13,5 +13,6 @@ public record TradeResponse(
         BigDecimal changeRate,
         long tradeVolume,
         long totalVolume,
-        String tradeTime
+        String tradeTime,
+        String tradeSide        // "1": 매수, "5": 매도
 ) {}
