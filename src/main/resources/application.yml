@@ -64,9 +64,9 @@ jwt:
 
 hantu:
   api:
-    baseUrl: https://openapivts.koreainvestment.com:29443
+    baseUrl: https://openapi.koreainvestment.com:9443
     appkey: ${HANTU_APPKEY:}
     appsecret: ${HANTU_APPSECRET:}
 
   ws:
-    url: ws://ops.koreainvestment.com:31000
+    url: ws://ops.koreainvestment.com:21000

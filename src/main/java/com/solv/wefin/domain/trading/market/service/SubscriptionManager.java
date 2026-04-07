@@ -1,40 +1,51 @@
 package com.solv.wefin.domain.trading.market.service;
 
 import com.solv.wefin.domain.trading.market.client.HantuWebSocketClient;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.HashMap;
+import java.util.Map;
 
 @RequiredArgsConstructor
 @Service
 public class SubscriptionManager {
 
+    private static final int MAX_SUBSCRIPTION = 20;
+
     private final HantuWebSocketClient hantuWebSocketClient;
-    private final ConcurrentHashMap<String, AtomicInteger> subscriptions = new ConcurrentHashMap<>();
+    private final Map<String, Integer> subscriptions = new HashMap<>();
 
-    public void subscribe(String stockCode) {
+    public synchronized void subscribe(String stockCode) {
+        boolean isNew = !subscriptions.containsKey(stockCode);
 
-        AtomicInteger count = subscriptions.computeIfAbsent
-                (stockCode, k -> new AtomicInteger(0));
+        if (isNew && subscriptions.size() >= MAX_SUBSCRIPTION) {
+            throw new BusinessException(ErrorCode.MARKET_SUBSCRIPTION_LIMIT_EXCEEDED);
+        }
 
-        if (count.incrementAndGet() == 1) {
-            hantuWebSocketClient.sendSubscribe(stockCode);
+        int count = subscriptions.merge(stockCode, 1, Integer::sum);
+
+        if (count == 1) {
+            hantuWebSocketClient.sendSubscribe("H0STCNT0", stockCode);
+            hantuWebSocketClient.sendSubscribe("H0STASP0", stockCode);
         }
     }
 
-    public void unsubscribe(String stockCode) {
-        AtomicInteger count = subscriptions.get(stockCode);
+    public synchronized void unsubscribe(String stockCode) {
+        Integer count = subscriptions.get(stockCode);
 
-        if (count == null) {
+        if (count == null || count <= 0) {
             return;
         }
 
-        if (count.decrementAndGet() == 0) {
-            hantuWebSocketClient.sendUnsubscribe(stockCode);
+        if (count == 1) {
+            hantuWebSocketClient.sendUnsubscribe("H0STCNT0", stockCode);
+            hantuWebSocketClient.sendUnsubscribe("H0STASP0", stockCode);
             subscriptions.remove(stockCode);
+        } else {
+            subscriptions.put(stockCode, count - 1);
         }
-
     }
 }
