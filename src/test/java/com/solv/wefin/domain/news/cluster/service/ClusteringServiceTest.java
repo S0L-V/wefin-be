@@ -88,7 +88,7 @@ class ClusteringServiceTest {
 
         // then
         verify(clusterMatchingService).clearCache();
-        verify(persistenceService).addToCluster(eq(cluster), eq(article), eq(vector), eq(false));
+        verify(persistenceService).addToCluster(cluster, article, vector, false);
         verify(persistenceService, never()).createSingleCluster(any(), any());
     }
 
@@ -180,7 +180,7 @@ class ClusteringServiceTest {
         clusteringService.clusterPendingArticles();
 
         // then
-        verify(persistenceService).addToCluster(eq(cluster), eq(article), eq(vector), eq(true));
+        verify(persistenceService).addToCluster(cluster, article, vector, true);
     }
 
     @Test

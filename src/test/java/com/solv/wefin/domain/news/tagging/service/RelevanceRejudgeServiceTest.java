@@ -19,6 +19,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.solv.wefin.global.error.BusinessException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -101,7 +102,7 @@ class RelevanceRejudgeServiceTest {
         assertThat(summary.success()).isZero();
         assertThat(summary.skipped()).isEqualTo(1);
         verify(openAiTaggingClient, never()).analyzeTags(anyString(), anyString());
-        verify(persistenceService, never()).saveRelevance(eq(1L), org.mockito.ArgumentMatchers.any());
+        verify(persistenceService, never()).saveRelevance(anyLong(), org.mockito.ArgumentMatchers.any());
     }
 
     @Test
@@ -115,7 +116,7 @@ class RelevanceRejudgeServiceTest {
                 .willReturn(parseResult("FINANCIAL"));
         given(openAiTaggingClient.analyzeTags(anyString(), eq("content2")))
                 .willThrow(new RuntimeException("OpenAI down"));
-        given(persistenceService.saveRelevance(eq(1L), eq(RelevanceStatus.FINANCIAL))).willReturn(true);
+        given(persistenceService.saveRelevance(1L, RelevanceStatus.FINANCIAL)).willReturn(true);
 
         RejudgeSummary summary = rejudgeService.rejudgeByIds(List.of(1L, 2L));
 
@@ -166,7 +167,7 @@ class RelevanceRejudgeServiceTest {
         List<NewsArticle> pending = List.of(
                 createArticle(1L, "t1", "c1"),
                 createArticle(2L, "t2", "c2"));
-        given(newsArticleRepository.findRejudgeTargets(eq(RelevanceStatus.PENDING), eq(PageRequest.of(0, 50))))
+        given(newsArticleRepository.findRejudgeTargets(RelevanceStatus.PENDING, PageRequest.of(0, 50)))
                 .willReturn(pending);
         given(openAiTaggingClient.analyzeTags(anyString(), anyString()))
                 .willReturn(parseResult("FINANCIAL"));
@@ -180,14 +181,14 @@ class RelevanceRejudgeServiceTest {
     }
 
     @Test
-    @DisplayName("rejudgePending — limit 0 이하 또는 500 초과면 IllegalArgumentException")
+    @DisplayName("rejudgePending — limit 0 이하 또는 500 초과면 BusinessException (400)")
     void rejudgePending_invalidLimit_throws() {
         assertThatThrownBy(() -> rejudgeService.rejudgePending(0))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(BusinessException.class);
         assertThatThrownBy(() -> rejudgeService.rejudgePending(-1))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(BusinessException.class);
         assertThatThrownBy(() -> rejudgeService.rejudgePending(501))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(BusinessException.class);
     }
 
     private NewsArticle createArticle(long id, String title, String content) {

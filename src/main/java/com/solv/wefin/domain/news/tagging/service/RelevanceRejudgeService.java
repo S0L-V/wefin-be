@@ -5,6 +5,8 @@ import com.solv.wefin.domain.news.article.entity.NewsArticle.RelevanceStatus;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
 import com.solv.wefin.domain.news.tagging.client.OpenAiTaggingClient;
 import com.solv.wefin.domain.news.tagging.dto.TaggingResult;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -72,7 +74,7 @@ public class RelevanceRejudgeService {
 
     private void validateLimit(int limit) {
         if (limit < 1 || limit > MAX_REJUDGE_LIMIT) {
-            throw new IllegalArgumentException(
+            throw new BusinessException(ErrorCode.INVALID_INPUT,
                     "limit는 1 이상 " + MAX_REJUDGE_LIMIT + " 이하여야 합니다 (요청값: " + limit + ")");
         }
     }
