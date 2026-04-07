@@ -27,7 +27,7 @@ news:
     client-secret: ${NAVER_CLIENT_SECRET}
     display: ${NAVER_NEWS_DISPLAY:100}
   collect:
-    cron: "0 0 */2 * * *"
+    cron: ${NEWS_COLLECT_CRON:${NEWS_BATCH_CRON:0 0 */2 * * *}}
 
 server:
   forward-headers-strategy: native
@@ -37,23 +37,23 @@ market:
     api-key: ${BOK_API_KEY:}
     base-url: ${BOK_BASE_URL:https://ecos.bok.or.kr/api}
   collect:
-    cron: "0 */5 * * * *"
+    cron: ${MARKET_COLLECT_CRON:${MARKET_BATCH_CRON:0 */5 * * * *}}
 
 embedding:
   collect:
-    cron: "0 */30 * * * *"
+    cron: ${EMBEDDING_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
 
 tagging:
   collect:
-    cron: "0 */30 * * * *"
+    cron: ${TAGGING_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
 
 clustering:
   collect:
-    cron: "0 */30 * * * *"
+    cron: ${CLUSTERING_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
 
 summary:
   collect:
-    cron: "0 */30 * * * *"
+    cron: ${SUMMARY_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
 
 websocket:
   allowed-origins:
