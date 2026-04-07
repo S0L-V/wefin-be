@@ -3,6 +3,7 @@ package com.solv.wefin.web.trading.portfolio;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,14 +22,12 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class PortfolioController {
 
-	private static final UUID TEMP_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000001");
-
 	private final PortfolioService portfolioService;
 	private final VirtualAccountService accountService;
 
 	@GetMapping
-	public ApiResponse<List<PortfolioResponse>> getPortfolios() {
-		VirtualAccount account = accountService.getAccountByUserId(TEMP_USER_ID);
+	public ApiResponse<List<PortfolioResponse>> getPortfolios(@AuthenticationPrincipal UUID userId) {
+		VirtualAccount account = accountService.getAccountByUserId(userId);
 		List<PortfolioInfo> infos = portfolioService.getPortfolioInfos(account.getVirtualAccountId());
 		List<PortfolioResponse> response = infos.stream()
 			.map(PortfolioResponse::from)

@@ -2,6 +2,7 @@ package com.solv.wefin.web.trading.order;
 
 import java.util.UUID;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,14 +25,13 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class OrderController {
 
-	private static final UUID TEMP_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000001");
-
 	private final OrderService orderService;
 	private final VirtualAccountService accountService;
 
 	@PostMapping("/buy")
-	public ApiResponse<OrderResponse> buy(@Valid @RequestBody OrderBuyRequest request) {
-		VirtualAccount account = accountService.getAccountByUserId(TEMP_USER_ID);
+	public ApiResponse<OrderResponse> buy(@AuthenticationPrincipal UUID userId,
+										  @Valid @RequestBody OrderBuyRequest request) {
+		VirtualAccount account = accountService.getAccountByUserId(userId);
 		OrderInfo orderInfo = orderService.buyMarket(account.getVirtualAccountId(),
 			request.stockId(), request.quantity());
 		OrderResponse response = OrderResponse.from(orderInfo);
@@ -39,8 +39,9 @@ public class OrderController {
 	}
 
 	@PostMapping("/sell")
-	public ApiResponse<OrderResponse> sell(@Valid @RequestBody OrderSellRequest request) {
-		VirtualAccount account = accountService.getAccountByUserId(TEMP_USER_ID);
+	public ApiResponse<OrderResponse> sell(@AuthenticationPrincipal UUID userId,
+										   @Valid @RequestBody OrderSellRequest request) {
+		VirtualAccount account = accountService.getAccountByUserId(userId);
 		OrderInfo orderInfo = orderService.sellMarket(account.getVirtualAccountId(),
 			request.stockId(), request.quantity());
 		OrderResponse response = OrderResponse.from(orderInfo);

@@ -3,6 +3,7 @@ package com.solv.wefin.web.trading.account;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,20 +25,19 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AccountController {
 
-	private static final UUID TEMP_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000001");
-
 	private final VirtualAccountService accountService;
 
 	@GetMapping
-	public ApiResponse<AccountResponse> getAccount() {
-		VirtualAccount account = accountService.getAccountByUserId(TEMP_USER_ID);
+	public ApiResponse<AccountResponse> getAccount(@AuthenticationPrincipal UUID userId) {
+		VirtualAccount account = accountService.getAccountByUserId(userId);
 		AccountResponse response = AccountResponse.from(account);
 		return ApiResponse.success(response);
 	}
 
 	@GetMapping("/buying-power")
-	public ApiResponse<BuyingPowerResponse> buyingPower(@RequestParam @Min(1) BigDecimal price) {
-		VirtualAccount account = accountService.getAccountByUserId(TEMP_USER_ID);
+	public ApiResponse<BuyingPowerResponse> buyingPower(@AuthenticationPrincipal UUID userId,
+														@RequestParam @Min(1) BigDecimal price) {
+		VirtualAccount account = accountService.getAccountByUserId(userId);
 		Integer quantity = accountService.calculateBuyingPower(account.getVirtualAccountId(), price);
 		return ApiResponse.success(new BuyingPowerResponse(quantity));
 	}
