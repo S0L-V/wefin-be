@@ -83,13 +83,7 @@ public class GlobalChatService {
     @Transactional
     public void sendSystemMessage(String content) {
 
-        validateMessage(content);
-
-        GlobalChatMessage savedMessage = globalChatMessageRepository.save(
-                GlobalChatMessage.createSystemMessage(content)
-        );
-
-        eventPublisher.publishEvent(toEvent(savedMessage));
+        saveSystemMessage(content);
     }
 
     @Transactional
@@ -98,6 +92,15 @@ public class GlobalChatService {
         sendSystemMessage(content);
     }
 
+    private void saveSystemMessage(String content) {
+        validateMessage(content);
+
+        GlobalChatMessage savedMessage = globalChatMessageRepository.save(
+                GlobalChatMessage.createSystemMessage(content)
+        );
+
+        eventPublisher.publishEvent(toEvent(savedMessage));
+    }
 
     private GlobalChatMessageInfo toInfo(GlobalChatMessage message) {
         return new GlobalChatMessageInfo(
