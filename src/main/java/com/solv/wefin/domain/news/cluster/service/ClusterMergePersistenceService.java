@@ -11,6 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.solv.wefin.domain.news.article.entity.NewsArticle;
+import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
+
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -25,6 +28,7 @@ public class ClusterMergePersistenceService {
 
     private final NewsClusterRepository newsClusterRepository;
     private final NewsClusterArticleRepository clusterArticleRepository;
+    private final NewsArticleRepository newsArticleRepository;
     private final ArticleVectorService articleVectorService;
 
     /**
@@ -66,21 +70,32 @@ public class ClusterMergePersistenceService {
             }
         }
 
-        // survivor 집계 재계산 (이관 후 전체 매핑 기준으로 centroid 재계산)
+        // survivor 집계 재계산 (이관 후 전체 매핑 기준)
+        int originalSurvivorCount = survivor.getArticleCount();
         List<NewsClusterArticle> allSurvivorMappings = clusterArticleRepository.findByNewsClusterId(survivorId);
+
+        // centroid 재계산 (TODO: N+1 — articleVectorService에 batch 조회 메서드 추가 시 개선)
         float[] newCentroid = recalculateCentroid(allSurvivorMappings);
+
+        // 대표 기사 재선정 — loser에서 이관된 기사 중 더 최신이 있을 수 있으므로 전체에서 재선정
+        List<Long> allArticleIds = allSurvivorMappings.stream()
+                .map(NewsClusterArticle::getNewsArticleId).toList();
+        NewsArticle representative = newsArticleRepository.findAllById(allArticleIds).stream()
+                .filter(a -> a.getPublishedAt() != null)
+                .max((a, b) -> a.getPublishedAt().compareTo(b.getPublishedAt()))
+                .orElseGet(() -> newsArticleRepository.findAllById(allArticleIds).stream().findAny().orElse(null));
 
         survivor.recalculateAggregates(
                 allSurvivorMappings.size(), newCentroid,
-                survivor.getRepresentativeArticleId(),
-                survivor.getPublishedAt(),
-                survivor.getThumbnailUrl());
+                representative != null ? representative.getId() : survivor.getRepresentativeArticleId(),
+                representative != null ? representative.getPublishedAt() : survivor.getPublishedAt(),
+                representative != null ? representative.getThumbnailUrl() : survivor.getThumbnailUrl());
 
         survivor.markSummaryStale();
         loser.deactivate();
 
         log.info("클러스터 병합 — survivor: {} ({}건), loser: {} ({}건→INACTIVE), 이관: {}건, 합산: {}건",
-                survivorId, survivor.getArticleCount() - transferredCount,
+                survivorId, originalSurvivorCount,
                 loserId, loserMappings.size(),
                 transferredCount, allSurvivorMappings.size());
     }
