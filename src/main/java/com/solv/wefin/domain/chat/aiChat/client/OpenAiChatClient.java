@@ -47,7 +47,7 @@ public class OpenAiChatClient {
         this.chatUrl = chatUrl;
     }
 
-    public String ask(List<AiChatMessage> history) {
+    public String ask(List<AiChatMessage> history, String currentQuestion) {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -55,7 +55,7 @@ public class OpenAiChatClient {
 
             Map<String, Object> body = Map.of(
                     "model", model,
-                    "messages", toOpenAiMessages(history)
+                    "messages", toOpenAiMessages(history, currentQuestion)
             );
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
@@ -82,7 +82,7 @@ public class OpenAiChatClient {
         }
     }
 
-    private List<Map<String, String>> toOpenAiMessages(List<AiChatMessage> history) {
+    private List<Map<String, String>> toOpenAiMessages(List<AiChatMessage> history, String currentQuestion) {
         List<Map<String, String>> messages = new ArrayList<>();
 
         messages.add(Map.of(
@@ -96,6 +96,11 @@ public class OpenAiChatClient {
                         "role", toOpenAiRole(message.getRole()),
                         "content", message.getContent()
                 )));
+
+        messages.add(Map.of(
+                "role", "user",
+                "content", currentQuestion
+        ));
 
         return messages;
     }

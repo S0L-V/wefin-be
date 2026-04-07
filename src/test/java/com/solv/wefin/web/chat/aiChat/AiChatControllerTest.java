@@ -11,10 +11,13 @@ import com.solv.wefin.global.error.GlobalExceptionHandler;
 import com.solv.wefin.web.chat.aiChat.dto.request.AiChatRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -22,11 +25,13 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -34,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(AiChatController.class)
 @Import(GlobalExceptionHandler.class)
-public class AiChatControllerTest {
+class AiChatControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -68,8 +73,7 @@ public class AiChatControllerTest {
         // when // then
         mockMvc.perform(post("/api/chat/ai/messages")
                         .with(csrf())
-                        .with(user("test"))
-                        .header("X-User-Id", userId.toString())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(userId, null, AuthorityUtils.NO_AUTHORITIES)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -78,10 +82,14 @@ public class AiChatControllerTest {
                 .andExpect(jsonPath("$.data.userId").value(userId.toString()))
                 .andExpect(jsonPath("$.data.role").value("AI"))
                 .andExpect(jsonPath("$.data.content").value("최근 실적 기준으로 설명드릴게요."));
+
+        ArgumentCaptor<AiChatCommand> captor = ArgumentCaptor.forClass(AiChatCommand.class);
+        verify(aiChatService).sendMessage(captor.capture(), eq(userId));
+        assertEquals(request.message(), captor.getValue().message());
     }
 
     @Test
-    @DisplayName("입력 메시지가 비어 있으면 INVALID_INPUT으로 400을 반환한다")
+    @DisplayName("입력 메시지가 비어 있으면 INVALID_INPUT을 반환한다")
     void sendMessage_fail_blank() throws Exception {
         // given
         UUID userId = UUID.randomUUID();
@@ -90,8 +98,7 @@ public class AiChatControllerTest {
         // when // then
         mockMvc.perform(post("/api/chat/ai/messages")
                         .with(csrf())
-                        .with(user("test"))
-                        .header("X-User-Id", userId.toString())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(userId, null, AuthorityUtils.NO_AUTHORITIES)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -112,8 +119,7 @@ public class AiChatControllerTest {
         // when // then
         mockMvc.perform(post("/api/chat/ai/messages")
                         .with(csrf())
-                        .with(user("test"))
-                        .header("X-User-Id", userId.toString())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(userId, null, AuthorityUtils.NO_AUTHORITIES)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isGatewayTimeout())
@@ -134,7 +140,7 @@ public class AiChatControllerTest {
                                 1L,
                                 userId,
                                 "USER",
-                                "삼성전자 어때?",
+                                "삼성전자 전망 알려줘",
                                 createdAt.minusMinutes(1)
                         ),
                         new AiChatInfo(
@@ -148,13 +154,12 @@ public class AiChatControllerTest {
 
         // when // then
         mockMvc.perform(get("/api/chat/ai/messages")
-                        .with(user("test"))
-                        .header("X-User-Id", userId.toString()))
+                        .with(authentication(new UsernamePasswordAuthenticationToken(userId, null, AuthorityUtils.NO_AUTHORITIES))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data[0].messageId").value(1))
                 .andExpect(jsonPath("$.data[0].role").value("USER"))
-                .andExpect(jsonPath("$.data[0].content").value("삼성전자 어때?"))
+                .andExpect(jsonPath("$.data[0].content").value("삼성전자 전망 알려줘"))
                 .andExpect(jsonPath("$.data[1].messageId").value(2))
                 .andExpect(jsonPath("$.data[1].role").value("AI"))
                 .andExpect(jsonPath("$.data[1].content").value("최근 실적 기준으로 설명드릴게요."));

@@ -23,7 +23,12 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class AiChatServiceTest {
 
@@ -50,13 +55,7 @@ class AiChatServiceTest {
     void getMessages_success() {
         // given
         UUID userId = UUID.randomUUID();
-
-        User user = User.builder()
-                .email("test@test.com")
-                .nickname("ai-user")
-                .password("password")
-                .build();
-        ReflectionTestUtils.setField(user, "userId", userId);
+        User user = createUser(userId);
 
         AiChatMessage firstMessage = AiChatMessage.createUserMessage(user, "삼성전자 어때?");
         ReflectionTestUtils.setField(firstMessage, "messageId", 1L);
@@ -81,44 +80,43 @@ class AiChatServiceTest {
     }
 
     @Test
-    @DisplayName("AI 채팅 요청 시 사용자 메시지와 AI 메시지를 저장하고 AI 답변을 반환한다")
+    @DisplayName("과거 history와 현재 질문을 분리해 AI에 전달하고 사용자와 AI 메시지를 저장한다")
     void sendMessage_success() {
         // given
         UUID userId = UUID.randomUUID();
         AiChatCommand command = new AiChatCommand("삼성전자 전망 알려줘");
+        User user = createUser(userId);
 
-        User user = User.builder()
-                .email("test@test.com")
-                .nickname("ai-user")
-                .password("password")
-                .build();
-        ReflectionTestUtils.setField(user, "userId", userId);
-
-        AiChatMessage historyUserMessage = AiChatMessage.createUserMessage(user, "삼성전자 전망 알려줘");
+        AiChatMessage historyUserMessage = AiChatMessage.createUserMessage(user, "이전에 나눈 질문");
         ReflectionTestUtils.setField(historyUserMessage, "messageId", 1L);
         ReflectionTestUtils.setField(historyUserMessage, "createdAt", OffsetDateTime.now().minusSeconds(10));
 
+        AiChatMessage savedUserMessage = AiChatMessage.createUserMessage(user, command.message());
+        ReflectionTestUtils.setField(savedUserMessage, "messageId", 2L);
+        ReflectionTestUtils.setField(savedUserMessage, "createdAt", OffsetDateTime.now().minusSeconds(5));
+
         AiChatMessage savedAiMessage = AiChatMessage.createAiMessage(user, "최근 실적 기준으로 설명드릴게요.");
-        ReflectionTestUtils.setField(savedAiMessage, "messageId", 2L);
+        ReflectionTestUtils.setField(savedAiMessage, "messageId", 3L);
         ReflectionTestUtils.setField(savedAiMessage, "createdAt", OffsetDateTime.now());
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(aiChatMessageRepository.findTop10ByUser_UserIdOrderByCreatedAtDesc(userId))
                 .thenReturn(List.of(historyUserMessage));
-        when(openAiChatClient.ask(any()))
+        when(openAiChatClient.ask(anyList(), eq(command.message())))
                 .thenReturn("최근 실적 기준으로 설명드릴게요.");
         when(aiChatMessageRepository.save(any(AiChatMessage.class)))
-                .thenReturn(historyUserMessage)
+                .thenReturn(savedUserMessage)
                 .thenReturn(savedAiMessage);
 
         ArgumentCaptor<AiChatMessage> messageCaptor = ArgumentCaptor.forClass(AiChatMessage.class);
+        ArgumentCaptor<List<AiChatMessage>> historyCaptor = ArgumentCaptor.forClass(List.class);
 
         // when
         AiChatInfo result = aiChatService.sendMessage(command, userId);
 
         // then
         verify(aiChatMessageRepository, times(2)).save(messageCaptor.capture());
-        verify(openAiChatClient, times(1)).ask(any());
+        verify(openAiChatClient).ask(historyCaptor.capture(), eq(command.message()));
 
         List<AiChatMessage> savedMessages = messageCaptor.getAllValues();
         assertEquals("USER", savedMessages.get(0).getRole().name());
@@ -126,7 +124,11 @@ class AiChatServiceTest {
         assertEquals("AI", savedMessages.get(1).getRole().name());
         assertEquals("최근 실적 기준으로 설명드릴게요.", savedMessages.get(1).getContent());
 
-        assertEquals(2L, result.messageId());
+        List<AiChatMessage> history = historyCaptor.getValue();
+        assertEquals(1, history.size());
+        assertEquals("이전에 나눈 질문", history.get(0).getContent());
+
+        assertEquals(3L, result.messageId());
         assertEquals(userId, result.userId());
         assertEquals("AI", result.role());
         assertEquals("최근 실적 기준으로 설명드릴게요.", result.content());
@@ -152,8 +154,7 @@ class AiChatServiceTest {
     void sendMessage_fail_too_long() {
         // given
         UUID userId = UUID.randomUUID();
-        String longMessage = "a".repeat(1001);
-        AiChatCommand command = new AiChatCommand(longMessage);
+        AiChatCommand command = new AiChatCommand("a".repeat(1001));
 
         // when
         BusinessException exception = assertThrows(BusinessException.class,
@@ -214,23 +215,16 @@ class AiChatServiceTest {
         // given
         UUID userId = UUID.randomUUID();
         AiChatCommand command = new AiChatCommand("질문");
+        User user = createUser(userId);
 
-        User user = User.builder()
-                .email("test@test.com")
-                .nickname("ai-user")
-                .password("password")
-                .build();
-        ReflectionTestUtils.setField(user, "userId", userId);
-
-        AiChatMessage historyUserMessage = AiChatMessage.createUserMessage(user, "질문");
+        AiChatMessage historyUserMessage = AiChatMessage.createUserMessage(user, "이전 질문");
         ReflectionTestUtils.setField(historyUserMessage, "messageId", 1L);
         ReflectionTestUtils.setField(historyUserMessage, "createdAt", OffsetDateTime.now());
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(aiChatMessageRepository.save(any(AiChatMessage.class))).thenReturn(historyUserMessage);
         when(aiChatMessageRepository.findTop10ByUser_UserIdOrderByCreatedAtDesc(userId))
                 .thenReturn(List.of(historyUserMessage));
-        when(openAiChatClient.ask(any()))
+        when(openAiChatClient.ask(anyList(), eq(command.message())))
                 .thenThrow(new BusinessException(ErrorCode.AI_CHAT_REQUEST_FAILED));
 
         // when
@@ -247,23 +241,16 @@ class AiChatServiceTest {
         // given
         UUID userId = UUID.randomUUID();
         AiChatCommand command = new AiChatCommand("질문");
+        User user = createUser(userId);
 
-        User user = User.builder()
-                .email("test@test.com")
-                .nickname("ai-user")
-                .password("password")
-                .build();
-        ReflectionTestUtils.setField(user, "userId", userId);
-
-        AiChatMessage historyUserMessage = AiChatMessage.createUserMessage(user, "질문");
+        AiChatMessage historyUserMessage = AiChatMessage.createUserMessage(user, "이전 질문");
         ReflectionTestUtils.setField(historyUserMessage, "messageId", 1L);
         ReflectionTestUtils.setField(historyUserMessage, "createdAt", OffsetDateTime.now());
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(aiChatMessageRepository.save(any(AiChatMessage.class))).thenReturn(historyUserMessage);
         when(aiChatMessageRepository.findTop10ByUser_UserIdOrderByCreatedAtDesc(userId))
                 .thenReturn(List.of(historyUserMessage));
-        when(openAiChatClient.ask(any()))
+        when(openAiChatClient.ask(anyList(), eq(command.message())))
                 .thenThrow(new BusinessException(ErrorCode.AI_CHAT_TIMEOUT));
 
         // when
@@ -272,5 +259,15 @@ class AiChatServiceTest {
 
         // then
         assertEquals(ErrorCode.AI_CHAT_TIMEOUT, exception.getErrorCode());
+    }
+
+    private User createUser(UUID userId) {
+        User user = User.builder()
+                .email("test@test.com")
+                .nickname("ai-user")
+                .password("password")
+                .build();
+        ReflectionTestUtils.setField(user, "userId", userId);
+        return user;
     }
 }

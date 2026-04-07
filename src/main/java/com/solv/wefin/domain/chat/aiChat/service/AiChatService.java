@@ -44,14 +44,14 @@ public class AiChatService {
         User user = userRepository.findById(userId)
                         .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        aiChatMessageRepository.save(
-                AiChatMessage.createUserMessage(user, command.message())
-        );
-
         List<AiChatMessage> history = aiChatMessageRepository
                 .findTop10ByUser_UserIdOrderByCreatedAtDesc(userId);
 
-        String answer = openAiChatClient.ask(history);
+        String answer = openAiChatClient.ask(history, command.message());
+
+        aiChatMessageRepository.save(
+                AiChatMessage.createUserMessage(user, command.message())
+        );
 
         AiChatMessage aiMessage = aiChatMessageRepository.save(
                 AiChatMessage.createAiMessage(user, answer)

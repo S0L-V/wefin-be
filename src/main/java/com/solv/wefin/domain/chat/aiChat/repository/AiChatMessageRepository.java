@@ -1,6 +1,5 @@
 package com.solv.wefin.domain.chat.aiChat.repository;
 
-import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.chat.aiChat.entity.AiChatMessage;
 import org.springframework.data.jpa.repository.JpaRepository;
 
