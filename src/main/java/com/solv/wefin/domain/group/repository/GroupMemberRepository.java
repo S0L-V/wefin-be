@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> {
+
     boolean existsByUserAndGroup(User user, Group group);
 
     Optional<GroupMember> findByUser_UserIdAndStatus(
@@ -34,4 +35,6 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             """)
     List<GroupMember> findByGroupAndStatusWithUser(@Param("group") Group group,
                                                    @Param("status") GroupMember.GroupMemberStatus status);
+
+    long countByGroupAndStatus(Group group, GroupMember.GroupMemberStatus status);
 }

@@ -1,10 +1,14 @@
 package com.solv.wefin.web.group;
 
 import com.solv.wefin.domain.group.dto.GroupInviteInfo;
+import com.solv.wefin.domain.group.dto.GroupMemberInfo;
 import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.global.common.ApiResponse;
 import com.solv.wefin.web.group.dto.CreateGroupInviteResponse;
 import com.solv.wefin.web.group.dto.GroupMemberResponse;
+import com.solv.wefin.web.group.dto.JoinGroupRequest;
+import com.solv.wefin.web.group.dto.JoinGroupResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -35,5 +39,16 @@ public class GroupController {
     ) {
         GroupInviteInfo inviteInfo = groupService.createInviteCode(groupId, userId);
         return ApiResponse.success(CreateGroupInviteResponse.from(inviteInfo));
+    }
+
+    @PostMapping("/join")
+    public ApiResponse<JoinGroupResponse> joinGroup(
+            @RequestBody @Valid JoinGroupRequest request,
+            @AuthenticationPrincipal UUID userId
+    ) {
+        GroupMemberInfo info = groupService.joinGroup(userId, request.inviteCode());
+        return ApiResponse.success(
+                JoinGroupResponse.from(info)
+        );
     }
 }

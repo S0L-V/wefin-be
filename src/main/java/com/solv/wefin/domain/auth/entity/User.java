@@ -1,5 +1,6 @@
 package com.solv.wefin.domain.auth.entity;
 
+import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -34,11 +35,19 @@ public class User extends BaseEntity {
     @Column(name = "status", nullable = false, length = 20)
     private UserStatus status;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "home_group_id")
+    private Group homeGroup;
+
     @Builder
     public User(String email, String nickname, String password) {
         this.email = email;
         this.nickname = nickname;
         this.password = password;
         this.status = UserStatus.ACTIVE;
+    }
+
+    public void setHomeGroup(Group homeGroup) {
+        this.homeGroup = homeGroup;
     }
 }

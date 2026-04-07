@@ -11,9 +11,9 @@ public record GroupMemberResponse(
 ) {
     public static GroupMemberResponse from(GroupMemberInfo info) {
         return new GroupMemberResponse(
-                info.getUserId(),
-                info.getNickname(),
-                info.getRole()
+                info.userId(),
+                info.nickname(),
+                info.role()
         );
     }
 }

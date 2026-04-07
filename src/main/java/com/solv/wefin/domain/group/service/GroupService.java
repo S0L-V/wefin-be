@@ -29,7 +29,7 @@ public class GroupService {
     private final UserRepository userRepository;
 
     @Transactional
-    public void createDefaultGroup(User user) {
+    public Group createDefaultGroup(User user) {
         Group group = Group.builder()
                 .name(user.getNickname() + "의 그룹")
                 .build();
@@ -43,6 +43,7 @@ public class GroupService {
                 .build();
 
         groupMemberRepository.save(groupMember);
+        return savedGroup;
     }
 
     public List<GroupMemberInfo> getActiveMembers(Long groupId) {
@@ -79,5 +80,63 @@ public class GroupService {
         GroupInvite saved = groupInviteRepository.save(invite);
 
         return GroupInviteInfo.from(saved);
+    }
+
+    @Transactional
+    public GroupMemberInfo joinGroup(UUID userId, UUID inviteCode) {
+        GroupInvite invite = groupInviteRepository.findByInviteCode(inviteCode)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_INVITE_NOT_FOUND));
+
+        if (invite.getExpiredAt().isBefore(java.time.OffsetDateTime.now())) {
+            throw new BusinessException(ErrorCode.GROUP_INVITE_EXPIRED);
+        }
+
+        if (invite.getStatus() == GroupInvite.InviteStatus.EXPIRED) {
+            throw new BusinessException(ErrorCode.GROUP_INVITE_EXPIRED);
+        }
+
+        if (invite.getStatus() == GroupInvite.InviteStatus.ACCEPTED) {
+            throw new BusinessException(ErrorCode.GROUP_INVITE_ALREADY_USED);
+        }
+
+        Group targetGroup = groupRepository.findByIdForUpdate(invite.getGroup().getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        GroupMember currentActiveMember = groupMemberRepository
+                .findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE)
+                .orElse(null);
+
+        if (currentActiveMember != null
+                && currentActiveMember.getGroup().getId().equals(targetGroup.getId())) {
+            throw new BusinessException(ErrorCode.ALREADY_JOINED_GROUP);
+        }
+
+        long activeMemberCount = groupMemberRepository.countByGroupAndStatus(
+                targetGroup,
+                GroupMember.GroupMemberStatus.ACTIVE
+        );
+
+        if (activeMemberCount >= 6) {
+            throw new BusinessException(ErrorCode.GROUP_FULL);
+        }
+
+        if (currentActiveMember != null) {
+            currentActiveMember.leave();
+        }
+
+        GroupMember newMember = GroupMember.builder()
+                .user(user)
+                .group(targetGroup)
+                .role(GroupMember.GroupMemberRole.MEMBER)
+                .status(GroupMember.GroupMemberStatus.ACTIVE)
+                .build();
+
+        groupMemberRepository.save(newMember);
+        invite.markAccepted();
+
+        return GroupMemberInfo.from(newMember);
     }
 }

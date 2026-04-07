@@ -8,6 +8,7 @@ import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.entity.UserStatus;
 import com.solv.wefin.domain.auth.repository.RefreshTokenRepository;
 import com.solv.wefin.domain.auth.repository.UserRepository;
+import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
@@ -85,6 +86,12 @@ class AuthServiceTest {
 
             when(userRepository.save(any(User.class))).thenReturn(savedUser);
 
+            Group homeGroup = Group.builder()
+                    .name("testuser의 그룹")
+                    .build();
+
+            when(groupService.createDefaultGroup(savedUser)).thenReturn(homeGroup);
+
             SignupInfo response = authService.signup(
                     new SignupCommand(rawEmail, rawNickname, rawPassword)
             );
@@ -93,12 +100,13 @@ class AuthServiceTest {
             verify(userRepository).save(captor.capture());
             verify(groupService).createDefaultGroup(savedUser);
 
-            User user = captor.getValue();
+            User capturedUser = captor.getValue();
 
             assertAll(
-                    () -> assertThat(user.getEmail()).isEqualTo("test@example.com"),
-                    () -> assertThat(user.getNickname()).isEqualTo("testuser"),
-                    () -> assertThat(user.getPassword()).isEqualTo("encoded-password"),
+                    () -> assertThat(capturedUser.getEmail()).isEqualTo("test@example.com"),
+                    () -> assertThat(capturedUser.getNickname()).isEqualTo("testuser"),
+                    () -> assertThat(capturedUser.getPassword()).isEqualTo("encoded-password"),
+                    () -> assertThat(savedUser.getHomeGroup()).isEqualTo(homeGroup),
                     () -> assertThat(response.userId()).isEqualTo(userId),
                     () -> assertThat(response.email()).isEqualTo("test@example.com"),
                     () -> assertThat(response.nickname()).isEqualTo("testuser")
