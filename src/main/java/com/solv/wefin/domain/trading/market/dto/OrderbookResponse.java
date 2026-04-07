@@ -5,7 +5,7 @@ import com.solv.wefin.domain.trading.market.client.dto.HantuOrderbookApiResponse
 import java.util.List;
 
 public record OrderbookResponse(
-        String type,
+        WebSocketMessageType type,
         List<OrderbookEntry> asks,   // 매도호가 10개
         List<OrderbookEntry> bids,   // 매수호가 10개
         long totalAskQuantity,       // 총 매도 잔량
@@ -49,7 +49,7 @@ public record OrderbookResponse(
         );
 
         return new OrderbookResponse(
-                "ORDERBOOK",
+                WebSocketMessageType.ORDERBOOK,
                 asks,
                 bids,
                 Long.parseLong(output.total_askp_rsqn()),

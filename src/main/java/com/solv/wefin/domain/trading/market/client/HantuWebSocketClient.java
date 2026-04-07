@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solv.wefin.domain.trading.market.dto.OrderbookResponse;
 import com.solv.wefin.domain.trading.market.dto.PriceResponse;
 import com.solv.wefin.domain.trading.market.dto.TradeResponse;
+import com.solv.wefin.domain.trading.market.dto.WebSocketMessageType;
 import com.solv.wefin.domain.trading.market.service.MarketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -167,7 +168,7 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
 
             try {
                 TradeResponse response = new TradeResponse(
-                        "TRADE",
+                        WebSocketMessageType.TRADE,
                         fields[offset],                           // stockCode
                         new BigDecimal(fields[offset + 2]),       // currentPrice
                         new BigDecimal(fields[offset + 4]),       // changePrice
@@ -221,7 +222,7 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
         }
 
         OrderbookResponse response = new OrderbookResponse(
-                "ORDERBOOK",
+                WebSocketMessageType.ORDERBOOK,
                 asks, bids,
                 Long.parseLong(fields[43]),                // TOTAL_ASKP_RSQN
                 Long.parseLong(fields[44])                 // TOTAL_BIDP_RSQN

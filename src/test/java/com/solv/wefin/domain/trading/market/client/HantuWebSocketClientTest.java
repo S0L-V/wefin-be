@@ -3,6 +3,7 @@ package com.solv.wefin.domain.trading.market.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solv.wefin.domain.trading.market.dto.OrderbookResponse;
 import com.solv.wefin.domain.trading.market.dto.TradeResponse;
+import com.solv.wefin.domain.trading.market.dto.WebSocketMessageType;
 import com.solv.wefin.domain.trading.market.service.MarketService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -76,7 +77,7 @@ class HantuWebSocketClientTest {
         verify(messagingTemplate).convertAndSend(
                 eq("/topic/stocks/005930"),
                 argThat((TradeResponse r) ->
-                        r.type().equals("TRADE")
+                        r.type() == WebSocketMessageType.TRADE
                                 && r.stockCode().equals("005930")
                                 && r.currentPrice().intValue() == 97500
                                 && r.changePrice().intValue() == 1200
@@ -124,7 +125,7 @@ class HantuWebSocketClientTest {
         verify(messagingTemplate).convertAndSend(
                 eq("/topic/stocks/005930/orderbook"),
                 argThat((OrderbookResponse r) ->
-                        r.type().equals("ORDERBOOK")
+                        r.type() == WebSocketMessageType.ORDERBOOK
                                 && r.asks().size() == 10
                                 && r.bids().size() == 10
                                 && r.asks().get(0).price() == 98000
