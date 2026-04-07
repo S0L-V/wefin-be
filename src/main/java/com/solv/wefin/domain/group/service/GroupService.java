@@ -92,7 +92,12 @@ public class GroupService {
             throw new BusinessException(ErrorCode.GROUP_INVITE_EXPIRED);
         }
 
-        Group targetGroup = invite.getGroup();
+        if (invite.getStatus() == GroupInvite.InviteStatus.ACCEPTED) {
+            throw new BusinessException(ErrorCode.GROUP_INVITE_ALREADY_USED);
+        }
+
+        Group targetGroup = groupRepository.findById(invite.getGroup().getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -127,6 +132,7 @@ public class GroupService {
                 .build();
 
         groupMemberRepository.save(newMember);
+        invite.markAccepted();
 
         return GroupMemberInfo.from(newMember);
     }
