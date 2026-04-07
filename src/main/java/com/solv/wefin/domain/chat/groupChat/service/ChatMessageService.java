@@ -5,6 +5,7 @@ import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.chat.common.constant.ChatScope;
 import com.solv.wefin.domain.chat.common.service.ChatSpamGuard;
 import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessageInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessagesInfo;
 import com.solv.wefin.domain.chat.groupChat.dto.info.ReplyMessageInfo;
 import com.solv.wefin.domain.chat.groupChat.entity.ChatMessage;
 import com.solv.wefin.domain.chat.groupChat.entity.MessageType;
@@ -85,20 +86,33 @@ public class ChatMessageService {
     }
 
 
-    public List<ChatMessageInfo> getRecentMessages(UUID userId, int limit) {
+    public ChatMessagesInfo getMessages(UUID userId, Long beforeMessageId, int size) {
 
         Group group = findActiveUserGroup(userId);
         Long groupId = group.getId();
 
-        int size = Math.min(Math.max(limit, 1), 100);
-        Pageable pageable = PageRequest.of(0, size);
+        int pageSize = Math.min(Math.max(size, 1), 100);
+        Pageable pageable = PageRequest.of(0, pageSize + 1);
 
-        List<ChatMessage> messages = chatMessageRepository.findRecentMessagesByGroupId(groupId, pageable);
+        List<ChatMessage> fetched = beforeMessageId == null
+                ? chatMessageRepository.findMessagesByGroupId(groupId, pageable)
+                : chatMessageRepository.findMessagesByGroupIdBefore(groupId, beforeMessageId, pageable);
 
-        return messages.stream()
+        boolean hasNext = fetched.size() > pageSize;
+        if (hasNext) {
+            fetched = fetched.subList(0, pageSize);
+        }
+
+        List<ChatMessageInfo> messages = fetched.stream()
                 .sorted(Comparator.comparing(ChatMessage::getId))
                 .map(this::toInfo)
                 .toList();
+
+        Long nextCursor = hasNext && !messages.isEmpty()
+                ? messages.get(0).messageId()
+                : null;
+
+        return new ChatMessagesInfo(messages, nextCursor, hasNext);
     }
 
     private ChatMessageInfo toInfo(ChatMessage message) {
