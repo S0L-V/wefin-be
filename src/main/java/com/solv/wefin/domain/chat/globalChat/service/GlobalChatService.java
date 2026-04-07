@@ -6,6 +6,7 @@ import com.solv.wefin.domain.chat.common.constant.ChatScope;
 import com.solv.wefin.domain.chat.common.service.ChatSpamGuard;
 import com.solv.wefin.domain.chat.globalChat.dto.command.GlobalProfitShareCommand;
 import com.solv.wefin.domain.chat.globalChat.dto.info.GlobalChatMessageInfo;
+import com.solv.wefin.domain.chat.globalChat.dto.info.GlobalChatMessagesInfo;
 import com.solv.wefin.domain.chat.globalChat.entity.ChatRole;
 import com.solv.wefin.domain.chat.globalChat.entity.GlobalChatMessage;
 import com.solv.wefin.domain.chat.globalChat.event.GlobalChatMessageCreatedEvent;
@@ -130,17 +131,30 @@ public class GlobalChatService {
         }
     }
 
-    public List<GlobalChatMessageInfo> getRecentMessages(int limit) {
+    public GlobalChatMessagesInfo getMessages(Long beforeMessageId, int size) {
 
-        int size = Math.min(Math.max(limit, 1), 100);
-        Pageable pageable = PageRequest.of(0, size);
+        int pageSize = Math.min(Math.max(size, 1), 100);
+        Pageable pageable = PageRequest.of(0, pageSize + 1);
 
-        List<GlobalChatMessage> messages = globalChatMessageRepository.findRecentMessages(pageable);
+        List<GlobalChatMessage> fetched = beforeMessageId == null
+                ? globalChatMessageRepository.findMessages(pageable)
+                : globalChatMessageRepository.findMessagesBefore(beforeMessageId, pageable);
 
-        return messages.stream()
+        boolean hasNext = fetched.size() > pageSize;
+        if (hasNext) {
+            fetched = fetched.subList(0, pageSize);
+        }
+
+        List<GlobalChatMessageInfo> messages = fetched.stream()
                 .sorted(Comparator.comparing(GlobalChatMessage::getId))
                 .map(this::toInfo)
                 .toList();
+
+        Long nextCursor = hasNext && !messages.isEmpty()
+                ? messages.get(0).messageId()
+                : null;
+
+        return new GlobalChatMessagesInfo(messages, nextCursor, hasNext);
     }
 
     // 수익 메시지 변환
