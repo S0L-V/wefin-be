@@ -1,11 +1,13 @@
 package com.solv.wefin.web.chat.aiChat;
 
 import com.solv.wefin.domain.chat.aiChat.dto.info.AiChatInfo;
+import com.solv.wefin.domain.chat.aiChat.dto.info.AiChatMessagesInfo;
 import com.solv.wefin.domain.chat.aiChat.service.AiChatService;
 import com.solv.wefin.global.common.ApiResponse;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.chat.aiChat.dto.request.AiChatRequest;
+import com.solv.wefin.web.chat.aiChat.dto.response.AiChatMessagesResponse;
 import com.solv.wefin.web.chat.aiChat.dto.response.AiChatResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,14 +40,21 @@ public class AiChatController {
     }
 
     @GetMapping("/messages")
-    public ApiResponse<List<AiChatResponse>> getMessages(
-            @AuthenticationPrincipal UUID userId
+    public ApiResponse<AiChatMessagesResponse> getMessages(
+            @AuthenticationPrincipal UUID userId,
+            @RequestParam(required = false) Long beforeMessageId,
+            @RequestParam(defaultValue = "30") int size
     ) {
-        List<AiChatResponse> messages = aiChatService.getMessages(userId)
-                .stream()
+        AiChatMessagesInfo info = aiChatService.getMessages(userId, beforeMessageId, size);
+
+        List<AiChatResponse> messages = info.messages().stream()
                 .map(AiChatResponse::from)
                 .toList();
 
-        return ApiResponse.success(messages);
+        return ApiResponse.success(new AiChatMessagesResponse(
+                messages,
+                info.nextCursor(),
+                info.hasNext()
+        ));
     }
 }
