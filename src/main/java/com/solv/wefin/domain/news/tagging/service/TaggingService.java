@@ -2,6 +2,7 @@ package com.solv.wefin.domain.news.tagging.service;
 
 import com.solv.wefin.domain.news.article.entity.NewsArticle;
 import com.solv.wefin.domain.news.article.entity.NewsArticle.CrawlStatus;
+import com.solv.wefin.domain.news.article.entity.NewsArticle.RelevanceStatus;
 import com.solv.wefin.domain.news.article.entity.NewsArticle.TaggingStatus;
 import com.solv.wefin.domain.news.article.entity.NewsArticleTag;
 import com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType;
@@ -84,7 +85,7 @@ public class TaggingService {
                 allTags.addAll(tags);
                 successArticles.add(article);
             } catch (Exception e) {
-                log.warn("태깅 실패 - articleId: {}, error: {}", article.getId(), e.getMessage());
+                log.warn("태깅 실패 - articleId: {}", article.getId(), e);
                 persistenceService.markFailed(article.getId(), e.getMessage());
                 failCount++;
             }
@@ -111,6 +112,7 @@ public class TaggingService {
         }
 
         article.updateSummary(result.getSummary());
+        article.updateRelevance(RelevanceStatus.from(result.getRelevance()));
 
         List<NewsArticleTag> tags = new ArrayList<>();
 

@@ -72,7 +72,7 @@ class ClusteringServiceTest {
         NewsCluster cluster = NewsCluster.createSingle(vector, 99L, null, OffsetDateTime.now());
         ReflectionTestUtils.setField(cluster, "id", 10L);
 
-        given(newsArticleRepository.findClusteringTargets(any(), any(), any()))
+        given(newsArticleRepository.findClusteringTargets(any(), any(), any(), any()))
                 .willReturn(List.of(article));
         given(newsClusterRepository.findByStatus(ClusterStatus.ACTIVE))
                 .willReturn(new ArrayList<>(List.of(cluster)));
@@ -88,7 +88,7 @@ class ClusteringServiceTest {
 
         // then
         verify(clusterMatchingService).clearCache();
-        verify(persistenceService).addToCluster(eq(cluster), eq(article), eq(vector), eq(false));
+        verify(persistenceService).addToCluster(cluster, article, vector, false);
         verify(persistenceService, never()).createSingleCluster(any(), any());
     }
 
@@ -102,7 +102,7 @@ class ClusteringServiceTest {
         NewsCluster newCluster = NewsCluster.createSingle(vector, 1L, null, OffsetDateTime.now());
         ReflectionTestUtils.setField(newCluster, "id", 20L);
 
-        given(newsArticleRepository.findClusteringTargets(any(), any(), any()))
+        given(newsArticleRepository.findClusteringTargets(any(), any(), any(), any()))
                 .willReturn(List.of(article));
         given(newsClusterRepository.findByStatus(ClusterStatus.ACTIVE))
                 .willReturn(new ArrayList<>());
@@ -134,7 +134,7 @@ class ClusteringServiceTest {
         NewsCluster newCluster = NewsCluster.createSingle(vector, 1L, null, OffsetDateTime.now());
         ReflectionTestUtils.setField(newCluster, "id", 20L);
 
-        given(newsArticleRepository.findClusteringTargets(any(), any(), any()))
+        given(newsArticleRepository.findClusteringTargets(any(), any(), any(), any()))
                 .willReturn(List.of(article));
         given(newsClusterRepository.findByStatus(ClusterStatus.ACTIVE))
                 .willReturn(new ArrayList<>(List.of(cluster)));
@@ -165,7 +165,7 @@ class ClusteringServiceTest {
         NewsCluster cluster = NewsCluster.createSingle(vector, 99L, null, OffsetDateTime.now());
         ReflectionTestUtils.setField(cluster, "id", 10L);
 
-        given(newsArticleRepository.findClusteringTargets(any(), any(), any()))
+        given(newsArticleRepository.findClusteringTargets(any(), any(), any(), any()))
                 .willReturn(List.of(article));
         given(newsClusterRepository.findByStatus(ClusterStatus.ACTIVE))
                 .willReturn(new ArrayList<>(List.of(cluster)));
@@ -180,7 +180,7 @@ class ClusteringServiceTest {
         clusteringService.clusterPendingArticles();
 
         // then
-        verify(persistenceService).addToCluster(eq(cluster), eq(article), eq(vector), eq(true));
+        verify(persistenceService).addToCluster(cluster, article, vector, true);
     }
 
     @Test
@@ -189,7 +189,7 @@ class ClusteringServiceTest {
         // given
         NewsArticle article = createArticle(1L);
 
-        given(newsArticleRepository.findClusteringTargets(any(), any(), any()))
+        given(newsArticleRepository.findClusteringTargets(any(), any(), any(), any()))
                 .willReturn(List.of(article));
         given(newsClusterRepository.findByStatus(ClusterStatus.ACTIVE))
                 .willReturn(new ArrayList<>());
@@ -208,7 +208,7 @@ class ClusteringServiceTest {
     @DisplayName("대상 기사가 없으면 아무것도 실행하지 않는다")
     void clusterPendingArticles_noTargets() {
         // given
-        given(newsArticleRepository.findClusteringTargets(any(), any(), any()))
+        given(newsArticleRepository.findClusteringTargets(any(), any(), any(), any()))
                 .willReturn(List.of());
 
         // when

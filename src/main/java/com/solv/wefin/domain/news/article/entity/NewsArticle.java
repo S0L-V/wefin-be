@@ -101,6 +101,10 @@ public class NewsArticle extends BaseEntity {
     @Column(name = "tagging_error_message")
     private String taggingErrorMessage;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "relevance", nullable = false, length = 30)
+    private RelevanceStatus relevance = RelevanceStatus.PENDING;
+
     @Builder
     private NewsArticle(Long rawNewsArticleId, String publisherName, String title,
                         String summary, String content, String originalUrl,
@@ -133,6 +137,31 @@ public class NewsArticle extends BaseEntity {
 
     public enum TaggingStatus {
         PENDING, PROCESSING, SUCCESS, FAILED
+    }
+
+    /**
+     * 금융 관련성 판정 상태
+     *
+     * PENDING — 아직 판정 안 됨 (초기/재판정 대기)
+     * FINANCIAL — 금융 관련 기사, 후속 파이프라인 대상
+     * IRRELEVANT — 금융 무관, 후속 파이프라인에서 제외
+     */
+    public enum RelevanceStatus {
+        PENDING, FINANCIAL, IRRELEVANT;
+
+        /**
+         * 외부(AI 응답) 문자열을 RelevanceStatus로 변환한다.
+         */
+        public static RelevanceStatus from(String value) {
+            if (value == null) {
+                return PENDING;
+            }
+            return switch (value.trim().toUpperCase()) {
+                case "FINANCIAL" -> FINANCIAL;
+                case "IRRELEVANT" -> IRRELEVANT;
+                default -> PENDING;
+            };
+        }
     }
 
     /**
@@ -253,6 +282,17 @@ public class NewsArticle extends BaseEntity {
         this.taggingStatus = TaggingStatus.FAILED;
         this.taggingAttemptedAt = OffsetDateTime.now();
         this.taggingErrorMessage = errorMessage;
+    }
+
+    /**
+     * 금융 관련성 판정 결과를 반영한다.
+     *
+     * @param relevance 판정 결과 (PENDING/FINANCIAL/IRRELEVANT)
+     */
+    public void updateRelevance(RelevanceStatus relevance) {
+        if (relevance != null) {
+            this.relevance = relevance;
+        }
     }
 
     public static NewsArticle of(RawNewsArticle rawArticle, CollectedNewsApiResponse dto,
