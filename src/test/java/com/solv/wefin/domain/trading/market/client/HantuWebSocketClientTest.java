@@ -83,6 +83,17 @@ class HantuWebSocketClientTest {
                                 && r.tradeVolume() == 342
                 )
         );
+
+        verify(marketService).updatePriceCache(
+                eq("005930"),
+                argThat(p -> p.currentPrice() == 97500
+                        && p.changePrice() == 1200
+                        && p.volume() == 12340567
+                        && p.openPrice() == 96800
+                        && p.highPrice() == 98200
+                        && p.lowPrice() == 96300
+                )
+        );
     }
 
     @Test
