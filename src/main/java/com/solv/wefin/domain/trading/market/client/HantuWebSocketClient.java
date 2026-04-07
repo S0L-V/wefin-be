@@ -87,7 +87,10 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
 
         // 실시간 데이터: 0|tr_id|004|데이터
         String[] parts = payload.split("\\|");
-        if (parts.length < 4) return;
+        if (parts.length < 4) {
+            log.warn("비정상 payload 수신: {}", payload);
+            return;
+        }
 
         String trId = parts[1];
         String data = parts[3];
@@ -161,30 +164,35 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
 
         for (int i = 0; i < recordCount; i++) {
             int offset = i * fieldCount;
-            TradeResponse response = new TradeResponse(
-                    "TRADE",
-                    fields[offset],                           // stockCode
-                    new BigDecimal(fields[offset + 2]),       // currentPrice
-                    new BigDecimal(fields[offset + 4]),       // changePrice
-                    new BigDecimal(fields[offset + 5]),       // changeRate
-                    Long.parseLong(fields[offset + 12]),      // tradeVolume
-                    Long.parseLong(fields[offset + 13]),      // totalVolume
-                    fields[offset + 1],                       // tradeTime
-                    fields[offset + 21]                       // tradeSide
-            );
-            messagingTemplate.convertAndSend("/topic/stocks/" + response.stockCode(), response);
 
-            PriceResponse priceResponse = new PriceResponse(
-                    fields[offset],
-                    Integer.parseInt(fields[offset + 2]),
-                    Integer.parseInt(fields[offset + 4]),
-                    Float.parseFloat(fields[offset + 5]),
-                    Long.parseLong(fields[offset + 13]),
-                    Integer.parseInt(fields[offset + 7]),
-                    Integer.parseInt(fields[offset + 8]),
-                    Integer.parseInt(fields[offset + 9])
-            );
-            marketService.updatePriceCache(fields[offset], priceResponse);
+            try {
+                TradeResponse response = new TradeResponse(
+                        "TRADE",
+                        fields[offset],                           // stockCode
+                        new BigDecimal(fields[offset + 2]),       // currentPrice
+                        new BigDecimal(fields[offset + 4]),       // changePrice
+                        new BigDecimal(fields[offset + 5]),       // changeRate
+                        Long.parseLong(fields[offset + 12]),      // tradeVolume
+                        Long.parseLong(fields[offset + 13]),      // totalVolume
+                        fields[offset + 1],                       // tradeTime
+                        fields[offset + 21]                       // tradeSide
+                );
+                messagingTemplate.convertAndSend("/topic/stocks/" + response.stockCode(), response);
+
+                PriceResponse priceResponse = new PriceResponse(
+                        fields[offset],
+                        Integer.parseInt(fields[offset + 2]),
+                        Integer.parseInt(fields[offset + 4]),
+                        Float.parseFloat(fields[offset + 5]),
+                        Long.parseLong(fields[offset + 13]),
+                        Integer.parseInt(fields[offset + 7]),
+                        Integer.parseInt(fields[offset + 8]),
+                        Integer.parseInt(fields[offset + 9])
+                );
+                marketService.updatePriceCache(fields[offset], priceResponse);
+            } catch (Exception e) {
+                log.warn("체결 레코드 파싱 스킵: index={}, offset={}", i, offset, e);
+            }
         }
     }
 
