@@ -61,7 +61,13 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
                 throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
             }
 
-            UUID userId = jwtProvider.getUserId(token);
+            UUID userId;
+            try {
+                userId = jwtProvider.getUserId(token);
+            } catch (RuntimeException e) {
+                throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
+            }
+
 
             boolean exists = userRepository.existsById(userId);
 

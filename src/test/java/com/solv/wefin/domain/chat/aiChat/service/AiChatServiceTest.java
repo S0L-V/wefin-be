@@ -6,7 +6,6 @@ import com.solv.wefin.domain.chat.aiChat.client.OpenAiChatClient;
 import com.solv.wefin.domain.chat.aiChat.dto.command.AiChatCommand;
 import com.solv.wefin.domain.chat.aiChat.dto.info.AiChatInfo;
 import com.solv.wefin.domain.chat.aiChat.entity.AiChatMessage;
-import com.solv.wefin.domain.chat.aiChat.repository.AiChatMessageRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,30 +21,28 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class AiChatServiceTest {
 
-    private AiChatMessageRepository aiChatMessageRepository;
+    private AiChatMessagePersistenceService aiChatMessagePersistenceService;
     private UserRepository userRepository;
     private OpenAiChatClient openAiChatClient;
     private AiChatService aiChatService;
 
     @BeforeEach
     void setUp() {
-        aiChatMessageRepository = mock(AiChatMessageRepository.class);
+        aiChatMessagePersistenceService = mock(AiChatMessagePersistenceService.class);
         userRepository = mock(UserRepository.class);
         openAiChatClient = mock(OpenAiChatClient.class);
 
         aiChatService = new AiChatService(
                 openAiChatClient,
-                aiChatMessageRepository,
+                aiChatMessagePersistenceService,
                 userRepository
         );
     }
@@ -65,7 +62,7 @@ class AiChatServiceTest {
         ReflectionTestUtils.setField(secondMessage, "messageId", 2L);
         ReflectionTestUtils.setField(secondMessage, "createdAt", OffsetDateTime.now());
 
-        when(aiChatMessageRepository.findByUser_UserIdOrderByCreatedAtAsc(userId))
+        when(aiChatMessagePersistenceService.getMessages(userId))
                 .thenReturn(List.of(firstMessage, secondMessage));
 
         // when
@@ -100,29 +97,24 @@ class AiChatServiceTest {
         ReflectionTestUtils.setField(savedAiMessage, "createdAt", OffsetDateTime.now());
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(aiChatMessageRepository.findTop10ByUser_UserIdOrderByCreatedAtDesc(userId))
+        when(aiChatMessagePersistenceService.getRecentHistory(userId))
                 .thenReturn(List.of(historyUserMessage));
         when(openAiChatClient.ask(anyList(), eq(command.message())))
                 .thenReturn("최근 실적 기준으로 설명드릴게요.");
-        when(aiChatMessageRepository.save(any(AiChatMessage.class)))
-                .thenReturn(savedUserMessage)
+        when(aiChatMessagePersistenceService.saveUserMessage(user, command.message()))
+                .thenReturn(savedUserMessage);
+        when(aiChatMessagePersistenceService.saveAiMessage(user, "최근 실적 기준으로 설명드릴게요."))
                 .thenReturn(savedAiMessage);
 
-        ArgumentCaptor<AiChatMessage> messageCaptor = ArgumentCaptor.forClass(AiChatMessage.class);
         ArgumentCaptor<List<AiChatMessage>> historyCaptor = ArgumentCaptor.forClass(List.class);
 
         // when
         AiChatInfo result = aiChatService.sendMessage(command, userId);
 
         // then
-        verify(aiChatMessageRepository, times(2)).save(messageCaptor.capture());
+        verify(aiChatMessagePersistenceService).saveUserMessage(user, command.message());
+        verify(aiChatMessagePersistenceService).saveAiMessage(user, "최근 실적 기준으로 설명드릴게요.");
         verify(openAiChatClient).ask(historyCaptor.capture(), eq(command.message()));
-
-        List<AiChatMessage> savedMessages = messageCaptor.getAllValues();
-        assertEquals("USER", savedMessages.get(0).getRole().name());
-        assertEquals("삼성전자 전망 알려줘", savedMessages.get(0).getContent());
-        assertEquals("AI", savedMessages.get(1).getRole().name());
-        assertEquals("최근 실적 기준으로 설명드릴게요.", savedMessages.get(1).getContent());
 
         List<AiChatMessage> history = historyCaptor.getValue();
         assertEquals(1, history.size());
@@ -222,7 +214,7 @@ class AiChatServiceTest {
         ReflectionTestUtils.setField(historyUserMessage, "createdAt", OffsetDateTime.now());
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(aiChatMessageRepository.findTop10ByUser_UserIdOrderByCreatedAtDesc(userId))
+        when(aiChatMessagePersistenceService.getRecentHistory(userId))
                 .thenReturn(List.of(historyUserMessage));
         when(openAiChatClient.ask(anyList(), eq(command.message())))
                 .thenThrow(new BusinessException(ErrorCode.AI_CHAT_REQUEST_FAILED));
@@ -248,7 +240,7 @@ class AiChatServiceTest {
         ReflectionTestUtils.setField(historyUserMessage, "createdAt", OffsetDateTime.now());
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(aiChatMessageRepository.findTop10ByUser_UserIdOrderByCreatedAtDesc(userId))
+        when(aiChatMessagePersistenceService.getRecentHistory(userId))
                 .thenReturn(List.of(historyUserMessage));
         when(openAiChatClient.ask(anyList(), eq(command.message())))
                 .thenThrow(new BusinessException(ErrorCode.AI_CHAT_TIMEOUT));
