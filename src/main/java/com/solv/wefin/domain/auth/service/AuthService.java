@@ -8,6 +8,7 @@ import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.entity.UserStatus;
 import com.solv.wefin.domain.auth.repository.RefreshTokenRepository;
 import com.solv.wefin.domain.auth.repository.UserRepository;
+import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
@@ -73,7 +74,10 @@ public class AuthService {
                     .build();
 
             User savedUser = userRepository.save(user);
-            groupService.createDefaultGroup(savedUser);
+
+            Group homeGroup = groupService.createDefaultGroup(savedUser);
+            savedUser.setHomeGroup(homeGroup);
+            userRepository.save(savedUser);
 
             return new SignupInfo(
                     savedUser.getUserId(),

@@ -99,12 +99,12 @@ class GroupServiceTest {
             // then
             assertAll(
                     () -> assertThat(result).hasSize(2),
-                    () -> assertThat(result.get(0).getUserId()).isEqualTo(leaderUser.getUserId()),
-                    () -> assertThat(result.get(0).getNickname()).isEqualTo("리더"),
-                    () -> assertThat(result.get(0).getRole()).isEqualTo("LEADER"),
-                    () -> assertThat(result.get(1).getUserId()).isEqualTo(memberUser.getUserId()),
-                    () -> assertThat(result.get(1).getNickname()).isEqualTo("멤버"),
-                    () -> assertThat(result.get(1).getRole()).isEqualTo("MEMBER")
+                    () -> assertThat(result.get(0).userId()).isEqualTo(leaderUser.getUserId()),
+                    () -> assertThat(result.get(0).nickname()).isEqualTo("리더"),
+                    () -> assertThat(result.get(0).role()).isEqualTo("LEADER"),
+                    () -> assertThat(result.get(1).userId()).isEqualTo(memberUser.getUserId()),
+                    () -> assertThat(result.get(1).nickname()).isEqualTo("멤버"),
+                    () -> assertThat(result.get(1).role()).isEqualTo("MEMBER")
             );
 
             verify(groupRepository).findById(1L);

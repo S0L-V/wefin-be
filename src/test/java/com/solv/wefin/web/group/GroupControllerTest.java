@@ -47,16 +47,20 @@ class GroupControllerTest {
 
         given(groupService.getActiveMembers(1L))
                 .willReturn(List.of(
-                        GroupMemberInfo.builder()
-                                .userId(leaderId)
-                                .nickname("리더")
-                                .role("LEADER")
-                                .build(),
-                        GroupMemberInfo.builder()
-                                .userId(memberId)
-                                .nickname("멤버")
-                                .role("MEMBER")
-                                .build()
+                        new GroupMemberInfo(
+                                leaderId,
+                                1L,
+                                "테스트 그룹",
+                                "리더",
+                                "LEADER"
+                        ),
+                        new GroupMemberInfo(
+                                memberId,
+                                1L,
+                                "테스트 그룹",
+                                "멤버",
+                                "MEMBER"
+                        )
                 ));
 
         // when & then

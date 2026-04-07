@@ -17,6 +17,8 @@ public enum ErrorCode {
     GROUP_INVITE_NOT_FOUND(404, "초대 코드를 찾을 수 없습니다."),
     GROUP_INVITE_EXPIRED(400, "만료된 초대 코드입니다."),
     GROUP_INVITE_ALREADY_USED(400, "이미 사용된 초대 코드입니다."),
+    GROUP_FULL(400, "그룹 인원이 가득 찼습니다."),
+    ALREADY_JOINED_GROUP(409, "이미 참여한 그룹입니다."),
 
     // Chat
     CHAT_MESSAGE_EMPTY(400, "메시지 내용은 비어 있을 수 없습니다."),
