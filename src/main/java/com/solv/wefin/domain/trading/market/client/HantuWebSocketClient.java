@@ -154,6 +154,11 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
         String[] fields = data.split("\\^");
         int fieldCount = 46;
 
+        if (fields.length < recordCount * fieldCount) {
+            log.warn("체결 데이터 필드 수 부족: expected={}, actual={}", recordCount * fieldCount, fields.length);
+            return;
+        }
+
         for (int i = 0; i < recordCount; i++) {
             int offset = i * fieldCount;
             TradeResponse response = new TradeResponse(
@@ -184,6 +189,12 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
 
     private void parseAndSendOrderbook(String data) {
         String[] fields = data.split("\\^");
+
+        if (fields.length < 45) {
+            log.warn("호가 데이터 필드 수 부족: expected=45, actual={}", fields.length);
+            return;
+        }
+
         String stockCode = fields[0];
 
         List<OrderbookResponse.OrderbookEntry> asks = new ArrayList<>();
