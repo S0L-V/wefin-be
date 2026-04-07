@@ -9,6 +9,7 @@ import com.solv.wefin.web.chat.aiChat.dto.request.AiChatRequest;
 import com.solv.wefin.web.chat.aiChat.dto.response.AiChatResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,7 +24,7 @@ public class AiChatController {
 
     @PostMapping("/messages")
     public ApiResponse<AiChatResponse> sendMessage(
-            @RequestHeader("X-User-Id") UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @Valid @RequestBody AiChatRequest request
     ) {
 
@@ -38,7 +39,7 @@ public class AiChatController {
 
     @GetMapping("/messages")
     public ApiResponse<List<AiChatResponse>> getMessages(
-            @RequestHeader("X-User-Id") UUID userId
+            @AuthenticationPrincipal UUID userId
     ) {
         List<AiChatResponse> messages = aiChatService.getMessages(userId)
                 .stream()
