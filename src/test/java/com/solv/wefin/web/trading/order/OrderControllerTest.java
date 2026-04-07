@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import com.solv.wefin.global.config.security.JwtProvider;
@@ -16,7 +17,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -43,16 +45,17 @@ class OrderControllerTest {
 	private JwtProvider jwtProvider;
 
 	private VirtualAccount mockAccount;
+	private UUID testUserId;
 
 	@BeforeEach
 	void setUp() {
+		testUserId = UUID.randomUUID();
 		mockAccount = mock(VirtualAccount.class);
 		given(mockAccount.getVirtualAccountId()).willReturn(1L);
 		given(accountService.getAccountByUserId(any())).willReturn(mockAccount);
 	}
 
 	@Test
-	@WithMockUser
 	void 매수_성공() throws Exception {
 		// given
 		Order mockOrder = mock(Order.class);
@@ -75,7 +78,10 @@ class OrderControllerTest {
 		mockMvc.perform(post("/api/order/buy")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"stockId\": 1, \"quantity\": 10}")
-				.with(csrf()))
+				.with(csrf())
+				.with(SecurityMockMvcRequestPostProcessors.authentication(
+					new UsernamePasswordAuthenticationToken(testUserId, null, List.of())
+				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.side").value("BUY"))
 			.andExpect(jsonPath("$.data.stockCode").value("005930"))
@@ -83,7 +89,6 @@ class OrderControllerTest {
 	}
 
 	@Test
-	@WithMockUser
 	void 매도_성공() throws Exception {
 		// given
 		Order mockOrder = mock(Order.class);
@@ -106,7 +111,10 @@ class OrderControllerTest {
 		mockMvc.perform(post("/api/order/sell")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"stockId\": 1, \"quantity\": 10}")
-				.with(csrf()))
+				.with(csrf())
+				.with(SecurityMockMvcRequestPostProcessors.authentication(
+					new UsernamePasswordAuthenticationToken(testUserId, null, List.of())
+				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.side").value("SELL"))
 			.andExpect(jsonPath("$.data.tax").value(3204))
