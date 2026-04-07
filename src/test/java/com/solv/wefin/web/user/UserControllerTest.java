@@ -6,6 +6,8 @@ import com.solv.wefin.global.config.SecurityConfig;
 import com.solv.wefin.global.config.security.JwtAuthenticationEntryPoint;
 import com.solv.wefin.global.config.security.JwtAuthenticationFilter;
 import com.solv.wefin.global.config.security.JwtProvider;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -92,5 +94,26 @@ class UserControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTH_INVALID_TOKEN"))
                 .andExpect(jsonPath("$.message").value("유효하지 않은 인증 토큰입니다."));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 사용자면 404를 반환한다")
+    void getMyPage_userNotFound() throws Exception {
+        // given
+        UUID userId = UUID.randomUUID();
+        String token = "valid-access-token";
+
+        given(jwtProvider.isValid(token)).willReturn(true);
+        given(jwtProvider.isAccessToken(token)).willReturn(true);
+        given(jwtProvider.getUserId(token)).willReturn(userId);
+        given(userService.getMyPage(userId))
+                .willThrow(new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // when & then
+        mockMvc.perform(get("/api/users/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("사용자를 찾을 수 없습니다."));
     }
 }
