@@ -1,6 +1,7 @@
 package com.solv.wefin.global.config;
 
 import com.solv.wefin.domain.auth.repository.UserRepository;
+import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +23,12 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
+    private static final String BEARER_PREFIX = "Bearer ";
+
+    private final JwtProvider jwtProvider;
     private final UserRepository userRepository;
 
-    // 메시지가 채널로 보내지기 직전 호출 -> 조건에 안맞으면 차단(지금은 안함), 사용자 정보 넣기
+    // 메시지가 채널로 보내지기 직전 호출 -> 조건에 안맞으면 차단, 사용자 정보 넣기
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor =
@@ -36,20 +40,34 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
         // CONNECT 일때 id를 웹소켓 사용자로 저장
         if(StompCommand.CONNECT.equals(accessor.getCommand())) {
-            String userIdHeader = accessor.getFirstNativeHeader("userId");
+            String authorizationHeader = accessor.getFirstNativeHeader("Authorization");
 
             // jwt 토큰 검증
-//            String token = accessor.getFirstNativeHeader("Authorization");
-            if (userIdHeader == null || userIdHeader.isBlank()) {
-                throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+            if (authorizationHeader == null || !authorizationHeader.startsWith(BEARER_PREFIX)) {
+                throw new BusinessException(ErrorCode.AUTH_UNAUTHORIZED);
+            }
+
+            String token = authorizationHeader.substring(BEARER_PREFIX.length());
+
+            boolean validAccessToken;
+
+            try {
+                validAccessToken = jwtProvider.isValid(token) && jwtProvider.isAccessToken(token);
+            } catch (RuntimeException e) {
+                validAccessToken = false;
+            }
+
+            if (!validAccessToken) {
+                throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
             }
 
             UUID userId;
             try {
-                userId = UUID.fromString(userIdHeader);
-            } catch (IllegalArgumentException e) {
-                throw new BusinessException(ErrorCode.INVALID_INPUT);
+                userId = jwtProvider.getUserId(token);
+            } catch (RuntimeException e) {
+                throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
             }
+
 
             boolean exists = userRepository.existsById(userId);
 

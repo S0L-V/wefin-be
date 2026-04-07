@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
@@ -22,8 +24,8 @@ import java.util.UUID;
 
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -64,8 +66,11 @@ class GroupChatControllerTest {
         // when // then
         mockMvc.perform(get("/api/chat/group/messages")
                         .with(csrf())
-                        .with(user("test"))
-                        .header("X-User-Id", userId.toString())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userId,
+                                null,
+                                AuthorityUtils.NO_AUTHORITIES
+                        )))
                         .param("limit", "50"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
@@ -88,8 +93,11 @@ class GroupChatControllerTest {
         // when // then
         mockMvc.perform(get("/api/chat/group/messages")
                         .with(csrf())
-                        .with(user("test"))
-                        .header("X-User-Id", userId.toString())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userId,
+                                null,
+                                AuthorityUtils.NO_AUTHORITIES
+                        )))
                         .param("limit", "50"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
@@ -112,8 +120,11 @@ class GroupChatControllerTest {
         // when // then
         mockMvc.perform(get("/api/chat/group/me")
                         .with(csrf())
-                        .with(user("test"))
-                        .header("X-User-Id", userId.toString()))
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userId,
+                                null,
+                                AuthorityUtils.NO_AUTHORITIES
+                        ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data.groupId").value(7))

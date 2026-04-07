@@ -5,6 +5,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.solv.wefin.common.WebSocketIntegrationTestBase;
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
+import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.web.chat.globalChat.dto.response.GlobalChatMessageResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,6 +43,9 @@ class GlobalChatWebSocketTest extends WebSocketIntegrationTestBase {
     @Autowired
     private PlatformTransactionManager transactionManager;
 
+    @Autowired
+    private JwtProvider jwtProvider;
+
     @LocalServerPort
     private int port;
 
@@ -67,6 +71,7 @@ class GlobalChatWebSocketTest extends WebSocketIntegrationTestBase {
         });
 
         UUID userId = savedUserIdRef.get();
+        String accessToken = jwtProvider.generateAccessToken(userId);
 
         // SockJS + WebSocket 기반 STOMP 클라이언트 생성
         List<Transport> transports = List.of(
@@ -91,7 +96,7 @@ class GlobalChatWebSocketTest extends WebSocketIntegrationTestBase {
 
         // CONNECT 시 userId 해더 전달
         StompHeaders connectHeaders = new StompHeaders();
-        connectHeaders.add("userId", userId.toString());
+        connectHeaders.add("Authorization", "Bearer " + accessToken);
 
         // WebSocket 연결
         StompSession session = stompClient
