@@ -77,7 +77,6 @@ public class AuthService {
 
             Group homeGroup = groupService.createDefaultGroup(savedUser);
             savedUser.setHomeGroup(homeGroup);
-            userRepository.save(savedUser);
 
             return new SignupInfo(
                     savedUser.getUserId(),

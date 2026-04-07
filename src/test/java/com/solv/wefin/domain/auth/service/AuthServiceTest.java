@@ -97,17 +97,16 @@ class AuthServiceTest {
             );
 
             ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-            verify(userRepository, times(2)).save(captor.capture());
+            verify(userRepository).save(captor.capture());
             verify(groupService).createDefaultGroup(savedUser);
 
-            User firstSavedUser = captor.getAllValues().get(0);
-            User secondSavedUser = captor.getAllValues().get(1);
+            User capturedUser = captor.getValue();
 
             assertAll(
-                    () -> assertThat(firstSavedUser.getEmail()).isEqualTo("test@example.com"),
-                    () -> assertThat(firstSavedUser.getNickname()).isEqualTo("testuser"),
-                    () -> assertThat(firstSavedUser.getPassword()).isEqualTo("encoded-password"),
-                    () -> assertThat(secondSavedUser.getHomeGroup()).isEqualTo(homeGroup),
+                    () -> assertThat(capturedUser.getEmail()).isEqualTo("test@example.com"),
+                    () -> assertThat(capturedUser.getNickname()).isEqualTo("testuser"),
+                    () -> assertThat(capturedUser.getPassword()).isEqualTo("encoded-password"),
+                    () -> assertThat(savedUser.getHomeGroup()).isEqualTo(homeGroup),
                     () -> assertThat(response.userId()).isEqualTo(userId),
                     () -> assertThat(response.email()).isEqualTo("test@example.com"),
                     () -> assertThat(response.nickname()).isEqualTo("testuser")
