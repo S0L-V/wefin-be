@@ -4,7 +4,7 @@ import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.chat.common.constant.ChatScope;
 import com.solv.wefin.domain.chat.common.service.ChatSpamGuard;
-import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessageInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessagesInfo;
 import com.solv.wefin.domain.chat.groupChat.entity.ChatMessage;
 import com.solv.wefin.domain.chat.groupChat.entity.MessageType;
 import com.solv.wefin.domain.chat.groupChat.event.ChatMessageCreatedEvent;
@@ -27,9 +27,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -198,19 +198,21 @@ class ChatMessageServiceTest {
 
         when(groupMemberRepository.findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(groupMember));
-        when(chatMessageRepository.findRecentMessagesByGroupId(eq(3L), any(Pageable.class)))
+        when(chatMessageRepository.findMessagesByGroupId(eq(3L), any(Pageable.class)))
                 .thenReturn(List.of(message));
 
         // when
-        List<ChatMessageInfo> result = chatMessageService.getRecentMessages(userId, 50);
+        ChatMessagesInfo result = chatMessageService.getMessages(userId, null, 30);
 
         // then
-        assertEquals(1, result.size());
-        assertEquals(7L, result.get(0).messageId());
-        assertEquals(3L, result.get(0).groupId());
-        assertEquals("groupUser", result.get(0).sender());
-        assertEquals("CHAT", result.get(0).messageType());
-        assertNull(result.get(0).replyTo());
+        assertEquals(1, result.messages().size());
+        assertEquals(7L, result.messages().get(0).messageId());
+        assertEquals(3L, result.messages().get(0).groupId());
+        assertEquals("groupUser", result.messages().get(0).sender());
+        assertEquals("CHAT", result.messages().get(0).messageType());
+        assertNull(result.messages().get(0).replyTo());
+        assertEquals(false, result.hasNext());
+        assertEquals(null, result.nextCursor());
     }
 
     @Test
@@ -355,5 +357,4 @@ class ChatMessageServiceTest {
         assertEquals(ErrorCode.CHAT_MESSAGE_NOT_FOUND, exception.getErrorCode());
         verify(chatMessageRepository, never()).save(any());
     }
-
 }

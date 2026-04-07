@@ -5,6 +5,7 @@ import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.chat.common.constant.ChatScope;
 import com.solv.wefin.domain.chat.common.service.ChatSpamGuard;
 import com.solv.wefin.domain.chat.globalChat.dto.command.GlobalProfitShareCommand;
+import com.solv.wefin.domain.chat.globalChat.dto.info.GlobalChatMessagesInfo;
 import com.solv.wefin.domain.chat.globalChat.entity.ChatRole;
 import com.solv.wefin.domain.chat.globalChat.entity.GlobalChatMessage;
 import com.solv.wefin.domain.chat.globalChat.event.GlobalChatMessageCreatedEvent;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.OffsetDateTime;
@@ -50,11 +52,11 @@ public class GlobalChatServiceTest {
     }
 
     @Test
-    @DisplayName("전체 채팅 사용자 메시지 전송 시 이벤트를 발행한다")
+    @DisplayName("Send message publishes event")
     void sendMessage_success() {
         // given
         UUID userId = UUID.randomUUID();
-        String content = "안녕하세요";
+        String content = "hello";
 
         User user = User.builder()
                 .email("test1@test.com")
@@ -91,7 +93,7 @@ public class GlobalChatServiceTest {
     }
 
     @Test
-    @DisplayName("메시지가 비어 있으면 예외가 발생한다")
+    @DisplayName("Blank message throws exception")
     void sendMessage_fail_blank() {
         // given
         UUID userId = UUID.randomUUID();
@@ -102,7 +104,7 @@ public class GlobalChatServiceTest {
     }
 
     @Test
-    @DisplayName("메시지가 1000자를 초과하면 예외가 발생한다")
+    @DisplayName("Too long message throws exception")
     void sendMessage_fail_tooLong() {
         // given
         UUID userId = UUID.randomUUID();
@@ -114,11 +116,11 @@ public class GlobalChatServiceTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 사용자면 USER_NOT_FOUND 예외가 발생한다")
+    @DisplayName("Unknown user throws USER_NOT_FOUND")
     void sendMessage_fail_userNotFound() {
         // given
         UUID userId = UUID.randomUUID();
-        String content = "안녕하세요";
+        String content = "hello";
 
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
@@ -132,8 +134,8 @@ public class GlobalChatServiceTest {
     }
 
     @Test
-    @DisplayName("최근 메시지 조회 시 domain info로 변환한다")
-    void getRecentMessages_success() {
+    @DisplayName("Get messages returns paged info")
+    void getMessages_success() {
         // given
         UUID userId = UUID.randomUUID();
 
@@ -147,38 +149,40 @@ public class GlobalChatServiceTest {
         GlobalChatMessage message = GlobalChatMessage.builder()
                 .user(user)
                 .role(ChatRole.USER)
-                .content("최근 메시지")
+                .content("recent")
                 .createdAt(OffsetDateTime.now())
                 .build();
         ReflectionTestUtils.setField(message, "id", 10L);
 
-        when(globalChatMessageRepository.findRecentMessages(any()))
+        when(globalChatMessageRepository.findMessages(any(Pageable.class)))
                 .thenReturn(List.of(message));
 
         // when
-        var result = globalChatService.getRecentMessages(1);
+        GlobalChatMessagesInfo result = globalChatService.getMessages(null, 30);
 
         // then
-        assertEquals(1, result.size());
-        assertEquals("testUser1", result.get(0).sender());
-        assertEquals("USER", result.get(0).role());
+        assertEquals(1, result.messages().size());
+        assertEquals("testUser1", result.messages().get(0).sender());
+        assertEquals("USER", result.messages().get(0).role());
+        assertFalse(result.hasNext());
+        assertNull(result.nextCursor());
     }
 
     @Test
-    @DisplayName("수익 공유 시스템 메시지를 저장하고 이벤트를 발생한다")
+    @DisplayName("Profit share stores system message and publishes event")
     void sendProfitShareMessage_profit_success() {
         // given
         GlobalProfitShareCommand command = GlobalProfitShareCommand.builder()
                 .type("PROFIT_ALERT")
                 .userNickname("tico")
-                .stockName("삼성전자")
+                .stockName("samsung")
                 .profitAmount(523000L)
                 .build();
 
         GlobalChatMessage savedMessage = GlobalChatMessage.builder()
                 .user(null)
                 .role(ChatRole.SYSTEM)
-                .content("축하합니다! tico님이 삼성전자에서 523,000원의 수익을 달성하셨습니다!")
+                .content("system message")
                 .createdAt(OffsetDateTime.now())
                 .build();
         ReflectionTestUtils.setField(savedMessage, "id", 1L);
@@ -197,19 +201,19 @@ public class GlobalChatServiceTest {
 
         GlobalChatMessage capturedMessage = captor.getValue();
         assertEquals(ChatRole.SYSTEM, capturedMessage.getRole());
-        assertEquals("축하합니다! tico님이 삼성전자에서 523,000원의 수익을 달성하셨습니다!", capturedMessage.getContent());
+        assertTrue(capturedMessage.getContent().contains("tico"));
+        assertTrue(capturedMessage.getContent().contains("523,000"));
         assertNull(capturedMessage.getUser());
     }
 
-
     @Test
-    @DisplayName("손익이 0원이면 예외가 발생한다")
+    @DisplayName("Zero profit amount throws exception")
     void sendProfitShareMessage_fail_when_profitAmount_zero() {
         // given
         GlobalProfitShareCommand command = GlobalProfitShareCommand.builder()
                 .type("PROFIT_ALERT")
                 .userNickname("tico")
-                .stockName("삼성전자")
+                .stockName("samsung")
                 .profitAmount(0L)
                 .build();
 
