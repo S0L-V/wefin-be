@@ -6,12 +6,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 import com.solv.wefin.global.config.security.JwtProvider;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -34,8 +38,14 @@ class PortfolioControllerTest {
 	@MockitoBean
 	private JwtProvider jwtProvider;
 
+	private UUID testUserId;
+
+	@BeforeEach
+	void setUp() {
+		testUserId = UUID.randomUUID();
+	}
+
 	@Test
-	@WithMockUser
 	void 포트폴리오_조회_성공() throws Exception {
 		// given
 		VirtualAccount mockAccount = mock(VirtualAccount.class);
@@ -50,7 +60,10 @@ class PortfolioControllerTest {
 		given(portfolioService.getPortfolioInfos(1L)).willReturn(List.of(info));
 
 		// when & then
-		mockMvc.perform(get("/api/portfolio"))
+		mockMvc.perform(get("/api/portfolio")
+				.with(SecurityMockMvcRequestPostProcessors.authentication(
+					new UsernamePasswordAuthenticationToken(testUserId, null, List.of())
+				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data[0].stockCode").value("005930"))
 			.andExpect(jsonPath("$.data[0].quantity").value(10));

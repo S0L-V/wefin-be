@@ -5,12 +5,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.UUID;
 
 import com.solv.wefin.global.config.security.JwtProvider;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -29,8 +34,13 @@ class AccountControllerTest {
 	@MockitoBean
 	private JwtProvider jwtProvider;
 
+	private UUID testUserId;
+	@BeforeEach
+	void setUp() {
+		testUserId = UUID.randomUUID();
+	}
+
 	@Test
-	@WithMockUser
 	void 계좌_조회_성공() throws Exception {
 		// given
 		VirtualAccount mockAccount = mock(VirtualAccount.class);
@@ -40,13 +50,15 @@ class AccountControllerTest {
 		given(accountService.getAccountByUserId(any())).willReturn(mockAccount);
 
 		// when & then
-		mockMvc.perform(get("/api/account"))
+		mockMvc.perform(get("/api/account")
+				.with(SecurityMockMvcRequestPostProcessors.authentication(
+					new UsernamePasswordAuthenticationToken(testUserId, null, List.of())
+				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.balance").value(10000000));
 	}
 
 	@Test
-	@WithMockUser
 	void 주문가능수량_조회_성공() throws Exception {
 		// given
 		VirtualAccount mockAccount = mock(VirtualAccount.class);
@@ -56,7 +68,10 @@ class AccountControllerTest {
 
 		// when & then
 		mockMvc.perform(get("/api/account/buying-power")
-				.param("price", "186000"))
+				.param("price", "186000")
+				.with(SecurityMockMvcRequestPostProcessors.authentication(
+					new UsernamePasswordAuthenticationToken(testUserId, null, List.of())
+				)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.maxQuantity").value(100));
 	}
