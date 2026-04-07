@@ -36,6 +36,16 @@ news:
   collect:
     cron: ${NEWS_COLLECT_CRON:-}
 
+stock:
+  collect:
+    enabled: false
+
+briefing:
+  collect:
+    enabled: false
+
+
+
 market:
   bok:
     api-key: ${BOK_API_KEY:}

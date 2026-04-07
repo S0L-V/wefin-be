@@ -34,9 +34,6 @@ kis:
   app-secret: ${KIS_APP_SECRET:}
   base-url: ${KIS_BASE_URL:https://openapi.koreainvestment.com:9443}
 
-stock:
-  collect:
-    enabled: false
 
 clustering:
   threshold: 0.80
