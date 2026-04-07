@@ -26,6 +26,7 @@ public class AiChatService {
     private final AiChatMessageRepository aiChatMessageRepository;
     private final UserRepository userRepository;
 
+    @Transactional(readOnly = true)
     public List<AiChatInfo> getMessages(UUID userId) {
         validateUserId(userId);
 
