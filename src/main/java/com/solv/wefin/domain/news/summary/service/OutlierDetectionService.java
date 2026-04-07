@@ -88,7 +88,6 @@ public class OutlierDetectionService {
     @Transactional
     public int removeOutliers(NewsCluster cluster) {
         // 0. 현재 트랜잭션의 영속 컨텍스트에서 관리되는 엔티티로 re-fetch.
-        //    이렇게 해야 recalculateAfterOutlierRemoval의 필드 변경이 dirty checking으로 커밋된다.
         NewsCluster managedCluster = newsClusterRepository.findById(cluster.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.SUMMARY_CLUSTER_NOT_FOUND));
 
@@ -189,7 +188,7 @@ public class OutlierDetectionService {
 
         // 남은 기사 없으면 집계를 초기화하고 클러스터를 INACTIVE로 내려 재조회 대상에서 제외한다.
         if (remainingArticleIds.isEmpty()) {
-            cluster.recalculateAfterOutlierRemoval(0, null, null, null, null);
+            cluster.recalculateAggregates(0, null, null, null, null);
             cluster.deactivate();
             return;
         }
@@ -212,7 +211,7 @@ public class OutlierDetectionService {
                 .orElseGet(() -> remainingArticles.stream().findAny().orElse(null));
 
         // 4. 클러스터 상태 업데이트
-        cluster.recalculateAfterOutlierRemoval(
+        cluster.recalculateAggregates(
                 remainingArticleIds.size(),
                 newCentroid,
                 representative != null ? representative.getId() : null,

@@ -54,6 +54,8 @@ tagging:
 clustering:
   collect:
     cron: ${CLUSTERING_COLLECT_CRON:-}
+  merge:
+    cron: ${CLUSTER_MERGE_CRON:-}
 
 summary:
   collect:

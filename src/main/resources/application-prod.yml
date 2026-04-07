@@ -50,6 +50,8 @@ tagging:
 clustering:
   collect:
     cron: ${CLUSTERING_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
+  merge:
+    cron: ${CLUSTER_MERGE_CRON:${NEWS_BATCH_CRON:0 0 */6 * * *}}
 
 summary:
   collect:
