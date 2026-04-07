@@ -88,7 +88,6 @@ public class GroupService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_INVITE_NOT_FOUND));
 
         if (invite.getExpiredAt().isBefore(java.time.OffsetDateTime.now())) {
-            invite.expire();
             throw new BusinessException(ErrorCode.GROUP_INVITE_EXPIRED);
         }
 
