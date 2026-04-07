@@ -7,6 +7,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -30,7 +31,7 @@ public class NewsBatchService {
     /**
      * 비동기로 배치를 실행한다. Controller에서 즉시 응답 반환용.
      */
-    @Async
+    @Async("batchExecutor")
     public void collectBatchAsync(int days) {
         collectBatch(days);
     }
@@ -70,7 +71,7 @@ public class NewsBatchService {
             current = current.plusDays(1);
         }
 
-        long totalDays = COLLECT_START.until(COLLECT_END).getDays() + 1;
+        long totalDays = ChronoUnit.DAYS.between(COLLECT_START, COLLECT_END) + 1;
 
         if (targetDates.isEmpty()) {
             log.info("[뉴스 배치] 모든 날짜 처리 완료 ({}/{})",

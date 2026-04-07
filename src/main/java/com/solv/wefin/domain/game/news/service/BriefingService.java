@@ -9,8 +9,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +30,6 @@ public class BriefingService {
      *
      * @return 브리핑 텍스트
      */
-    @Transactional
     public String getBriefingForDate(LocalDate date) {
         // 1. 캐시 조회
         Optional<BriefingCache> cached = briefingCacheRepository.findByTargetDate(date);

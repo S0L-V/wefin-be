@@ -8,8 +8,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -32,7 +30,6 @@ public class NewsCrawlService {
      *
      * @return 해당 날짜의 전체 뉴스 목록 (기존 + 신규)
      */
-    @Transactional
     public List<GameNewsArchive> crawlAndSave(LocalDate date) {
         // 1. 해당 날짜에 이미 저장된 뉴스 조회
         OffsetDateTime dayStart = date.atStartOfDay().atOffset(KST);
