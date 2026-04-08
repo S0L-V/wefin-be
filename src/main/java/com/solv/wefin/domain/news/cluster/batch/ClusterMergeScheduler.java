@@ -22,10 +22,14 @@ public class ClusterMergeScheduler {
 
     @Scheduled(cron = "${clustering.merge.cron:0 0 */6 * * *}")
     public void mergeScheduled() {
+        log.info("클러스터 병합 배치 시작");
         try {
-            execute();
+            boolean executed = execute();
+            if (executed) {
+                log.info("클러스터 병합 배치 완료");
+            }
         } catch (Exception e) {
-            log.error("클러스터 병합 배치 실패: {}", e.getMessage(), e);
+            log.error("클러스터 병합 배치 실패", e);
         }
     }
 

@@ -51,6 +51,10 @@ public class ClusterMergePersistenceService {
         NewsCluster loser = newsClusterRepository.findById(loserId)
                 .orElseThrow(() -> new IllegalStateException("loser 클러스터 없음: " + loserId));
 
+        if (survivor.getStatus() != ClusterStatus.ACTIVE) {
+            log.debug("survivor가 이미 INACTIVE — 병합 스킵, survivorId: {}", survivorId);
+            return false;
+        }
         if (loser.getStatus() != ClusterStatus.ACTIVE) {
             log.debug("loser가 이미 INACTIVE — 병합 스킵, loserId: {}", loserId);
             return false;
