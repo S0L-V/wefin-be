@@ -3,6 +3,7 @@ package com.solv.wefin.domain.news.summary.client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solv.wefin.domain.news.config.dto.OpenAiChatApiResponse;
+import lombok.extern.slf4j.Slf4j;
 import com.solv.wefin.domain.news.summary.dto.SummaryResult;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,6 +24,7 @@ import java.util.Map;
  * 한 클러스터에 묶인 여러 기사를 종합하여 하나의 title + summary 브리핑을 만든다.
  * 프롬프트에서 팩트, 분석, 전망, 영향 등을 다각도에서 정리하도록 유도한다.
  */
+@Slf4j
 @Component
 public class OpenAiSummaryClient {
     private static final String OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
@@ -31,6 +33,22 @@ public class OpenAiSummaryClient {
 
     // 클러스터당 프롬프트에 포함할 최대 기사 수
     private static final int MAX_ARTICLES_PER_CLUSTER = 10;
+
+    private static final String SINGLE_TITLE_PROMPT = """
+            당신은 금융 뉴스 전문 에디터입니다.
+            기사 한 건의 제목을 깔끔하게 다듬어주세요.
+
+            규칙:
+            1. 50자 이내 한글로 작성
+            2. 언론사 코너명([경제D톡스], [기자수첩] 등)이나 특수 기호(①②③ 등)는 제거
+            3. 핵심 내용만 남기되, 원본의 의미를 훼손하지 말 것
+            4. 말줄임표로 잘린 문장이면 본문을 참고하여 완결된 문장으로 작성
+
+            반드시 아래 JSON 형식으로만 응답하세요:
+            {
+              "title": "다듬어진 제목"
+            }
+            """;
 
     private static final String SYSTEM_PROMPT = """
             당신은 금융 뉴스 전문 에디터입니다.
@@ -158,6 +176,64 @@ public class OpenAiSummaryClient {
         }
 
         return sb.toString();
+    }
+
+    /**
+     * 단독 클러스터용 — 기사 한 건의 title을 AI로 정제한다.
+     *
+     * <p>규칙 기반 클렌징으로 처리 불가한 경우(너무 짧은 제목 등)의 fallback으로 사용된다.
+     * summary는 건드리지 않고 title만 재생성한다.</p>
+     *
+     * @param originalTitle 원본 제목
+     * @param content 기사 본문 (제목이 잘린 경우 본문 참고용)
+     * @return 정제된 title. 실패 시 null.
+     */
+    public String generateSingleTitle(String originalTitle, String content) {
+        try {
+            String truncatedContent = content != null && content.length() > MAX_ARTICLE_LENGTH
+                    ? content.substring(0, MAX_ARTICLE_LENGTH) : (content != null ? content : "");
+            String userMessage = "제목: " + originalTitle + "\n\n본문: " + truncatedContent;
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(apiKey);
+
+            Map<String, Object> body = Map.of(
+                    "model", model,
+                    "response_format", Map.of("type", "json_object"),
+                    "messages", List.of(
+                            Map.of("role", "system", "content", SINGLE_TITLE_PROMPT),
+                            Map.of("role", "user", "content", userMessage)
+                    )
+            );
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+            OpenAiChatApiResponse response;
+            try {
+                response = restTemplate.postForObject(OPENAI_CHAT_URL, request, OpenAiChatApiResponse.class);
+            } catch (HttpStatusCodeException e) {
+                throw new OpenAiClientException("OpenAI Single Title API HTTP 오류: " + e.getStatusCode(), e.getStatusCode(), e);
+            } catch (RestClientException e) {
+                throw new OpenAiClientException("OpenAI Single Title API 호출 실패: " + e.getMessage(), null, e);
+            }
+
+            if (response == null || response.getChoices() == null || response.getChoices().isEmpty()) {
+                return null;
+            }
+
+            OpenAiChatApiResponse.Choice firstChoice = response.getChoices().get(0);
+            if (firstChoice == null || firstChoice.getMessage() == null || firstChoice.getMessage().getContent() == null) {
+                return null;
+            }
+
+            SummaryResult result = parseSummaryResult(firstChoice.getMessage().getContent());
+            return result.getTitle() != null && !result.getTitle().isBlank() ? result.getTitle() : null;
+        } catch (OpenAiClientException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("단독 title AI 재생성 실패: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**

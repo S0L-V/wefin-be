@@ -137,12 +137,43 @@ public class SummaryService {
         }
 
         var article = articleOpt.get();
-        String title = article.getTitle();
-
-        // summary가 null일 수 있으므로 title을 fallback
-        String summary = article.getSummary() != null ? article.getSummary() : article.getTitle();
+        String title = resolveTitle(article);
+        String summary = article.getSummary() != null ? article.getSummary() : title;
         persistenceService.markGenerated(cluster.getId(), title, summary);
         return true;
+    }
+
+    /**
+     * 단독 클러스터 title을 3단계 fallback으로 결정한다.
+     * 1단계: 규칙 기반 클렌징 → 2단계: AI 재생성 → 3단계: 원본 그대로
+     */
+    private String resolveTitle(com.solv.wefin.domain.news.article.entity.NewsArticle article) {
+        String original = article.getTitle();
+
+        // 1단계: 규칙 기반 클렌징
+        String cleansed = TitleCleanser.cleanse(original);
+
+        if (!TitleCleanser.needsAiFallback(cleansed)) {
+            if (!cleansed.equals(original)) {
+                log.debug("단독 title 클렌징 — articleId: {}, before: {}, after: {}", article.getId(), original, cleansed);
+            }
+            return cleansed;
+        }
+
+        // 2단계: AI fallback (클렌징 결과가 너무 짧음)
+        log.info("단독 title AI fallback — articleId: {}, cleansed: '{}' ({}자)", article.getId(), cleansed, cleansed.length());
+        try {
+            String aiTitle = openAiSummaryClient.generateSingleTitle(original, article.getContent());
+            if (aiTitle != null && !aiTitle.isBlank()) {
+                log.info("단독 title AI 재생성 성공 — articleId: {}, title: {}", article.getId(), aiTitle);
+                return aiTitle;
+            }
+        } catch (Exception e) {
+            log.warn("단독 title AI 재생성 실패 — articleId: {}", article.getId(), e);
+        }
+
+        // 3단계: 원본 그대로
+        return original;
     }
 
     /**
