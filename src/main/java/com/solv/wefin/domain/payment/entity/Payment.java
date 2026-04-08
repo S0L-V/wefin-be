@@ -1,6 +1,7 @@
 package com.solv.wefin.domain.payment.entity;
 
 import com.solv.wefin.domain.auth.entity.User;
+import com.solv.wefin.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -18,7 +19,7 @@ import java.time.OffsetDateTime;
                 @UniqueConstraint(name = "uk_payment_order_id", columnNames = "order_id")
         }
 )
-public class Payment {
+public class Payment extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -62,12 +63,6 @@ public class Payment {
     @Column(name = "failure_reason", length = 200)
     private String failureReason;
 
-    @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
-
     private Payment(
             SubscriptionPlan plan,
             User user,
@@ -82,10 +77,7 @@ public class Payment {
         this.amount = amount;
         this.status = PaymentStatus.READY;
 
-        OffsetDateTime now = OffsetDateTime.now();
-        this.requestedAt = now;
-        this.createdAt = now;
-        this.updatedAt = now;
+        this.requestedAt = OffsetDateTime.now();
     }
 
     public static Payment createReady(
@@ -102,7 +94,6 @@ public class Payment {
         this.providerPaymentKey = providerPaymentKey;
         this.status = PaymentStatus.PAID;
         this.approvedAt = OffsetDateTime.now();
-        this.updatedAt = this.approvedAt;
         this.failedAt = null;
         this.failureReason = null;
     }
@@ -110,13 +101,11 @@ public class Payment {
     public void markFailed(String failureReason) {
         this.status = PaymentStatus.FAILED;
         this.failedAt = OffsetDateTime.now();
-        this.updatedAt = this.failedAt;
         this.failureReason = failureReason;
     }
 
     public void markCanceled() {
         this.status = PaymentStatus.CANCELED;
-        this.updatedAt = OffsetDateTime.now();
     }
 
     public boolean isReady() {
