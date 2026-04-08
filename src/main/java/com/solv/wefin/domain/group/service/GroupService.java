@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,6 +24,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class GroupService {
+
+    private static final long MAX_GROUP_MEMBER_COUNT = 6L;
+
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final GroupInviteRepository groupInviteRepository;
@@ -30,17 +34,14 @@ public class GroupService {
 
     @Transactional
     public Group createDefaultGroup(User user) {
-        Group group = Group.builder()
-                .name(user.getNickname() + "의 그룹")
-                .build();
+        Group group = Group.createHomeGroup(user.getNickname() + "의 그룹");
         Group savedGroup = groupRepository.save(group);
 
-        GroupMember groupMember = GroupMember.builder()
-                .user(user)
-                .group(savedGroup)
-                .role(GroupMember.GroupMemberRole.LEADER)
-                .status(GroupMember.GroupMemberStatus.ACTIVE)
-                .build();
+        GroupMember groupMember = GroupMember.createLeader(
+                user,
+                savedGroup,
+                GroupMember.GroupMemberStatus.ACTIVE
+        );
 
         groupMemberRepository.save(groupMember);
         return savedGroup;
@@ -62,6 +63,10 @@ public class GroupService {
     public GroupInviteInfo createInviteCode(Long groupId, UUID userId) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
+
+        if (group.isHomeGroup()) {
+            throw new BusinessException(ErrorCode.GROUP_HOME_INVITE_NOT_ALLOWED);
+        }
 
         boolean isMember = groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
                 userId,
@@ -87,7 +92,9 @@ public class GroupService {
         GroupInvite invite = groupInviteRepository.findByInviteCode(inviteCode)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_INVITE_NOT_FOUND));
 
-        if (invite.getExpiredAt().isBefore(java.time.OffsetDateTime.now())) {
+        OffsetDateTime now = OffsetDateTime.now();
+
+        if (invite.getExpiredAt().isBefore(now)) {
             throw new BusinessException(ErrorCode.GROUP_INVITE_EXPIRED);
         }
 
@@ -101,6 +108,10 @@ public class GroupService {
 
         Group targetGroup = groupRepository.findByIdForUpdate(invite.getGroup().getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
+
+        if (targetGroup.isHomeGroup()) {
+            throw new BusinessException(ErrorCode.GROUP_HOME_INVITE_NOT_ALLOWED);
+        }
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -119,20 +130,29 @@ public class GroupService {
                 GroupMember.GroupMemberStatus.ACTIVE
         );
 
-        if (activeMemberCount >= 6) {
+        if (activeMemberCount >= MAX_GROUP_MEMBER_COUNT) {
             throw new BusinessException(ErrorCode.GROUP_FULL);
         }
 
         if (currentActiveMember != null) {
-            currentActiveMember.leave();
+            currentActiveMember.deactivate();
         }
 
-        GroupMember newMember = GroupMember.builder()
-                .user(user)
-                .group(targetGroup)
-                .role(GroupMember.GroupMemberRole.MEMBER)
-                .status(GroupMember.GroupMemberStatus.ACTIVE)
-                .build();
+        GroupMember targetMembership = groupMemberRepository
+                .findByUser_UserIdAndGroup_Id(userId, targetGroup.getId())
+                .orElse(null);
+
+        if (targetMembership != null) {
+            targetMembership.activate();
+            invite.markAccepted();
+            return GroupMemberInfo.from(targetMembership);
+        }
+
+        GroupMember newMember = GroupMember.createMember(
+                user,
+                targetGroup,
+                GroupMember.GroupMemberStatus.ACTIVE
+        );
 
         groupMemberRepository.save(newMember);
         invite.markAccepted();

@@ -3,7 +3,6 @@ package com.solv.wefin.domain.group.entity;
 import com.solv.wefin.domain.auth.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -42,12 +41,19 @@ public class GroupMember {
     @Column(name = "left_at")
     private OffsetDateTime leftAt;
 
-    @Builder
     private GroupMember(User user, Group group, GroupMemberRole role, GroupMemberStatus status) {
         this.user = user;
         this.group = group;
         this.role = role;
         this.status = status;
+    }
+
+    public static GroupMember createLeader(User user, Group group, GroupMemberStatus status) {
+        return new GroupMember(user, group, GroupMemberRole.LEADER, status);
+    }
+
+    public static GroupMember createMember(User user, Group group, GroupMemberStatus status) {
+        return new GroupMember(user, group, GroupMemberRole.MEMBER, status);
     }
 
     @PrePersist
@@ -57,9 +63,25 @@ public class GroupMember {
         }
     }
 
-    public void leave() {
-        this.status = GroupMemberStatus.LEFT;
-        this.leftAt = OffsetDateTime.now();
+    public void activate() {
+        this.status = GroupMemberStatus.ACTIVE;
+        this.leftAt = null;
+    }
+
+    public void deactivate() {
+        this.status = GroupMemberStatus.INACTIVE;
+    }
+
+    public boolean isActive() {
+        return this.status == GroupMemberStatus.ACTIVE;
+    }
+
+    public boolean isLeader() {
+        return this.role == GroupMemberRole.LEADER;
+    }
+
+    public boolean isHomeGroupMember() {
+        return this.group.isHomeGroup();
     }
 
     public enum GroupMemberRole {
@@ -69,6 +91,6 @@ public class GroupMember {
 
     public enum GroupMemberStatus {
         ACTIVE,
-        LEFT
+        INACTIVE
     }
 }
