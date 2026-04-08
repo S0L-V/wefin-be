@@ -65,8 +65,10 @@ public class ClusterMergeService {
         int mergedCount = 0;
         for (MergePair pair : pairs) {
             try {
-                mergePersistenceService.mergePair(pair.survivorId, pair.loserId);
-                mergedCount++;
+                boolean merged = mergePersistenceService.mergePair(pair.survivorId, pair.loserId);
+                if (merged) {
+                    mergedCount++;
+                }
             } catch (Exception e) {
                 log.warn("클러스터 병합 실패 — survivor: {}, loser: {}, error: {}",
                         pair.survivorId, pair.loserId, e.getMessage());

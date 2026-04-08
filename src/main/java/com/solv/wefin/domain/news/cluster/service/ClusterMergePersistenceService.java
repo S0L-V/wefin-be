@@ -40,14 +40,20 @@ public class ClusterMergePersistenceService {
      * loser는 INACTIVE 처리한다.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void mergePair(Long survivorId, Long loserId) {
+    public boolean mergePair(Long survivorId, Long loserId) {
+        if (java.util.Objects.equals(survivorId, loserId)) {
+            log.warn("동일 클러스터 병합 시도 무시 — id: {}", survivorId);
+            return false;
+        }
+
         NewsCluster survivor = newsClusterRepository.findById(survivorId)
                 .orElseThrow(() -> new IllegalStateException("survivor 클러스터 없음: " + survivorId));
         NewsCluster loser = newsClusterRepository.findById(loserId)
                 .orElseThrow(() -> new IllegalStateException("loser 클러스터 없음: " + loserId));
 
         if (loser.getStatus() != ClusterStatus.ACTIVE) {
-            return;
+            log.debug("loser가 이미 INACTIVE — 병합 스킵, loserId: {}", loserId);
+            return false;
         }
 
         // survivor에 이미 있는 기사 ID (중복 매핑 방어)
@@ -99,6 +105,7 @@ public class ClusterMergePersistenceService {
                 survivorId, originalSurvivorCount,
                 loserId, loserMappings.size(),
                 transferredCount, allSurvivorMappings.size());
+        return true;
     }
 
     private float[] recalculateCentroid(List<NewsClusterArticle> mappings) {

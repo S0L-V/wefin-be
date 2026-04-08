@@ -46,11 +46,12 @@ class ClusterMergeServiceTest {
         given(newsClusterRepository.findByStatus(ClusterStatus.ACTIVE)).willReturn(List.of(big, small));
         given(clusterMatchingService.cosineSimilarity(big.getCentroidVector(), small.getCentroidVector()))
                 .willReturn(0.90);
+        given(mergePersistenceService.mergePair(1L, 2L)).willReturn(true);
 
         int merged = clusterMergeService.mergeActiveClusters();
 
         assertThat(merged).isEqualTo(1);
-        verify(mergePersistenceService).mergePair(1L, 2L); // big=survivor, small=loser
+        verify(mergePersistenceService).mergePair(1L, 2L);
     }
 
     @Test
@@ -110,10 +111,10 @@ class ClusterMergeServiceTest {
                 .willReturn(0.90);
         given(clusterMatchingService.cosineSimilarity(b.getCentroidVector(), c.getCentroidVector()))
                 .willReturn(0.88);
+        given(mergePersistenceService.mergePair(1L, 2L)).willReturn(true);
 
         int merged = clusterMergeService.mergeActiveClusters();
 
-        // a-b가 유사도 최고라 먼저 선택 → a,b 사용됨 → c는 남은 쌍에서 a,b 모두 사용됐으므로 선택 안 됨
         assertThat(merged).isEqualTo(1);
         verify(mergePersistenceService).mergePair(1L, 2L);
     }
@@ -127,10 +128,11 @@ class ClusterMergeServiceTest {
         given(newsClusterRepository.findByStatus(ClusterStatus.ACTIVE)).willReturn(List.of(a, b));
         given(clusterMatchingService.cosineSimilarity(a.getCentroidVector(), b.getCentroidVector()))
                 .willReturn(0.90);
+        given(mergePersistenceService.mergePair(1L, 2L)).willReturn(true);
 
         clusterMergeService.mergeActiveClusters();
 
-        verify(mergePersistenceService).mergePair(1L, 2L); // a가 survivor (같은 수면 >= 조건)
+        verify(mergePersistenceService).mergePair(1L, 2L);
     }
 
     @Test
@@ -156,7 +158,8 @@ class ClusterMergeServiceTest {
                 .willReturn(0.92);
 
         // a-b 병합은 실패, c-d 병합은 성공
-        org.mockito.Mockito.doThrow(new RuntimeException("DB error")).when(mergePersistenceService).mergePair(1L, 2L);
+        given(mergePersistenceService.mergePair(1L, 2L)).willThrow(new RuntimeException("DB error"));
+        given(mergePersistenceService.mergePair(3L, 4L)).willReturn(true);
 
         int merged = clusterMergeService.mergeActiveClusters();
 
