@@ -226,4 +226,59 @@ public class GlobalChatServiceTest {
         verify(globalChatMessageRepository, never()).save(any());
         verify(eventPublisher, never()).publishEvent(any());
     }
+
+    @Test
+    @DisplayName("전체 채팅 메시지 조회 시 hasNext와 nextCursor를 계산한다")
+    void getMessages_success_with_hasNext_and_nextCursor() {
+        // given
+        UUID userId = UUID.randomUUID();
+
+        User user = User.builder()
+                .email("test1@test.com")
+                .nickname("testUser1")
+                .password("password1")
+                .build();
+        ReflectionTestUtils.setField(user, "userId", userId);
+
+        GlobalChatMessage latestMessage = GlobalChatMessage.builder()
+                .user(user)
+                .role(ChatRole.USER)
+                .content("세 번째 메시지")
+                .createdAt(OffsetDateTime.now())
+                .build();
+        ReflectionTestUtils.setField(latestMessage, "id", 3L);
+
+        GlobalChatMessage middleMessage = GlobalChatMessage.builder()
+                .user(user)
+                .role(ChatRole.USER)
+                .content("두 번째 메시지")
+                .createdAt(OffsetDateTime.now().minusMinutes(1))
+                .build();
+        ReflectionTestUtils.setField(middleMessage, "id", 2L);
+
+        GlobalChatMessage oldestMessage = GlobalChatMessage.builder()
+                .user(user)
+                .role(ChatRole.USER)
+                .content("첫 번째 메시지")
+                .createdAt(OffsetDateTime.now().minusMinutes(2))
+                .build();
+        ReflectionTestUtils.setField(oldestMessage, "id", 1L);
+
+        when(globalChatMessageRepository.findMessages(any(Pageable.class)))
+                .thenReturn(List.of(latestMessage, middleMessage, oldestMessage));
+
+        // when
+        GlobalChatMessagesInfo result = globalChatService.getMessages(null, 2);
+
+        // then
+        assertEquals(2, result.messages().size());
+        assertTrue(result.hasNext());
+        assertEquals(2L, result.nextCursor());
+
+        assertEquals(2L, result.messages().get(0).messageId());
+        assertEquals("두 번째 메시지", result.messages().get(0).content());
+        assertEquals(3L, result.messages().get(1).messageId());
+        assertEquals("세 번째 메시지", result.messages().get(1).content());
+    }
+
 }

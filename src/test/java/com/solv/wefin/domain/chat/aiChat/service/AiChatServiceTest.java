@@ -265,4 +265,40 @@ class AiChatServiceTest {
         ReflectionTestUtils.setField(user, "userId", userId);
         return user;
     }
+
+    @Test
+    @DisplayName("AI 채팅 메시지 조회 시 hasNext와 nextCursor를 계산한다")
+    void getMessages_success_with_hasNext_and_nextCursor() {
+        // given
+        UUID userId = UUID.randomUUID();
+        User user = createUser(userId);
+
+        AiChatMessage latestMessage = AiChatMessage.createAiMessage(user, "세 번째 메시지");
+        ReflectionTestUtils.setField(latestMessage, "messageId", 3L);
+        ReflectionTestUtils.setField(latestMessage, "createdAt", OffsetDateTime.now());
+
+        AiChatMessage middleMessage = AiChatMessage.createUserMessage(user, "두 번째 메시지");
+        ReflectionTestUtils.setField(middleMessage, "messageId", 2L);
+        ReflectionTestUtils.setField(middleMessage, "createdAt", OffsetDateTime.now().minusMinutes(1));
+
+        AiChatMessage oldestMessage = AiChatMessage.createUserMessage(user, "첫 번째 메시지");
+        ReflectionTestUtils.setField(oldestMessage, "messageId", 1L);
+        ReflectionTestUtils.setField(oldestMessage, "createdAt", OffsetDateTime.now().minusMinutes(2));
+
+        when(aiChatMessagePersistenceService.getMessages(userId, null, 2))
+                .thenReturn(List.of(latestMessage, middleMessage, oldestMessage));
+
+        // when
+        AiChatMessagesInfo result = aiChatService.getMessages(userId, null, 2);
+
+        // then
+        assertEquals(2, result.messages().size());
+        assertEquals(true, result.hasNext());
+        assertEquals(2L, result.nextCursor());
+
+        assertEquals(2L, result.messages().get(0).messageId());
+        assertEquals("두 번째 메시지", result.messages().get(0).content());
+        assertEquals(3L, result.messages().get(1).messageId());
+        assertEquals("세 번째 메시지", result.messages().get(1).content());
+    }
 }
