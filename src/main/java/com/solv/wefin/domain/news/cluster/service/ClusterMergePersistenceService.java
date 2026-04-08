@@ -80,10 +80,11 @@ public class ClusterMergePersistenceService {
         // 대표 기사 재선정 — loser에서 이관된 기사 중 더 최신이 있을 수 있으므로 전체에서 재선정
         List<Long> allArticleIds = allSurvivorMappings.stream()
                 .map(NewsClusterArticle::getNewsArticleId).toList();
-        NewsArticle representative = newsArticleRepository.findAllById(allArticleIds).stream()
+        List<NewsArticle> allArticles = newsArticleRepository.findAllById(allArticleIds);
+        NewsArticle representative = allArticles.stream()
                 .filter(a -> a.getPublishedAt() != null)
                 .max((a, b) -> a.getPublishedAt().compareTo(b.getPublishedAt()))
-                .orElseGet(() -> newsArticleRepository.findAllById(allArticleIds).stream().findAny().orElse(null));
+                .orElseGet(() -> allArticles.stream().findAny().orElse(null));
 
         survivor.recalculateAggregates(
                 allSurvivorMappings.size(), newCentroid,
