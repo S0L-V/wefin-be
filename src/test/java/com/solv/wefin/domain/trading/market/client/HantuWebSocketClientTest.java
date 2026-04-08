@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solv.wefin.domain.trading.market.dto.OrderbookResponse;
 import com.solv.wefin.domain.trading.market.dto.TradeResponse;
 import com.solv.wefin.domain.trading.market.dto.WebSocketMessageType;
+import com.solv.wefin.domain.trading.market.service.CandleGenerator;
 import com.solv.wefin.domain.trading.market.service.MarketService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,8 @@ class HantuWebSocketClientTest {
     private MarketService marketService;
     @Mock
     private WebSocketSession session;
+    @Mock
+    private CandleGenerator candleGenerator;
 
     private HantuWebSocketClient client;
 
@@ -45,7 +48,8 @@ class HantuWebSocketClientTest {
                 hantuWebSocketKeyManager,
                 objectMapper,
                 messagingTemplate,
-                marketService
+                marketService,
+                candleGenerator
         );
     }
 
