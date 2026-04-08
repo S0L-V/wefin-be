@@ -146,9 +146,7 @@ public class NewsCluster extends BaseEntity {
         }
 
         // AI 요약 재생성 필요
-        if (this.summaryStatus == SummaryStatus.GENERATED) {
-            this.summaryStatus = SummaryStatus.STALE;
-        }
+        markSummaryStale();
     }
 
     /**
@@ -196,6 +194,16 @@ public class NewsCluster extends BaseEntity {
     }
 
     /**
+     * AI 요약 재생성이 필요함을 기록한다.
+     * 클러스터에 기사가 추가/병합되어 기존 요약이 stale 상태가 된 경우 사용한다.
+     */
+    public void markSummaryStale() {
+        if (this.summaryStatus == SummaryStatus.GENERATED) {
+            this.summaryStatus = SummaryStatus.STALE;
+        }
+    }
+
+    /**
      * AI 요약 생성 실패를 기록한다.
      * 다음 요약 배치에서 재시도 대상이 된다.
      */
@@ -204,15 +212,10 @@ public class NewsCluster extends BaseEntity {
     }
 
     /**
-     * 이상치 제거 후 클러스터 집계 상태를 재계산한다.
-     *
-     * @param newArticleCount 남은 기사 수 (0일 수 있음)
-     * @param newCentroid 재계산된 centroid (남은 기사 없으면 null)
-     * @param newRepresentativeArticleId 새 대표 기사 ID (남은 기사 없으면 null — 초기화)
-     * @param newPublishedAt 새 대표 기사 발행 시각 (남은 기사 없으면 null)
-     * @param newThumbnailUrl 새 대표 기사 썸네일 (없거나 blank면 null로 초기화)
+     * 클러스터 집계 상태(articleCount, centroid, 대표 기사)를 재계산한다.
+     * 이상치 제거, 클러스터 병합 등 멤버 변경 후 호출한다.
      */
-    public void recalculateAfterOutlierRemoval(int newArticleCount, float[] newCentroid,
+    public void recalculateAggregates(int newArticleCount, float[] newCentroid,
                                                 Long newRepresentativeArticleId,
                                                 OffsetDateTime newPublishedAt,
                                                 String newThumbnailUrl) {

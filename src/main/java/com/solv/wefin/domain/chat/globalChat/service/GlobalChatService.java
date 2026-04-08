@@ -6,6 +6,7 @@ import com.solv.wefin.domain.chat.common.constant.ChatScope;
 import com.solv.wefin.domain.chat.common.service.ChatSpamGuard;
 import com.solv.wefin.domain.chat.globalChat.dto.command.GlobalProfitShareCommand;
 import com.solv.wefin.domain.chat.globalChat.dto.info.GlobalChatMessageInfo;
+import com.solv.wefin.domain.chat.globalChat.dto.info.GlobalChatMessagesInfo;
 import com.solv.wefin.domain.chat.globalChat.entity.ChatRole;
 import com.solv.wefin.domain.chat.globalChat.entity.GlobalChatMessage;
 import com.solv.wefin.domain.chat.globalChat.event.GlobalChatMessageCreatedEvent;
@@ -37,6 +38,7 @@ public class GlobalChatService {
     private static final long SPAM_WINDOW_SECONDS = 3L;
     private static final String SYSTEM = "시스템";
     private static final int MAX_MESSAGE_LENGTH = 1000;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final Map<String, Object> chatLocks = new ConcurrentHashMap<>();
     @Transactional
@@ -82,13 +84,7 @@ public class GlobalChatService {
     @Transactional
     public void sendSystemMessage(String content) {
 
-        validateMessage(content);
-
-        GlobalChatMessage savedMessage = globalChatMessageRepository.save(
-                GlobalChatMessage.createSystemMessage(content)
-        );
-
-        eventPublisher.publishEvent(toEvent(savedMessage));
+        saveSystemMessage(content);
     }
 
     @Transactional
@@ -97,6 +93,15 @@ public class GlobalChatService {
         sendSystemMessage(content);
     }
 
+    private void saveSystemMessage(String content) {
+        validateMessage(content);
+
+        GlobalChatMessage savedMessage = globalChatMessageRepository.save(
+                GlobalChatMessage.createSystemMessage(content)
+        );
+
+        eventPublisher.publishEvent(toEvent(savedMessage));
+    }
 
     private GlobalChatMessageInfo toInfo(GlobalChatMessage message) {
         return new GlobalChatMessageInfo(
@@ -130,17 +135,30 @@ public class GlobalChatService {
         }
     }
 
-    public List<GlobalChatMessageInfo> getRecentMessages(int limit) {
+    public GlobalChatMessagesInfo getMessages(Long beforeMessageId, int size) {
 
-        int size = Math.min(Math.max(limit, 1), 100);
-        Pageable pageable = PageRequest.of(0, size);
+        int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        Pageable pageable = PageRequest.of(0, pageSize + 1);
 
-        List<GlobalChatMessage> messages = globalChatMessageRepository.findRecentMessages(pageable);
+        List<GlobalChatMessage> fetched = beforeMessageId == null
+                ? globalChatMessageRepository.findMessages(pageable)
+                : globalChatMessageRepository.findMessagesBefore(beforeMessageId, pageable);
 
-        return messages.stream()
+        boolean hasNext = fetched.size() > pageSize;
+        if (hasNext) {
+            fetched = fetched.subList(0, pageSize);
+        }
+
+        Long nextCursor = hasNext && !fetched.isEmpty()
+                ? fetched.get(fetched.size() - 1).getId()
+                :null;
+
+        List<GlobalChatMessageInfo> messages = fetched.stream()
                 .sorted(Comparator.comparing(GlobalChatMessage::getId))
                 .map(this::toInfo)
                 .toList();
+
+        return new GlobalChatMessagesInfo(messages, nextCursor, hasNext);
     }
 
     // 수익 메시지 변환

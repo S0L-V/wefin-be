@@ -36,6 +36,16 @@ news:
   collect:
     cron: ${NEWS_COLLECT_CRON:-}
 
+stock:
+  collect:
+    enabled: false
+
+briefing:
+  collect:
+    enabled: false
+
+
+
 market:
   bok:
     api-key: ${BOK_API_KEY:}
@@ -54,6 +64,8 @@ tagging:
 clustering:
   collect:
     cron: ${CLUSTERING_COLLECT_CRON:-}
+  merge:
+    cron: ${CLUSTER_MERGE_CRON:-}
 
 summary:
   collect:
