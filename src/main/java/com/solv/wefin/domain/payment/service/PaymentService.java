@@ -93,6 +93,18 @@ public class PaymentService {
             try {
                 return paymentRepository.save(payment);
             } catch (DataIntegrityViolationException e) {
+                Optional<Payment> concurrentReady =
+                        paymentRepository.findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(
+                                user.getUserId(),
+                                plan.getPlanId(),
+                                provider,
+                                PaymentStatus.READY
+                        );
+
+                if (concurrentReady.isPresent()) {
+                    return concurrentReady.get();
+                }
+
                 if (i == 2) {
                     throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
                 }
