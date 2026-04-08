@@ -5,6 +5,7 @@ import com.solv.wefin.domain.trading.market.dto.WebSocketMessageType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -73,7 +74,6 @@ public class CandleGenerator {
         messagingTemplate.convertAndSend("/topic/stocks/" + stockCode + "/candle", response);
     }
 
-
     // 분봉 데이터를 담는 내부 클래스
     private static class MinuteCandleData {
         String minuteKey;  // "1126"
@@ -96,7 +96,14 @@ public class CandleGenerator {
             close = price;
             volume += tradeVolume;
         }
+    }
 
+    @Scheduled(cron = "0 30 15 * * MON-FRI", zone = "Asia/Seoul")
+    public void flushAll() {
+        log.info("장 마감 분봉 flush 시작");
+        currentCandles.forEach((stockCode, data) -> {
+            pushCandle(stockCode, data);
+        });
+        currentCandles.clear();
     }
 }
-
