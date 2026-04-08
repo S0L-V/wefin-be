@@ -129,7 +129,8 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
     }
 
     private void sendMessage(String trId, String stockCode, String trType) {
-        if (session == null || !session.isOpen()) {
+        WebSocketSession s = this.session;
+        if (s == null || !s.isOpen()) {
             log.warn("한투 웹소켓 미연결 상태. 메시지 전송 스킵: {}", stockCode);
             return;
         }
@@ -150,7 +151,7 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
                     )
             );
 
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
+            s.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
         } catch (Exception e) {
             log.error("한투 웹소켓 메시지 전송 실패: {}", stockCode, e);
         }
