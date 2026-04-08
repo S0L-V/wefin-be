@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Service
@@ -36,12 +37,12 @@ public class CandleGenerator {
         // onTrade 시작: 체결 수신 확인
         // log.debug("캔들 체결 수신: {} price={} minute={}", stockCode, price, minuteKey);
 
-        final MinuteCandleData[] toPush = {null};
+        final AtomicReference<MinuteCandleData> toPush = new AtomicReference<>();
 
         currentCandles.compute(stockCode, (key, existing) -> {
             if (existing == null || !existing.minuteKey.equals(minuteKey)) {
                 if (existing != null) {
-                    toPush[0] = existing;
+                    toPush.set(existing);
                 }
                 return new MinuteCandleData(minuteKey, price, price, price, price, volume);
             }
@@ -49,8 +50,8 @@ public class CandleGenerator {
             return existing;
         });
 
-        if (toPush[0] != null) {
-            pushCandle(stockCode, toPush[0]);
+        if (toPush.get() != null) {
+            pushCandle(stockCode, toPush.get());
         }
     }
 
