@@ -139,7 +139,7 @@ public class NewsClusterQueryService {
         if (tab == null || tab.isBlank() || "ALL".equalsIgnoreCase(tab)) {
             return null;
         }
-        String upper = tab.toUpperCase();
+        String upper = tab.toUpperCase(java.util.Locale.ROOT);
         if (!VALID_CATEGORIES.contains(upper)) {
             throw new BusinessException(ErrorCode.INVALID_INPUT,
                     "지원하지 않는 tab 값입니다: " + tab);
