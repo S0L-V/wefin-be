@@ -44,6 +44,17 @@ clustering:
   score:
     reject-cutoff: 70
     suspicious-cutoff: 80
+  outlier:
+    similarity-threshold: 0.70
+    hard-threshold: 0.55
+    broad-topic-blacklist:
+      - ECONOMY
+      - MARKET
+      - INDUSTRY
+      - POLITICS
+      - SOCIETY
+  merge:
+    threshold: 0.85
   collect:
     cron: "0 */30 * * * *"
 

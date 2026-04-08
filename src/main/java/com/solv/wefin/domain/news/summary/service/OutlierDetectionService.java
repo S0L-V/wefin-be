@@ -13,8 +13,8 @@ import com.solv.wefin.domain.news.cluster.service.ArticleVectorService;
 import com.solv.wefin.domain.news.cluster.service.ClusterMatchingService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,15 +35,8 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class OutlierDetectionService {
 
-    // centroid와의 cosine similarity 기준
-    // → 0.7 미만이면 해당 클러스터와 의미적으로 어긋난 기사로 판단 (이상치 후보)
-    private static final double OUTLIER_SIMILARITY_THRESHOLD = 0.70;
-
-    // 클러스터 내 특정 카테고리 태그의 최대 비중 기준
-    // → 0.6 미만이면 주제가 분산된 클러스터로 판단 (경고 로그용, 제거 기준 아님)
     private static final double CATEGORY_DOMINANCE_THRESHOLD = 0.60;
 
     private final NewsClusterArticleRepository clusterArticleRepository;
@@ -53,15 +46,41 @@ public class OutlierDetectionService {
     private final ArticleVectorService articleVectorService;
     private final ClusterMatchingService clusterMatchingService;
 
+    private final double similarityThreshold;
+    private final double hardThreshold;
+    private final Set<String> broadTopicBlacklist;
+
+    public OutlierDetectionService(
+            NewsClusterArticleRepository clusterArticleRepository,
+            NewsClusterRepository newsClusterRepository,
+            NewsArticleTagRepository articleTagRepository,
+            NewsArticleRepository newsArticleRepository,
+            ArticleVectorService articleVectorService,
+            ClusterMatchingService clusterMatchingService,
+            @Value("${clustering.outlier.similarity-threshold:0.70}") double similarityThreshold,
+            @Value("${clustering.outlier.hard-threshold:0.55}") double hardThreshold,
+            @Value("${clustering.outlier.broad-topic-blacklist:}") List<String> broadTopicBlacklist) {
+        this.clusterArticleRepository = clusterArticleRepository;
+        this.newsClusterRepository = newsClusterRepository;
+        this.articleTagRepository = articleTagRepository;
+        this.newsArticleRepository = newsArticleRepository;
+        this.articleVectorService = articleVectorService;
+        this.clusterMatchingService = clusterMatchingService;
+        if (hardThreshold >= similarityThreshold) {
+            throw new IllegalArgumentException(
+                    "hardThreshold(" + hardThreshold + ")는 similarityThreshold(" + similarityThreshold + ")보다 작아야 합니다");
+        }
+        this.similarityThreshold = similarityThreshold;
+        this.hardThreshold = hardThreshold;
+        this.broadTopicBlacklist = broadTopicBlacklist.stream()
+                .filter(s -> s != null && !s.isBlank())
+                .collect(Collectors.toCollection(HashSet::new));
+    }
+
     /**
      * 클러스터에서 이상치 기사를 제거하고 집계 상태를 갱신한다.
      *
-     * <p>제거된 기사는 같은 트랜잭션 안에서 즉시 단독 클러스터로 승격되어
-     * orphan 상태가 되지 않도록 한다.</p>
-     *
-     * <p>호출자(SummaryService)는 @Transactional 없이 클러스터 엔티티를 전달하므로
-     * 파라미터는 detached 상태다. 이 메서드에서 id로 re-fetch하여 현재 트랜잭션의
-     * 영속 컨텍스트에서 관리되는 엔티티를 얻은 뒤 dirty checking으로 집계 변경을 커밋한다.</p>
+     * 제거된 기사는 같은 트랜잭션 안에서 즉시 단독 클러스터로 승격되어 orphan 상태가 되지 않도록 한다.
      *
      * @param cluster 대상 클러스터 (id 참조 용도, detached 허용)
      * @return 제거된 기사 수
@@ -69,7 +88,6 @@ public class OutlierDetectionService {
     @Transactional
     public int removeOutliers(NewsCluster cluster) {
         // 0. 현재 트랜잭션의 영속 컨텍스트에서 관리되는 엔티티로 re-fetch.
-        //    이렇게 해야 recalculateAfterOutlierRemoval의 필드 변경이 dirty checking으로 커밋된다.
         NewsCluster managedCluster = newsClusterRepository.findById(cluster.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.SUMMARY_CLUSTER_NOT_FOUND));
 
@@ -89,11 +107,15 @@ public class OutlierDetectionService {
             return 0;
         }
 
-        // 3. 클러스터 태그 분산 체크 (경고 로그용, 제거 로직과는 별개)
-        checkCategoryDominance(managedCluster.getId(), mappings);
+        // 3. 태그 전체 조회 (한 번만, checkCategoryDominance + findOutliers 공유)
+        List<Long> articleIds = mappings.stream().map(NewsClusterArticle::getNewsArticleId).toList();
+        List<NewsArticleTag> allTags = articleTagRepository.findByNewsArticleIdIn(articleIds);
 
-        // 4. 유사도 + 태그 기준으로 이상치 기사 탐색
-        List<NewsClusterArticle> outliers = findOutliers(mappings, centroid);
+        // 4. 클러스터 태그 분산 체크 (경고 로그용, 제거 로직과는 별개)
+        checkCategoryDominance(managedCluster.getId(), mappings, allTags);
+
+        // 5. 유사도 + 태그 기준으로 이상치 기사 탐색
+        List<NewsClusterArticle> outliers = findOutliers(mappings, centroid, allTags);
 
 
         // 이상치 없으면 종료
@@ -126,14 +148,6 @@ public class OutlierDetectionService {
 
     /**
      * 이상치 기사를 새 단독 클러스터로 승격시킨다.
-     *
-     * <p>클러스터에서 빠진 기사가 다음 클러스터링 배치(최근 24시간 이내 기사만 대상)에서
-     * 수거되지 않을 위험이 있으므로, 이 시점에서 바로 자기 자신으로 구성된 단독 클러스터를
-     * 만들어 피드 노출과 요약 재시도가 가능한 상태로 만든다. 새 클러스터는 PENDING 상태로
-     * 시작되어 다음 요약 배치에서 자연스럽게 단독 클러스터 경로(AI 미호출, 원본 사용)로 처리된다.</p>
-     *
-     * <p>벡터 또는 기사 레코드 조회에 실패하면 승격을 스킵하고 경고 로그만 남긴다.
-     * 승격 실패가 이상치 제거 전체를 롤백시킬 만한 치명도는 아니기 때문.</p>
      */
     private void promoteToSingletonCluster(Long articleId, Long fromClusterId) {
         float[] vector = articleVectorService.calculateRepresentativeVector(articleId);
@@ -174,7 +188,7 @@ public class OutlierDetectionService {
 
         // 남은 기사 없으면 집계를 초기화하고 클러스터를 INACTIVE로 내려 재조회 대상에서 제외한다.
         if (remainingArticleIds.isEmpty()) {
-            cluster.recalculateAfterOutlierRemoval(0, null, null, null, null);
+            cluster.recalculateAggregates(0, null, null, null, null);
             cluster.deactivate();
             return;
         }
@@ -197,7 +211,7 @@ public class OutlierDetectionService {
                 .orElseGet(() -> remainingArticles.stream().findAny().orElse(null));
 
         // 4. 클러스터 상태 업데이트
-        cluster.recalculateAfterOutlierRemoval(
+        cluster.recalculateAggregates(
                 remainingArticleIds.size(),
                 newCentroid,
                 representative != null ? representative.getId() : null,
@@ -230,18 +244,9 @@ public class OutlierDetectionService {
     /**
      * 이상치 기사 탐색
      * centroid와 유사도가 낮고 태그가 클러스터와 불일치하면 → outlier로 판단
-     *
-     * <p>태그 일치 여부를 판정할 때는 후보 기사 자신의 태그는 제외한 "다른 기사들의 태그"와
-     * 비교해야 한다. 후보 자신의 태그를 포함시키면 자기 자신과는 항상 일치하게 되어
-     * 이상치 판정이 무력화된다.</p>
      */
-    private List<NewsClusterArticle> findOutliers(List<NewsClusterArticle> mappings, float[] centroid) {
-        // 클러스터 전체 기사 ID
-        List<Long> articleIds = mappings.stream().map(NewsClusterArticle::getNewsArticleId).toList();
-
-        // 모든 기사 태그 조회 (한 번에 조회해서 성능 최적화)
-        List<NewsArticleTag> allTags = articleTagRepository.findByNewsArticleIdIn(articleIds);
-
+    private List<NewsClusterArticle> findOutliers(List<NewsClusterArticle> mappings, float[] centroid,
+                                                   List<NewsArticleTag> allTags) {
         // articleId → (TagType → Set<tagCode>) 사전 인덱싱
         // 후보 기사를 제외한 "나머지 기사들의 태그 집합"을 O(1)에 구하기 위해 사용한다.
         Map<Long, Map<TagType, Set<String>>> tagsByArticle = groupTagsByArticle(allTags);
@@ -260,15 +265,18 @@ public class OutlierDetectionService {
             // centroid와 유사도 계산
             double similarity = clusterMatchingService.cosineSimilarity(vector, centroid);
 
-            // 1차 필터: 유사도 낮음
-            if (similarity < OUTLIER_SIMILARITY_THRESHOLD) {
-                // 후보 기사의 태그
-                Map<TagType, Set<String>> candidateTags = tagsByArticle.getOrDefault(candidateId, Map.of());
+            // 1단: 극단 이상치 — 유사도가 매우 낮으면 태그 검사 없이 즉시 제거
+            if (similarity < hardThreshold) {
+                log.debug("극단 이상치 제거 — articleId: {}, similarity: {}", candidateId, similarity);
+                outliers.add(mapping);
+                continue;
+            }
 
-                // 후보를 제외한 나머지 기사들의 태그 집합 (타입별 union)
+            // 2단: 중간 영역 — 유사도가 낮고 + 태그도 불일치하면 제거
+            if (similarity < similarityThreshold) {
+                Map<TagType, Set<String>> candidateTags = tagsByArticle.getOrDefault(candidateId, Map.of());
                 Map<TagType, Set<String>> otherTagsByType = unionTagsExcluding(tagsByArticle, candidateId);
 
-                // 2차 필터: 태그 불일치
                 if (isTagMismatch(candidateTags, otherTagsByType)) {
                     outliers.add(mapping);
                 }
@@ -310,10 +318,11 @@ public class OutlierDetectionService {
     }
 
     /**
-     * 기사 태그가 클러스터와 맞지 않는지 판단
+     * 기사 태그가 클러스터와 맞지 않는지 판단한다.
      *
-     * <p>STOCK, SECTOR, TOPIC 중 하나도 겹치지 않으면 mismatch로 간주한다.
-     * clusterTagsByType은 후보 기사 자신의 태그가 제외된 "나머지 기사들의 태그 집합"이어야 한다.</p>
+     * STOCK, SECTOR, TOPIC 중 하나도 겹치지 않으면 mismatch로 간주한다.
+     * TOPIC 교집합 검사 시 광범위 TOPIC 블랙리스트(ECONOMY, MARKET 등)는 제외하여,
+     * 거의 모든 기사에 붙는 상위 태그가 이상치 판정을 무력화하는 문제를 방지한다.
      */
     private boolean isTagMismatch(Map<TagType, Set<String>> candidateTagsByType,
                                   Map<TagType, Set<String>> clusterTagsByType) {
@@ -323,7 +332,7 @@ public class OutlierDetectionService {
 
         return !hasOverlap(TagType.STOCK, candidateTagsByType, clusterTagsByType)
                 && !hasOverlap(TagType.SECTOR, candidateTagsByType, clusterTagsByType)
-                && !hasOverlap(TagType.TOPIC, candidateTagsByType, clusterTagsByType);
+                && !hasTopicOverlapExcludingBlacklist(candidateTagsByType, clusterTagsByType);
     }
 
     /**
@@ -346,14 +355,43 @@ public class OutlierDetectionService {
     }
 
     /**
+     * TOPIC 교집합을 검사하되, 광범위 블랙리스트 태그를 제외한다.
+     *
+     * ECONOMY, MARKET, INDUSTRY 같은 태그는 거의 모든 기사에 붙어서 교집합이 항상 존재하는 문제를 유발한다.
+     * 이 태그들을 제거한 뒤 남은 TOPIC끼리만 교집합을 검사한다
+     */
+    private boolean hasTopicOverlapExcludingBlacklist(
+            Map<TagType, Set<String>> candidateTagsByType,
+            Map<TagType, Set<String>> clusterTagsByType) {
+        Set<String> candidateTopics = candidateTagsByType.getOrDefault(TagType.TOPIC, Collections.emptySet());
+        Set<String> clusterTopics = clusterTagsByType.getOrDefault(TagType.TOPIC, Collections.emptySet());
+
+        // 블랙리스트 제외
+        Set<String> filteredCandidate = candidateTopics.stream()
+                .filter(code -> !broadTopicBlacklist.contains(code))
+                .collect(Collectors.toSet());
+        Set<String> filteredCluster = clusterTopics.stream()
+                .filter(code -> !broadTopicBlacklist.contains(code))
+                .collect(Collectors.toSet());
+
+        if (filteredCandidate.isEmpty() || filteredCluster.isEmpty()) {
+            return false;
+        }
+        for (String code : filteredCandidate) {
+            if (filteredCluster.contains(code)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * 클러스터 태그 분산 체크 (모니터링용)
      *
      * 특정 카테고리가 충분히 지배적이지 않으면 경고 로그 출력
      */
-    private void checkCategoryDominance(Long clusterId, List<NewsClusterArticle> mappings) {
-        List<Long> articleIds = mappings.stream().map(NewsClusterArticle::getNewsArticleId).toList();
-        List<NewsArticleTag> tags = articleTagRepository.findByNewsArticleIdIn(articleIds);
-
+    private void checkCategoryDominance(Long clusterId, List<NewsClusterArticle> mappings,
+                                         List<NewsArticleTag> tags) {
         // SECTOR, TOPIC만 대상으로 분석
         // → 클러스터는 산업/주제 단위로 묶이므로 상위 개념(SECTOR, TOPIC)만 사용
         List<NewsArticleTag> categoryTags = tags.stream()
