@@ -144,7 +144,7 @@ class MarketServiceTest {
         // given
         given(stockService.existsByCode("005930")).willReturn(true);
         given(hantuMarketClient.fetchRecentTrades("005930")).willReturn(
-                new HantuRecentTradeApiResponse(List.of(
+                new HantuRecentTradeApiResponse(null, List.of(
                         new HantuRecentTradeApiResponse.Output(
                                 "104610", "97500", "1200", "2", "1", "106.78", "1.25"
                         ),
