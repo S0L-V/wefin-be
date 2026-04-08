@@ -12,6 +12,8 @@ import com.solv.wefin.domain.news.cluster.entity.UserNewsClusterRead;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.news.cluster.repository.UserNewsClusterReadRepository;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -24,7 +26,6 @@ import java.util.stream.Collectors;
 
 /**
  * 뉴스 클러스터 피드 목록 조회 서비스
- * <p>
  * 커서 기반 페이지네이션으로 ACTIVE + 요약 완료 클러스터를 최신순으로 반환한다.
  * 각 클러스터에 출처(publisher) 집계, 관련 종목(STOCK 태그), 읽음 여부를 포함한다.
  */
@@ -140,8 +141,7 @@ public class NewsClusterQueryService {
         }
         String upper = tab.toUpperCase();
         if (!VALID_CATEGORIES.contains(upper)) {
-            throw new com.solv.wefin.global.error.BusinessException(
-                    com.solv.wefin.global.error.ErrorCode.INVALID_INPUT,
+            throw new BusinessException(ErrorCode.INVALID_INPUT,
                     "지원하지 않는 tab 값입니다: " + tab);
         }
         return upper;
@@ -171,7 +171,7 @@ public class NewsClusterQueryService {
 
     /**
      * 클러스터별 출처(publisher) 상위 N개를 조회한다.
-     * <p>
+     *
      * 정책:
      * - 같은 언론사는 1번만 포함 (publisherName 기준 dedup)
      * - 최대 MAX_SOURCES_PER_CLUSTER 개까지만 노출
@@ -193,8 +193,9 @@ public class NewsClusterQueryService {
             for (Long articleId : entry.getValue()) {
                 var projection = projectionMap.get(articleId); // O(1)로 projection 조회
 
-                // null 방어 + publisher 기준 dedup
-                if (projection != null && seenPublishers.add(projection.getPublisherName())) {
+                if (projection != null
+                        && projection.getPublisherName() != null
+                        && seenPublishers.add(projection.getPublisherName())) {
 
                     // 출처 정보 추가
                     sources.add(new SourceInfo(projection.getPublisherName(), projection.getOriginalUrl()));
