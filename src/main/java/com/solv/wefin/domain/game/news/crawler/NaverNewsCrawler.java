@@ -123,7 +123,9 @@ public class NaverNewsCrawler {
             if (!articleId.isBlank() && !officeId.isBlank()) {
                 return "https://n.news.naver.com/mnews/article/" + officeId + "/" + articleId;
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.debug("[URL 변환 실패] url={}, error={}", url, e.getMessage());
+        }
         return url;
     }
 
@@ -139,7 +141,9 @@ public class NaverNewsCrawler {
                     return java.net.URLDecoder.decode(kv[1], java.nio.charset.StandardCharsets.UTF_8);
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.debug("[URL 파라미터 파싱 실패] url={}, param={}, error={}", url, param, e.getMessage());
+        }
         return "";
     }
 }
