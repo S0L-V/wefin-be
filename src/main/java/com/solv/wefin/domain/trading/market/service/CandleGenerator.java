@@ -34,17 +34,22 @@ public class CandleGenerator {
         // onTrade 시작: 체결 수신 확인
         // log.debug("캔들 체결 수신: {} price={} minute={}", stockCode, price, minuteKey);
 
+        final MinuteCandleData[] toPush = {null};
+
         currentCandles.compute(stockCode, (key, existing) -> {
             if (existing == null || !existing.minuteKey.equals(minuteKey)) {
                 if (existing != null) {
-                    pushCandle(stockCode, existing);
+                    toPush[0] = existing;
                 }
                 return new MinuteCandleData(minuteKey, price, price, price, price, volume);
             }
-
             existing.update(price, volume);
             return existing;
         });
+
+        if (toPush[0] != null) {
+            pushCandle(stockCode, toPush[0]);
+        }
     }
 
     private void pushCandle(String stockCode, MinuteCandleData data) {
