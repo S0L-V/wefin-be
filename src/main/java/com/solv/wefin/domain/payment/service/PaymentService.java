@@ -94,7 +94,7 @@ public class PaymentService {
                 return paymentRepository.save(payment);
             } catch (DataIntegrityViolationException e) {
                 if (i == 2) {
-                    throw e;
+                    throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
                 }
             }
         }
