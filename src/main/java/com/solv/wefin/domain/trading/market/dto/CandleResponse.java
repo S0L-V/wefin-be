@@ -1,6 +1,7 @@
 package com.solv.wefin.domain.trading.market.dto;
 
 import com.solv.wefin.domain.trading.market.client.dto.HantuCandleApiResponse;
+import com.solv.wefin.global.util.ParseUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,20 +18,11 @@ public record CandleResponse(
     public static CandleResponse from(HantuCandleApiResponse.Output2 output2) {
         return new CandleResponse(
                 LocalDate.parse(output2.stck_bsop_date(), DateTimeFormatter.ofPattern("yyyyMMdd")),
-                parseBigDecimal(output2.stck_oprc()),
-                parseBigDecimal(output2.stck_hgpr()),
-                parseBigDecimal(output2.stck_lwpr()),
-                parseBigDecimal(output2.stck_clpr()),
-                parseLong(output2.acml_vol())
+                ParseUtils.parseBigDecimal(output2.stck_oprc()),
+                ParseUtils.parseBigDecimal(output2.stck_hgpr()),
+                ParseUtils.parseBigDecimal(output2.stck_lwpr()),
+                ParseUtils.parseBigDecimal(output2.stck_clpr()),
+                ParseUtils.parseLong(output2.acml_vol())
         );
     }
-
-    private static BigDecimal parseBigDecimal(String value) {
-        return new BigDecimal(value == null || value.isBlank() ? "0" : value);
-    }
-
-    private static Long parseLong(String value) {
-        return value == null || value.isBlank() ? 0L : Long.parseLong(value);
-    }
-
 }
