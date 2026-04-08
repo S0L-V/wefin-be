@@ -3,6 +3,7 @@ package com.solv.wefin.web.news.dto.response;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterFeedItem;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterFeedResult;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.SourceInfo;
+import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.StockInfo;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -12,7 +13,6 @@ import java.util.List;
  *
  * - Service 레이어의 ClusterFeedResult를 API 응답 형태로 변환
  * - 커서 기반 페이지네이션 정보를 문자열 형태로 가공하여 전달
- * - publishedAt + id를 조합하여 커서 생성 (정렬 기준과 동일)
  */
 public record ClusterFeedResponse(
         List<ClusterItemResponse> items,
@@ -51,15 +51,12 @@ public record ClusterFeedResponse(
             String summary,
             String thumbnailUrl,
             OffsetDateTime publishedAt,
-            int sourceCount, // 해당 클러스터에 포함된 전체 기사 수
-            List<SourceResponse> sources, // 대표 출처 리스트 (최대 3개)
-            List<String> relatedStocks, // 관련 종목 태그 목록
-            boolean isRead // 사용자의 읽음 여부
+            int sourceCount,
+            List<SourceResponse> sources,
+            List<StockResponse> relatedStocks,
+            List<String> marketTags,
+            boolean isRead
     ) {
-
-        /**
-         * Service DTO → Response DTO 변환
-         */
         public static ClusterItemResponse from(ClusterFeedItem item) {
             return new ClusterItemResponse(
                     item.clusterId(),
@@ -71,7 +68,8 @@ public record ClusterFeedResponse(
                     item.sources().stream()
                             .map(SourceResponse::from)
                             .toList(),
-                    item.relatedStocks(),
+                    item.relatedStocks().stream().map(StockResponse::from).toList(),
+                    item.marketTags(),
                     item.isRead()
             );
         }
@@ -93,6 +91,12 @@ public record ClusterFeedResponse(
                     source.publisherName(),
                     source.url()
             );
+        }
+    }
+
+    public record StockResponse(String code, String name) {
+        public static StockResponse from(StockInfo stock) {
+            return new StockResponse(stock.code(), stock.name());
         }
     }
 }

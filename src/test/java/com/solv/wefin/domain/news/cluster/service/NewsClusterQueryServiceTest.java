@@ -70,7 +70,9 @@ class NewsClusterQueryServiceTest {
         assertThat(result.items().get(0).title()).isEqualTo("삼성전자 실적 호조");
         assertThat(result.items().get(0).sourceCount()).isEqualTo(3);
         assertThat(result.items().get(0).sources()).hasSize(1);
-        assertThat(result.items().get(0).relatedStocks()).containsExactly("삼성전자");
+        assertThat(result.items().get(0).relatedStocks()).hasSize(1);
+        assertThat(result.items().get(0).relatedStocks().get(0).code()).isEqualTo("005930");
+        assertThat(result.items().get(0).relatedStocks().get(0).name()).isEqualTo("삼성전자");
         assertThat(result.items().get(0).isRead()).isFalse();
         assertThat(result.hasNext()).isFalse();
     }
