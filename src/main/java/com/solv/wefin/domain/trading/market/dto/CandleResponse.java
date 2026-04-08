@@ -26,11 +26,11 @@ public record CandleResponse(
     }
 
     private static BigDecimal parseBigDecimal(String value) {
-        return new BigDecimal(value.isBlank() ? "0" : value);
+        return new BigDecimal(value == null || value.isBlank() ? "0" : value);
     }
 
     private static Long parseLong(String value) {
-        return value.isBlank() ? 0L : Long.parseLong(value);
+        return value == null || value.isBlank() ? 0L : Long.parseLong(value);
     }
 
 }

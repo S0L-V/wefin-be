@@ -16,12 +16,24 @@ public record RecentTradeResponse(
     public static RecentTradeResponse from(HantuRecentTradeApiResponse.Output output) {
         return new RecentTradeResponse(
                 output.stck_cntg_hour(),
-                new BigDecimal(output.stck_prpr()),
-                new BigDecimal(output.prdy_vrss()),
+                parseBigDecimal(output.stck_prpr()),
+                parseBigDecimal(output.prdy_vrss()),
                 output.prdy_vrss_sign(),
-                Float.parseFloat(output.prdy_ctrt()),
-                Long.parseLong(output.cntg_vol()),
-                Float.parseFloat(output.tday_rltv())
+                parseFloat(output.prdy_ctrt()),
+                parseLong(output.cntg_vol()),
+                parseFloat(output.tday_rltv())
         );
+    }
+
+    private static BigDecimal parseBigDecimal(String value) {
+        return new BigDecimal(value == null || value.isBlank() ? "0" : value);
+    }
+
+    private static Long parseLong(String value) {
+        return value == null || value.isBlank() ? 0L : Long.parseLong(value);
+    }
+
+    private static float parseFloat(String value) {
+        return value == null || value.isBlank() ? 0F : Float.parseFloat(value);
     }
 }
