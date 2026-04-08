@@ -11,7 +11,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "user_news_cluster_feedback",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_user_news_cluster_feedback",
+                name = "uk_user_news_cluster_feedback_user_cluster",
                 columnNames = {"user_id", "news_cluster_id"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
