@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,7 +20,12 @@ import com.solv.wefin.domain.trading.account.service.VirtualAccountService;
 import com.solv.wefin.domain.trading.common.MarketPriceProvider;
 import com.solv.wefin.domain.trading.common.StockInfoProvider;
 import com.solv.wefin.domain.trading.matching.event.OrderMatchedEvent;
+import com.solv.wefin.domain.trading.order.entity.Order;
+import com.solv.wefin.domain.trading.order.entity.OrderSide;
+import com.solv.wefin.domain.trading.order.entity.OrderStatus;
+import com.solv.wefin.domain.trading.order.entity.OrderType;
 import com.solv.wefin.domain.trading.order.repository.OrderRepository;
+import com.solv.wefin.domain.trading.portfolio.entity.Currency;
 import com.solv.wefin.domain.trading.portfolio.entity.Portfolio;
 import com.solv.wefin.domain.trading.portfolio.service.PortfolioService;
 import com.solv.wefin.domain.trading.stock.entity.Stock;
@@ -164,5 +171,122 @@ class OrderServiceTest {
 		// when & then
 		assertThatThrownBy(() -> orderService.sellMarket(1L, 1L, 30))
 			.isInstanceOf(BusinessException.class);
+	}
+
+	@Nested
+	class 주문취소_검증{
+
+		@Test
+		void 취소_성공_매수주문() {
+			// given
+			Order order = new Order(1L, 1L, OrderType.LIMIT, OrderSide.BUY, 10,
+				BigDecimal.valueOf(50000), Currency.KRW, null,
+				BigDecimal.valueOf(75), BigDecimal.ZERO);
+			VirtualAccount mockAccount = mock(VirtualAccount.class);
+			given(orderRepository.findByOrderNoForUpdate(any())).willReturn(Optional.of(order));
+			given(virtualAccountService.getAccountWithLock(1L)).willReturn(mockAccount);
+
+			// when
+			orderService.cancelOrder(1L, order.getOrderNo());
+
+			// then
+			verify(mockAccount).deposit(BigDecimal.valueOf(500075));
+			assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+		}
+
+		@Test
+		void 취소_성공_매도주문() {
+			// given
+			Order order = new Order(1L, 1L, OrderType.LIMIT, OrderSide.SELL, 10,
+				BigDecimal.valueOf(5000), Currency.KRW, null,
+				BigDecimal.valueOf(75), BigDecimal.ZERO);
+			VirtualAccount mockAccount = mock(VirtualAccount.class);
+			given(orderRepository.findByOrderNoForUpdate(order.getOrderNo())).willReturn(Optional.of(order));
+			given(virtualAccountService.getAccountWithLock(1L)).willReturn(mockAccount);
+
+			// when
+			orderService.cancelOrder(1L, order.getOrderNo());
+
+			// then
+			verify(portfolioService).addHolding(1L, 1L, 10, BigDecimal.valueOf(5000), Currency.KRW);
+			assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+		}
+
+		@Test
+		void 취소_실패_주문없음() {
+			// given
+			given(orderRepository.findByOrderNoForUpdate(any())).willReturn(Optional.empty());
+
+			// when & then
+			assertThatThrownBy(() -> orderService.cancelOrder(1L, UUID.randomUUID()))
+				.isInstanceOf(BusinessException.class)
+				.hasMessage(ErrorCode.ORDER_NOT_FOUND.getMessage());
+		}
+
+		@Test
+		void 취소_실패_권한없음() {
+			// given
+			Order order = new Order(1L, 1L, OrderType.LIMIT, OrderSide.BUY, 10,
+				BigDecimal.valueOf(100000), Currency.KRW, null,
+				BigDecimal.valueOf(75), BigDecimal.ZERO);
+			given(orderRepository.findByOrderNoForUpdate(any())).willReturn(Optional.of(order));
+
+			// when & then
+			assertThatThrownBy(() -> orderService.cancelOrder(999L, order.getOrderNo()))
+				.isInstanceOf(BusinessException.class)
+				.hasMessage(ErrorCode.ORDER_OWNERSHIP_MISMATCH.getMessage());
+		}
+	}
+
+	@Nested
+	class 주문정정_검증{
+
+		@Test
+		void 정정_성공_매수_가격변경() {
+			// given
+			Order order = new Order(1L, 1L, OrderType.LIMIT, OrderSide.BUY, 10,
+				BigDecimal.valueOf(50000), Currency.KRW, null,
+				BigDecimal.valueOf(75), BigDecimal.ZERO);
+			VirtualAccount mockAccount = mock(VirtualAccount.class);
+			Stock mockStock = mock(Stock.class);
+			given(orderRepository.findByOrderNoForUpdate(any())).willReturn(Optional.of(order));
+			given(virtualAccountService.getAccountWithLock(1L)).willReturn(mockAccount);
+			given(stockInfoProvider.getStock(1L)).willReturn(mockStock);
+			given(mockStock.getStockCode()).willReturn("005930");
+			given(mockStock.getStockName()).willReturn("삼성전자");
+			given(mockAccount.getBalance()).willReturn(BigDecimal.valueOf(5000000));
+
+			// when
+			orderService.modifyOrder(1L, order.getOrderNo(), BigDecimal.valueOf(60000), 10);
+
+			// then
+			assertThat(order.getRequestPrice()).isEqualByComparingTo(BigDecimal.valueOf(60000));
+			verify(mockAccount).deduct(BigDecimal.valueOf(100015));
+		}
+
+		@Test
+		void 정정_실패_시장가주문() {
+			// given
+			Order order = new Order(1L, 1L, OrderType.MARKET, OrderSide.BUY, 10,
+				BigDecimal.valueOf(50000), Currency.KRW, null,
+				BigDecimal.valueOf(75), BigDecimal.ZERO);
+			given(orderRepository.findByOrderNoForUpdate(order.getOrderNo())).willReturn(Optional.of(order));
+
+			// when & then
+			assertThatThrownBy(() -> orderService.modifyOrder(1L, order.getOrderNo(), BigDecimal.valueOf(60000), 10))
+				.isInstanceOf(BusinessException.class)
+				.hasMessage(ErrorCode.ORDER_NOT_MODIFIABLE.getMessage());
+		}
+
+		@Test
+		void 정정_실패_주문없음() {
+			// given
+			given(orderRepository.findByOrderNoForUpdate(any())).willReturn(Optional.empty());
+
+			// when & then
+			assertThatThrownBy(() -> orderService.modifyOrder(1L, UUID.randomUUID(), BigDecimal.valueOf(60000), 10))
+				.isInstanceOf(BusinessException.class)
+				.hasMessage(ErrorCode.ORDER_NOT_FOUND.getMessage());
+		}
 	}
 }
