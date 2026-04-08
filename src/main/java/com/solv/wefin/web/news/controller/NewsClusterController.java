@@ -46,9 +46,12 @@ public class NewsClusterController {
         OffsetDateTime cursorPublishedAt = null;
         Long cursorId = null;
 
-        if (cursor != null && cursor.contains("_")) {
+        if (cursor != null) {
             try {
                 String[] parts = cursor.split("_", 2);
+                if (parts.length != 2) {
+                    throw new NumberFormatException("underscore missing");
+                }
                 cursorPublishedAt = OffsetDateTime.ofInstant(
                         Instant.ofEpochMilli(Long.parseLong(parts[0])), ZoneOffset.UTC);
                 cursorId = Long.parseLong(parts[1]);

@@ -36,6 +36,9 @@ public class NewsClusterQueryService {
 
     private static final List<SummaryStatus> VISIBLE_STATUSES = List.of(SummaryStatus.GENERATED, SummaryStatus.STALE);
     private static final int MAX_SOURCES_PER_CLUSTER = 3;
+    // ETC는 "전체" 탭에서만 노출되므로 탭 필터 대상에서 제외
+    private static final Set<String> VALID_CATEGORIES = Set.of(
+            "FINANCE", "TECH", "INDUSTRY", "ENERGY", "BIO", "CRYPTO");
 
     private final NewsClusterRepository newsClusterRepository;
     private final NewsClusterArticleRepository clusterArticleRepository;
@@ -53,14 +56,14 @@ public class NewsClusterQueryService {
      * @return 클러스터 목록 + 부가 정보
      */
     /**
-     * @param tab "ALL" / "SECTOR" / "STOCK" — null이면 ALL 취급
+     * @param tab "ALL" / "FINANCE" / "TECH" / "INDUSTRY" / "ENERGY" / "BIO" / "CRYPTO" — null이면 ALL 취급
      */
     public ClusterFeedResult getFeed(OffsetDateTime cursorPublishedAt, Long cursorId,
                                      int pageSize, UUID userId, String tab) {
         int fetchSize = pageSize + 1;
-        TagType tagTypeFilter = resolveTabFilter(tab);
+        String categoryCode = resolveCategoryCode(tab);
 
-        List<NewsCluster> clusters = fetchClusters(cursorPublishedAt, cursorId, fetchSize, tagTypeFilter);
+        List<NewsCluster> clusters = fetchClusters(cursorPublishedAt, cursorId, fetchSize, categoryCode);
 
         // 다음 페이지 존재 여부
         boolean hasNext = clusters.size() > pageSize;
@@ -89,8 +92,10 @@ public class NewsClusterQueryService {
         // 출처 / 종목 / 읽음 여부 일괄 조회 (빈 리스트면 IN 절 오류 방지)
         Map<Long, List<SourceInfo>> sourcesMap = allArticleIds.isEmpty()
                 ? Map.of() : getSourcesMap(clusterArticleMap, allArticleIds);
-        Map<Long, List<String>> stocksMap = allArticleIds.isEmpty()
+        Map<Long, List<StockInfo>> stocksMap = allArticleIds.isEmpty()
                 ? Map.of() : getRelatedStocksMap(clusterArticleMap, allArticleIds);
+        Map<Long, List<String>> topicsMap = allArticleIds.isEmpty()
+                ? Map.of() : getMarketTagsMap(clusterArticleMap, allArticleIds);
         Set<Long> readClusterIds = getReadClusterIds(clusterIds, userId);
 
         // 클러스터 → 응답 DTO 변환
@@ -104,6 +109,7 @@ public class NewsClusterQueryService {
                         c.getArticleCount(),
                         sourcesMap.getOrDefault(c.getId(), List.of()),
                         stocksMap.getOrDefault(c.getId(), List.of()),
+                        topicsMap.getOrDefault(c.getId(), List.of()),
                         readClusterIds.contains(c.getId())
                 ))
                 .toList();
@@ -126,41 +132,40 @@ public class NewsClusterQueryService {
     }
 
     /**
-     * tab 파라미터를 TagType으로 변환한다. ALL이면 null (필터 없음).
+     * tab 파라미터를 대분류 카테고리 코드로 변환한다. ALL이면 null (필터 없음).
      */
-    private TagType resolveTabFilter(String tab) {
+    private String resolveCategoryCode(String tab) {
         if (tab == null || tab.isBlank() || "ALL".equalsIgnoreCase(tab)) {
             return null;
         }
-        return switch (tab.toUpperCase()) {
-            case "SECTOR" -> TagType.SECTOR;
-            case "STOCK" -> TagType.STOCK;
-            case "TOPIC" -> TagType.TOPIC;
-            default -> null;
-        };
+        String upper = tab.toUpperCase();
+        if (!VALID_CATEGORIES.contains(upper)) {
+            throw new com.solv.wefin.global.error.BusinessException(
+                    com.solv.wefin.global.error.ErrorCode.INVALID_INPUT,
+                    "지원하지 않는 tab 값입니다: " + tab);
+        }
+        return upper;
     }
 
     /**
-     * 탭 필터 + 커서 조건에 따라 클러스터를 조회한다.
+     * 카테고리 필터 + 커서 조건에 따라 클러스터를 조회한다.
      */
     private List<NewsCluster> fetchClusters(OffsetDateTime cursorPublishedAt, Long cursorId,
-                                             int fetchSize, TagType tagTypeFilter) {
+                                             int fetchSize, String categoryCode) {
         boolean hasCursor = cursorPublishedAt != null && cursorId != null;
 
-        if (tagTypeFilter == null) {
-            // 전체 탭
+        if (categoryCode == null) {
             return hasCursor
                     ? newsClusterRepository.findForFeedAfterCursor(
                             ClusterStatus.ACTIVE, VISIBLE_STATUSES, cursorPublishedAt, cursorId, PageRequest.of(0, fetchSize))
                     : newsClusterRepository.findForFeedFirstPage(
                             ClusterStatus.ACTIVE, VISIBLE_STATUSES, PageRequest.of(0, fetchSize));
         } else {
-            // 탭 필터 (SECTOR/STOCK/TOPIC)
             return hasCursor
-                    ? newsClusterRepository.findForFeedByTagTypeAfterCursor(
-                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, tagTypeFilter, cursorPublishedAt, cursorId, PageRequest.of(0, fetchSize))
-                    : newsClusterRepository.findForFeedByTagTypeFirstPage(
-                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, tagTypeFilter, PageRequest.of(0, fetchSize));
+                    ? newsClusterRepository.findForFeedByCategoryAfterCursor(
+                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, TagType.SECTOR, categoryCode, cursorPublishedAt, cursorId, PageRequest.of(0, fetchSize))
+                    : newsClusterRepository.findForFeedByCategoryFirstPage(
+                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, TagType.SECTOR, categoryCode, PageRequest.of(0, fetchSize));
         }
     }
 
@@ -204,36 +209,46 @@ public class NewsClusterQueryService {
     }
 
     /**
-     * 클러스터별 관련 STOCK 태그를 조회한다.
+     * 클러스터별 관련 STOCK 태그를 조회한다. (code + name)
      */
-    private Map<Long, List<String>> getRelatedStocksMap(Map<Long, List<Long>> clusterArticleMap,
-                                                        List<Long> allArticleIds) {
-        // STOCK 태그만 DB에서 조회
+    private Map<Long, List<StockInfo>> getRelatedStocksMap(Map<Long, List<Long>> clusterArticleMap,
+                                                            List<Long> allArticleIds) {
         List<NewsArticleTag> stockTags = articleTagRepository.findByNewsArticleIdInAndTagType(
                 allArticleIds, TagType.STOCK);
-
-        // articleId → STOCK 태그 목록 매핑
         Map<Long, List<NewsArticleTag>> tagsByArticle = stockTags.stream()
                 .collect(Collectors.groupingBy(NewsArticleTag::getNewsArticleId));
 
-        Map<Long, List<String>> result = new HashMap<>();
-
-        // clusterId별로 순회
+        Map<Long, List<StockInfo>> result = new HashMap<>();
         for (var entry : clusterArticleMap.entrySet()) {
-            Set<String> stocks = new LinkedHashSet<>(); // 종목명 dedup + 순서 유지
-
-            // 해당 클러스터에 포함된 기사 순회
+            Map<String, StockInfo> seen = new LinkedHashMap<>();
             for (Long articleId : entry.getValue()) {
-
-                // 해당 기사에 매핑된 STOCK 태그 조회
-                List<NewsArticleTag> tags =
-                        tagsByArticle.getOrDefault(articleId, List.of());
-
-                // 태그명만 추출하여 Set에 추가 (중복 자동 제거)
-                tags.forEach(t -> stocks.add(t.getTagName()));
+                tagsByArticle.getOrDefault(articleId, List.of()).forEach(t ->
+                        seen.putIfAbsent(t.getTagCode(), new StockInfo(t.getTagCode(), t.getTagName())));
             }
 
-            result.put(entry.getKey(), new ArrayList<>(stocks));
+            result.put(entry.getKey(), new ArrayList<>(seen.values()));
+        }
+        return result;
+    }
+
+    /**
+     * 클러스터별 TOPIC 태그(marketTags)를 조회한다.
+     */
+    private Map<Long, List<String>> getMarketTagsMap(Map<Long, List<Long>> clusterArticleMap,
+                                                      List<Long> allArticleIds) {
+        List<NewsArticleTag> topicTags = articleTagRepository.findByNewsArticleIdInAndTagType(
+                allArticleIds, TagType.TOPIC);
+        Map<Long, List<NewsArticleTag>> tagsByArticle = topicTags.stream()
+                .collect(Collectors.groupingBy(NewsArticleTag::getNewsArticleId));
+
+        Map<Long, List<String>> result = new HashMap<>();
+        for (var entry : clusterArticleMap.entrySet()) {
+            Set<String> topics = new LinkedHashSet<>();
+            for (Long articleId : entry.getValue()) {
+                tagsByArticle.getOrDefault(articleId, List.of())
+                        .forEach(t -> topics.add(t.getTagName()));
+            }
+            result.put(entry.getKey(), new ArrayList<>(topics));
         }
         return result;
     }
@@ -278,12 +293,15 @@ public class NewsClusterQueryService {
             String summary,
             String thumbnailUrl,
             OffsetDateTime publishedAt,
-            int sourceCount, // 클러스터에 포함된 전체 기사 수
-            List<SourceInfo> sources, // 대표 출처 (최대 3개)
-            List<String> relatedStocks, // 관련 종목 태그
-            boolean isRead // 사용자 읽음 여부
+            int sourceCount,
+            List<SourceInfo> sources,
+            List<StockInfo> relatedStocks,
+            List<String> marketTags,
+            boolean isRead
     ) {
     }
+
+    public record StockInfo(String code, String name) {}
 
     /**
      * 출처 정보 (언론사, 원본 URL)
