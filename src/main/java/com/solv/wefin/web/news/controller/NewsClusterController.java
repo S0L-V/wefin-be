@@ -37,7 +37,7 @@ public class NewsClusterController {
     @GetMapping
     public ApiResponse<ClusterFeedResponse> getFeed(
             @RequestParam(name = "cursor", required = false) String cursor,
-            @RequestParam(name = "pageSize", defaultValue = "" + DEFAULT_PAGE_SIZE) int pageSize,
+            @RequestParam(name = "size", defaultValue = "" + DEFAULT_PAGE_SIZE) int pageSize,
             @RequestParam(name = "tab", defaultValue = "ALL") String tab,
             @RequestHeader(name = "X-User-Id", required = false) UUID userId
     ) {
