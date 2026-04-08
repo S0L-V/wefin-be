@@ -157,10 +157,8 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
         }
 
         // 한투 API 응답 코드 검증 (rt_cd "0"이면 정상)
-        if (response.output1() != null && response.output1().rt_cd()
-                != null
-                && !"0".equals(response.output1().rt_cd())) {
-            throw new BusinessException(ErrorCode.MARKET_API_FAILED);
+        if (response.output1() != null) {
+            validateRtCode(response.output1().rt_cd());
         }
 
         if (response.output2() == null) {
@@ -182,8 +180,8 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
             return List.of();
         }
 
-        if (response.output1() != null && response.output1().rt_cd() != null && !"0".equals(response.output1().rt_cd())) {
-            throw new BusinessException(ErrorCode.MARKET_API_FAILED);
+        if (response.output1() != null) {
+            validateRtCode(response.output1().rt_cd());
         }
 
         if (response.output() == null) {
@@ -204,5 +202,11 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
     public void updatePriceCache(String stockCode, PriceResponse response) {
         priceCache.put(stockCode, response);
         priceCacheTimestamp.put(stockCode, System.currentTimeMillis());
+    }
+
+    private void validateRtCode(String rtCd) {
+        if (rtCd != null && !"0".equals(rtCd)) {
+            throw new BusinessException(ErrorCode.MARKET_API_FAILED);
+        }
     }
 }
