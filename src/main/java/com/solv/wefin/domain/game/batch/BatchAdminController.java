@@ -5,6 +5,7 @@ import com.solv.wefin.domain.game.batch.entity.BatchType;
 import com.solv.wefin.domain.game.batch.repository.BatchProgressRepository;
 import com.solv.wefin.domain.game.batch.service.StockCollectService;
 import com.solv.wefin.domain.game.batch.service.StockInitService;
+import com.solv.wefin.domain.game.news.service.NewsBatchService;
 import com.solv.wefin.global.common.ApiResponse;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -28,6 +29,7 @@ public class BatchAdminController {
     private final StockInitService stockInitService;
     private final StockCollectService stockCollectService;
     private final BatchProgressRepository batchProgressRepository;
+    private final NewsBatchService newsBatchService;
 
     /**
      * POST /api/admin/batch/init
@@ -79,5 +81,20 @@ public class BatchAdminController {
         result.put("total", total);
 
         return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    /**
+     * POST /api/admin/batch/news?days=1
+     * 뉴스 크롤링 + AI 브리핑 생성을 수동 트리거한다.
+     * days 파라미터로 처리 일수를 조절 (기본 150, 테스트 시 1~5 권장).
+     */
+    @PostMapping("/news")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> collectNews(
+            @RequestParam(defaultValue = "150") @Min(1) @Max(150) int days) {
+        newsBatchService.collectBatchAsync(days);
+        return ResponseEntity.accepted().body(ApiResponse.success(Map.of(
+                "message", "뉴스 배치가 시작되었습니다. 로그에서 진행 상태를 확인하세요.",
+                "days", days
+        )));
     }
 }
