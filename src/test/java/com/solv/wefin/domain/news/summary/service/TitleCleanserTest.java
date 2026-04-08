@@ -79,15 +79,60 @@ class TitleCleanserTest {
     }
 
     @Test
-    @DisplayName("10자 미만이면 AI fallback 필요로 판단한다")
-    void needsAiFallback_shortTitle() {
-        assertThat(TitleCleanser.needsAiFallback("미국환율")).isTrue();
-        assertThat(TitleCleanser.needsAiFallback(null)).isTrue();
+    @DisplayName("[속보][단독] 연속 대괄호 접두사를 모두 제거한다")
+    void cleanse_consecutiveBrackets() {
+        assertThat(TitleCleanser.cleanse("[속보][단독] 삼성전자 1분기 실적 발표"))
+                .isEqualTo("삼성전자 1분기 실적 발표");
     }
 
     @Test
-    @DisplayName("10자 이상이면 AI fallback 불필요")
+    @DisplayName("sanitizeAiTitle — 정상 title은 클렌징 후 반환한다")
+    void sanitizeAiTitle_normal() {
+        assertThat(TitleCleanser.sanitizeAiTitle("삼성전자 1분기 실적, 시장 기대 상회"))
+                .isEqualTo("삼성전자 1분기 실적, 시장 기대 상회");
+    }
+
+    @Test
+    @DisplayName("sanitizeAiTitle — AI가 대괄호를 포함해도 제거된다")
+    void sanitizeAiTitle_withBracket() {
+        assertThat(TitleCleanser.sanitizeAiTitle("[요약] 삼성전자 실적 발표"))
+                .isEqualTo("삼성전자 실적 발표");
+    }
+
+    @Test
+    @DisplayName("sanitizeAiTitle — 50자 초과면 절단한다")
+    void sanitizeAiTitle_truncate() {
+        String longTitle = "삼성전자가 2026년 1분기 영업이익 6조 6천억원을 기록하며 시장 기대를 크게 상회하는 실적을 발표했다";
+        String result = TitleCleanser.sanitizeAiTitle(longTitle);
+        assertThat(result).isNotNull();
+        assertThat(result.length()).isLessThanOrEqualTo(50);
+    }
+
+    @Test
+    @DisplayName("sanitizeAiTitle — null/blank/짧은 결과는 null 반환")
+    void sanitizeAiTitle_invalid() {
+        assertThat(TitleCleanser.sanitizeAiTitle(null)).isNull();
+        assertThat(TitleCleanser.sanitizeAiTitle("")).isNull();
+        assertThat(TitleCleanser.sanitizeAiTitle("짧음")).isNull();
+    }
+
+    @Test
+    @DisplayName("10자 미만이면 AI fallback 필요로 판단한다")
+    void needsAiFallback_shortTitle() {
+        assertThat(TitleCleanser.needsAiFallback("미국환율", "미국환율")).isTrue();
+        assertThat(TitleCleanser.needsAiFallback(null, null)).isTrue();
+    }
+
+    @Test
+    @DisplayName("10자 이상 + 원본에 말줄임표 없으면 AI fallback 불필요")
     void needsAiFallback_longEnough() {
-        assertThat(TitleCleanser.needsAiFallback("중동발 유가 상승, 인플레이션 우려 확산")).isFalse();
+        assertThat(TitleCleanser.needsAiFallback("중동발 유가 상승, 인플레이션 우려 확산", "중동발 유가 상승, 인플레이션 우려 확산")).isFalse();
+    }
+
+    @Test
+    @DisplayName("10자 이상이라도 원본이 ...로 끝나면 AI fallback 필요 (절단 감지)")
+    void needsAiFallback_truncatedOriginal() {
+        assertThat(TitleCleanser.needsAiFallback("불안 부추기는 가짜뉴스까지 기", "불안 부추기는 가짜뉴스까지 기...")).isTrue();
+        assertThat(TitleCleanser.needsAiFallback("삼성전자 실적 발표", "삼성전자 실적 발표…")).isTrue();
     }
 }

@@ -11,10 +11,11 @@ import java.util.regex.Pattern;
 public class TitleCleanser {
 
     static final int MIN_CLEAN_LENGTH = 10;
+    static final int MAX_TITLE_LENGTH = 50;
 
-    // [경제D톡스], [기자수첩], [전쟁이 삼킨 증시①] 같은 접두사 대괄호 제거
-    // 제목 시작 부분의 [...] 만 제거 (본문 중간의 [삼성전자] 같은 건 유지)
-    private static final Pattern BRACKET_PREFIX = Pattern.compile("^\\s*\\[.*?]\\s*");
+    // [경제D톡스], [속보][단독] 같은 접두사 대괄호를 1개 이상 연속 제거
+    // 제목 시작 부분의 [...][...] 만 제거 (본문 중간의 [삼성전자] 같은 건 유지)
+    private static final Pattern BRACKET_PREFIX = Pattern.compile("^(\\s*\\[.*?])+\\s*");
 
     // 특수 기호 제거: ①②③④⑤⑥⑦⑧⑨⑩☞★▶▷◆◇■□●○△▲▽▼◁◀
     private static final Pattern SPECIAL_CHARS = Pattern.compile("[①②③④⑤⑥⑦⑧⑨⑩☞★▶▷◆◇■□●○△▲▽▼◁◀]");
@@ -57,7 +58,42 @@ public class TitleCleanser {
      *
      * @return true면 AI로 title 재생성 필요
      */
-    public static boolean needsAiFallback(String cleansedTitle) {
-        return cleansedTitle == null || cleansedTitle.length() < MIN_CLEAN_LENGTH;
+    /**
+     * AI fallback이 필요한지 판단한다.
+     *
+     * @param cleansedTitle 클렌징된 title
+     * @param originalTitle 클렌징 전 원본 title (말줄임표 절단 감지용)
+     * @return true면 AI로 title 재생성 필요
+     */
+    public static boolean needsAiFallback(String cleansedTitle, String originalTitle) {
+        if (cleansedTitle == null || cleansedTitle.length() < MIN_CLEAN_LENGTH) {
+            return true;
+        }
+        // 원본이 "..." 또는 "…"로 끝나면 뉴스 소스가 제목을 잘랐다는 의미 → AI가 완결된 title 생성
+        return originalTitle != null && (originalTitle.endsWith("...") || originalTitle.endsWith("…"));
+    }
+
+    /**
+     * AI가 생성한 title을 검증 + 정제한다.
+     * 클렌징 적용 후 50자 초과면 안전 절단한다.
+     *
+     * @return 유효한 title, 검증 실패 시 null
+     */
+    public static String sanitizeAiTitle(String aiTitle) {
+        if (aiTitle == null || aiTitle.isBlank()) {
+            return null;
+        }
+
+        String sanitized = cleanse(aiTitle);
+
+        if (sanitized.isEmpty() || sanitized.length() < MIN_CLEAN_LENGTH) {
+            return null;
+        }
+
+        if (sanitized.length() > MAX_TITLE_LENGTH) {
+            sanitized = sanitized.substring(0, MAX_TITLE_LENGTH);
+        }
+
+        return sanitized;
     }
 }

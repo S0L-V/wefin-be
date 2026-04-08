@@ -153,7 +153,7 @@ public class SummaryService {
         // 1단계: 규칙 기반 클렌징
         String cleansed = TitleCleanser.cleanse(original);
 
-        if (!TitleCleanser.needsAiFallback(cleansed)) {
+        if (!TitleCleanser.needsAiFallback(cleansed, original)) {
             if (!cleansed.equals(original)) {
                 log.debug("단독 title 클렌징 — articleId: {}, before: {}, after: {}", article.getId(), original, cleansed);
             }
@@ -163,8 +163,9 @@ public class SummaryService {
         // 2단계: AI fallback (클렌징 결과가 너무 짧음)
         log.info("단독 title AI fallback — articleId: {}, cleansed: '{}' ({}자)", article.getId(), cleansed, cleansed.length());
         try {
-            String aiTitle = openAiSummaryClient.generateSingleTitle(original, article.getContent());
-            if (aiTitle != null && !aiTitle.isBlank()) {
+            String rawAiTitle = openAiSummaryClient.generateSingleTitle(original, article.getContent());
+            String aiTitle = TitleCleanser.sanitizeAiTitle(rawAiTitle);
+            if (aiTitle != null) {
                 log.info("단독 title AI 재생성 성공 — articleId: {}, title: {}", article.getId(), aiTitle);
                 return aiTitle;
             }
