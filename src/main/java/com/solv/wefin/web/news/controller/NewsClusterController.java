@@ -55,7 +55,7 @@ public class NewsClusterController {
                 cursorPublishedAt = OffsetDateTime.ofInstant(
                         Instant.ofEpochMilli(Long.parseLong(parts[0])), ZoneOffset.UTC);
                 cursorId = Long.parseLong(parts[1]);
-            } catch (NumberFormatException e) {
+            } catch (NumberFormatException | java.time.DateTimeException e) {
                 throw new BusinessException(ErrorCode.INVALID_INPUT, "잘못된 cursor 형식입니다: " + cursor);
             }
         }
