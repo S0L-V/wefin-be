@@ -3,8 +3,16 @@ package com.solv.wefin.domain.trading.market.client.dto;
 import java.util.List;
 
 public record HantuRecentTradeApiResponse(
+        Output1 output1,
         List<Output> output
 ) {
+
+    public record Output1(
+        String rt_cd,
+        String msg_cd,
+        String msg1
+    ) {}
+
     public record Output(
             String stck_cntg_hour,   // 체결 시간
             String stck_prpr,        // 체결가

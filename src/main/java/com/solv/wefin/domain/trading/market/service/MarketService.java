@@ -176,9 +176,21 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
     public List<RecentTradeResponse> getRecentTrades(String stockCode) {
         validateStockCode(stockCode);
 
-        List<HantuRecentTradeApiResponse.Output> outputs = hantuMarketClient.fetchRecentTrades(stockCode).output();
+        HantuRecentTradeApiResponse response = hantuMarketClient.fetchRecentTrades(stockCode);
 
-        return outputs.stream()
+        if (response == null) {
+            return List.of();
+        }
+
+        if (response.output1() != null && response.output1().rt_cd() != null && !"0".equals(response.output1().rt_cd())) {
+            throw new BusinessException(ErrorCode.MARKET_API_FAILED);
+        }
+
+        if (response.output() == null) {
+            return List.of();
+        }
+
+        return response.output().stream()
                 .map(RecentTradeResponse::from)
                 .toList();
     }
