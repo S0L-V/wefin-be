@@ -3,6 +3,7 @@ package com.solv.wefin.web.chat.aiChat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solv.wefin.domain.chat.aiChat.dto.command.AiChatCommand;
 import com.solv.wefin.domain.chat.aiChat.dto.info.AiChatInfo;
+import com.solv.wefin.domain.chat.aiChat.dto.info.AiChatMessagesInfo;
 import com.solv.wefin.domain.chat.aiChat.service.AiChatService;
 import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
@@ -134,22 +135,26 @@ class AiChatControllerTest {
         UUID userId = UUID.randomUUID();
         OffsetDateTime createdAt = OffsetDateTime.now();
 
-        when(aiChatService.getMessages(userId))
-                .thenReturn(List.of(
-                        new AiChatInfo(
-                                1L,
-                                userId,
-                                "USER",
-                                "삼성전자 전망 알려줘",
-                                createdAt.minusMinutes(1)
+        when(aiChatService.getMessages(userId, null, 30))
+                .thenReturn(new AiChatMessagesInfo(
+                        List.of(
+                                new AiChatInfo(
+                                        1L,
+                                        userId,
+                                        "USER",
+                                        "삼성전자 전망 알려줘",
+                                        createdAt.minusMinutes(1)
+                                ),
+                                new AiChatInfo(
+                                        2L,
+                                        userId,
+                                        "AI",
+                                        "최근 실적 기준으로 설명드릴게요.",
+                                        createdAt
+                                )
                         ),
-                        new AiChatInfo(
-                                2L,
-                                userId,
-                                "AI",
-                                "최근 실적 기준으로 설명드릴게요.",
-                                createdAt
-                        )
+                        null,
+                        false
                 ));
 
         // when // then
@@ -157,11 +162,12 @@ class AiChatControllerTest {
                         .with(authentication(new UsernamePasswordAuthenticationToken(userId, null, AuthorityUtils.NO_AUTHORITIES))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
-                .andExpect(jsonPath("$.data[0].messageId").value(1))
-                .andExpect(jsonPath("$.data[0].role").value("USER"))
-                .andExpect(jsonPath("$.data[0].content").value("삼성전자 전망 알려줘"))
-                .andExpect(jsonPath("$.data[1].messageId").value(2))
-                .andExpect(jsonPath("$.data[1].role").value("AI"))
-                .andExpect(jsonPath("$.data[1].content").value("최근 실적 기준으로 설명드릴게요."));
+                .andExpect(jsonPath("$.data.messages[0].messageId").value(1))
+                .andExpect(jsonPath("$.data.messages[0].role").value("USER"))
+                .andExpect(jsonPath("$.data.messages[0].content").value("삼성전자 전망 알려줘"))
+                .andExpect(jsonPath("$.data.messages[1].messageId").value(2))
+                .andExpect(jsonPath("$.data.messages[1].role").value("AI"))
+                .andExpect(jsonPath("$.data.messages[1].content").value("최근 실적 기준으로 설명드릴게요."))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
     }
 }

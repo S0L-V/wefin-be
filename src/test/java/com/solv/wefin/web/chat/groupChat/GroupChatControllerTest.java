@@ -1,6 +1,7 @@
 package com.solv.wefin.web.chat.groupChat;
 
 import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessageInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessagesInfo;
 import com.solv.wefin.domain.chat.groupChat.service.ChatMessageService;
 import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.global.config.security.JwtProvider;
@@ -60,8 +61,12 @@ class GroupChatControllerTest {
                 null
         );
 
-        when(chatMessageService.getRecentMessages(userId, 50))
-                .thenReturn(List.of(info));
+        when(chatMessageService.getMessages(userId, null, 30))
+                .thenReturn(new ChatMessagesInfo(
+                        List.of(info),
+                        null,
+                        false
+                ));
 
         // when // then
         mockMvc.perform(get("/api/chat/group/messages")
@@ -70,14 +75,14 @@ class GroupChatControllerTest {
                                 userId,
                                 null,
                                 AuthorityUtils.NO_AUTHORITIES
-                        )))
-                        .param("limit", "50"))
+                        ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
-                .andExpect(jsonPath("$.data[0].messageId").value(1))
-                .andExpect(jsonPath("$.data[0].groupId").value(3))
-                .andExpect(jsonPath("$.data[0].sender").value("groupUser"))
-                .andExpect(jsonPath("$.data[0].content").value("안녕하세요"));
+                .andExpect(jsonPath("$.data.messages[0].messageId").value(1))
+                .andExpect(jsonPath("$.data.messages[0].groupId").value(3))
+                .andExpect(jsonPath("$.data.messages[0].sender").value("groupUser"))
+                .andExpect(jsonPath("$.data.messages[0].content").value("안녕하세요"))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
     }
 
     @Test
@@ -88,7 +93,7 @@ class GroupChatControllerTest {
 
         doThrow(new BusinessException(ErrorCode.GROUP_MEMBER_FORBIDDEN))
                 .when(chatMessageService)
-                .getRecentMessages(userId, 50);
+                .getMessages(userId, null, 30);
 
         // when // then
         mockMvc.perform(get("/api/chat/group/messages")
@@ -97,8 +102,7 @@ class GroupChatControllerTest {
                                 userId,
                                 null,
                                 AuthorityUtils.NO_AUTHORITIES
-                        )))
-                        .param("limit", "50"))
+                        ))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.code").value("GROUP_MEMBER_FORBIDDEN"));

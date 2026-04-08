@@ -23,7 +23,24 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
         where m.group.id = :groupId
         order by m.id desc
     """)
-    List<ChatMessage> findRecentMessagesByGroupId(@Param("groupId") Long groupId, Pageable pageable);
+    List<ChatMessage> findMessagesByGroupId(@Param("groupId") Long groupId, Pageable pageable);
+
+    @Query("""
+        select m
+        from ChatMessage m
+        left join fetch m.user
+        left join fetch m.group
+        left join fetch m.replyToMessage
+        left join fetch m.replyToMessage.user
+        where m.group.id = :groupId
+            and m.id < :beforeMessageId
+        order by m.id desc
+    """)
+    List<ChatMessage> findMessagesByGroupIdBefore(
+            @Param("groupId") Long groupId,
+            @Param("beforeMessageId") Long beforeMessageId,
+            Pageable pageable
+    );
 
     long countByGroup_IdAndUser_UserIdAndCreatedAtAfter(Long groupId, UUID userId, OffsetDateTime time);
 

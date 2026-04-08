@@ -4,7 +4,7 @@ import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.chat.common.constant.ChatScope;
 import com.solv.wefin.domain.chat.common.service.ChatSpamGuard;
-import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessageInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessagesInfo;
 import com.solv.wefin.domain.chat.groupChat.entity.ChatMessage;
 import com.solv.wefin.domain.chat.groupChat.entity.MessageType;
 import com.solv.wefin.domain.chat.groupChat.event.ChatMessageCreatedEvent;
@@ -27,10 +27,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -198,19 +195,21 @@ class ChatMessageServiceTest {
 
         when(groupMemberRepository.findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(groupMember));
-        when(chatMessageRepository.findRecentMessagesByGroupId(eq(3L), any(Pageable.class)))
+        when(chatMessageRepository.findMessagesByGroupId(eq(3L), any(Pageable.class)))
                 .thenReturn(List.of(message));
 
         // when
-        List<ChatMessageInfo> result = chatMessageService.getRecentMessages(userId, 50);
+        ChatMessagesInfo result = chatMessageService.getMessages(userId, null, 30);
 
         // then
-        assertEquals(1, result.size());
-        assertEquals(7L, result.get(0).messageId());
-        assertEquals(3L, result.get(0).groupId());
-        assertEquals("groupUser", result.get(0).sender());
-        assertEquals("CHAT", result.get(0).messageType());
-        assertNull(result.get(0).replyTo());
+        assertEquals(1, result.messages().size());
+        assertEquals(7L, result.messages().get(0).messageId());
+        assertEquals(3L, result.messages().get(0).groupId());
+        assertEquals("groupUser", result.messages().get(0).sender());
+        assertEquals("CHAT", result.messages().get(0).messageType());
+        assertNull(result.messages().get(0).replyTo());
+        assertEquals(false, result.hasNext());
+        assertEquals(null, result.nextCursor());
     }
 
     @Test
@@ -354,6 +353,77 @@ class ChatMessageServiceTest {
         // then
         assertEquals(ErrorCode.CHAT_MESSAGE_NOT_FOUND, exception.getErrorCode());
         verify(chatMessageRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("그룹 채팅 메시지 조회 시 hasNext와 nextCursor를 계산한다")
+    void getMessages_success_with_hasNext_and_nextCursor() {
+        // given
+        UUID userId = UUID.randomUUID();
+
+        User user = User.builder()
+                .email("test@test.com")
+                .nickname("groupUser")
+                .password("password")
+                .build();
+        ReflectionTestUtils.setField(user, "userId", userId);
+
+        Group group = Group.builder()
+                .name("1조")
+                .build();
+        ReflectionTestUtils.setField(group, "id", 3L);
+
+        GroupMember groupMember = GroupMember.builder()
+                .user(user)
+                .group(group)
+                .role(GroupMember.GroupMemberRole.MEMBER)
+                .status(GroupMember.GroupMemberStatus.ACTIVE)
+                .build();
+
+        ChatMessage latestMessage = ChatMessage.builder()
+                .user(user)
+                .group(group)
+                .messageType(MessageType.CHAT)
+                .content("세 번째 메시지")
+                .createdAt(OffsetDateTime.now())
+                .build();
+        ReflectionTestUtils.setField(latestMessage, "id", 3L);
+
+        ChatMessage middleMessage = ChatMessage.builder()
+                .user(user)
+                .group(group)
+                .messageType(MessageType.CHAT)
+                .content("두 번째 메시지")
+                .createdAt(OffsetDateTime.now().minusMinutes(1))
+                .build();
+        ReflectionTestUtils.setField(middleMessage, "id", 2L);
+
+        ChatMessage oldestMessage = ChatMessage.builder()
+                .user(user)
+                .group(group)
+                .messageType(MessageType.CHAT)
+                .content("첫 번째 메시지")
+                .createdAt(OffsetDateTime.now().minusMinutes(2))
+                .build();
+        ReflectionTestUtils.setField(oldestMessage, "id", 1L);
+
+        when(groupMemberRepository.findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(groupMember));
+        when(chatMessageRepository.findMessagesByGroupId(eq(3L), any(Pageable.class)))
+                .thenReturn(List.of(latestMessage, middleMessage, oldestMessage));
+
+        // when
+        ChatMessagesInfo result = chatMessageService.getMessages(userId, null, 2);
+
+        // then
+        assertEquals(2, result.messages().size());
+        assertTrue(result.hasNext());
+        assertEquals(2L, result.nextCursor());
+
+        assertEquals(2L, result.messages().get(0).messageId());
+        assertEquals("두 번째 메시지", result.messages().get(0).content());
+        assertEquals(3L, result.messages().get(1).messageId());
+        assertEquals("세 번째 메시지", result.messages().get(1).content());
     }
 
 }
