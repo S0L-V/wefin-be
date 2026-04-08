@@ -40,9 +40,23 @@ public class OpenAiTaggingClient {
             - 각 카테고리는 최대 5개까지
             - 확실한 것만 포함 (추측 금지)
             - 종목 코드는 한국 종목이면 6자리 숫자, 미국 종목이면 티커 심볼
-            - sector 코드는 대문자 영문 (예: SEMICONDUCTOR, FINANCE, ENERGY)
             - topic 코드는 대문자 영문 (예: EARNINGS, AI, REGULATION, IPO)
             - summary는 한글로 작성, 50자 이내
+
+            sectors 규칙:
+            - 기사의 핵심 주제 분야만 태깅하세요. 단순히 언급된 종목의 업종이 아닙니다.
+              예: "개인 투자자 순매도" 기사에 삼천당제약이 언급되더라도, 기사 주제가 증시 동향이면 BIO가 아닌 FINANCE입니다.
+            - 아래 대분류 중 반드시 1개를 sectors 첫 번째에 포함하세요:
+              · FINANCE (금융/은행/보험/증권/채권/외환/증시 동향)
+              · TECH (기술/반도체/IT/AI/전자/소프트웨어)
+              · INDUSTRY (산업/자동차/건설/부동산/제조/방산/철강/운송)
+              · ENERGY (에너지/화학/원자재)
+              · BIO (바이오/제약/헬스케어)
+              · CRYPTO (암호화폐/디지털자산)
+              · ETC (위에 해당하지 않는 경우)
+            - 대분류 외 세부 섹터(SEMICONDUCTOR, BANKING 등)는 자유롭게 추가 가능
+            - 암호화폐 토큰(비트코인, 리플 등)은 stocks가 아닌 sectors의 CRYPTO로 분류
+            - sector 코드는 대문자 영문
 
             relevance 판정 규칙:
             - "FINANCIAL": 기사가 주식, 채권, 환율, 금리, 부동산, 기업 실적, 산업 동향, 투자, 거시경제 등
@@ -55,7 +69,7 @@ public class OpenAiTaggingClient {
             반드시 아래 JSON 형식으로만 응답하세요:
             {
               "stocks": [{"code": "005930", "name": "삼성전자"}],
-              "sectors": [{"code": "SEMICONDUCTOR", "name": "반도체"}],
+              "sectors": [{"code": "TECH", "name": "기술"}, {"code": "SEMICONDUCTOR", "name": "반도체"}],
               "topics": [{"code": "EARNINGS", "name": "실적"}],
               "summary": "삼성전자가 2분기 반도체 실적 호조를 발표했다.",
               "relevance": "FINANCIAL"
