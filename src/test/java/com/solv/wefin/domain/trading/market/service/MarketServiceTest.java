@@ -163,4 +163,47 @@ class MarketServiceTest {
         assertThat(result.get(0).tradeStrength()).isEqualTo(106.78f);
         assertThat(result.get(1).tradeTime()).isEqualTo("104611");
     }
+
+    /**
+     * 정상 응답 (rt_cd = "0"):
+     */
+    @Test
+    void 최근체결_정상응답코드_조회() {
+        // given
+        given(stockService.existsByCode("005930")).willReturn(true);
+        given(hantuMarketClient.fetchRecentTrades("005930")).willReturn(
+                new HantuRecentTradeApiResponse(
+                        new HantuRecentTradeApiResponse.Output1("0", "KIOK0530", "정상처리"),
+                        List.of(
+                                new HantuRecentTradeApiResponse.Output(
+                                        "104610", "97500", "1200", "2", "1", "106.78", "1.25"
+                                )
+                        ))
+        );
+
+        // when
+        List<RecentTradeResponse> result = marketService.getRecentTrades("005930");
+
+        // then
+        assertThat(result).hasSize(1);
+    }
+
+    /**
+     * 에러 응답 (rt_cd != "0"):
+     */
+    @Test
+    void 최근체결_API에러시_예외발생() {
+        // given
+        given(stockService.existsByCode("005930")).willReturn(true);
+        given(hantuMarketClient.fetchRecentTrades("005930")).willReturn(
+                new HantuRecentTradeApiResponse(
+                        new HantuRecentTradeApiResponse.Output1("1", "KIOK0000", "오류 발생"),
+                                List.of()
+                        )
+                );
+
+        // when & then
+        assertThatThrownBy(() -> marketService.getRecentTrades("005930"))
+                .isInstanceOf(BusinessException.class);
+    }
 }
