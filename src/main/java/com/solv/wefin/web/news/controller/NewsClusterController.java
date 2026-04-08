@@ -38,6 +38,7 @@ public class NewsClusterController {
     public ApiResponse<ClusterFeedResponse> getFeed(
             @RequestParam(name = "cursor", required = false) String cursor,
             @RequestParam(name = "pageSize", defaultValue = "" + DEFAULT_PAGE_SIZE) int pageSize,
+            @RequestParam(name = "tab", defaultValue = "ALL") String tab,
             @RequestHeader(name = "X-User-Id", required = false) UUID userId
     ) {
         pageSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
@@ -57,7 +58,7 @@ public class NewsClusterController {
         }
 
         ClusterFeedResult result = newsClusterQueryService.getFeed(
-                cursorPublishedAt, cursorId, pageSize, userId);
+                cursorPublishedAt, cursorId, pageSize, userId, tab);
 
         return ApiResponse.success(ClusterFeedResponse.from(result));
     }

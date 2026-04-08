@@ -30,10 +30,8 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
                                                      List<NewsCluster.SummaryStatus> statuses,
                                                      Pageable pageable);
 
-    /**
-     * 피드 목록용 커서 기반 페이지네이션.
-     * ACTIVE + 요약 완료(GENERATED/STALE) 클러스터를 최신순으로 조회한다.
-     */
+    // --- 피드 목록: 전체 탭 (태그 필터 없음) ---
+
     @Query("SELECT c FROM NewsCluster c " +
             "WHERE c.status = :status " +
             "AND c.summaryStatus IN :summaryStatuses " +
@@ -48,9 +46,6 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
             @Param("cursorId") Long cursorId,
             Pageable pageable);
 
-    /**
-     * 피드 목록용 첫 페이지 (커서 없음).
-     */
     @Query("SELECT c FROM NewsCluster c " +
             "WHERE c.status = :status " +
             "AND c.summaryStatus IN :summaryStatuses " +
@@ -59,5 +54,39 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
     List<NewsCluster> findForFeedFirstPage(
             @Param("status") ClusterStatus status,
             @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
+            Pageable pageable);
+
+    // --- 피드 목록: 탭 필터 (특정 태그 타입을 가진 기사를 포함하는 클러스터만) ---
+
+    @Query("SELECT DISTINCT c FROM NewsCluster c " +
+            "WHERE c.status = :status " +
+            "AND c.summaryStatus IN :summaryStatuses " +
+            "AND c.title IS NOT NULL " +
+            "AND EXISTS (SELECT 1 FROM NewsClusterArticle nca " +
+            "            JOIN NewsArticleTag t ON t.newsArticleId = nca.newsArticleId " +
+            "            WHERE nca.newsClusterId = c.id AND t.tagType = :tagType) " +
+            "AND (c.publishedAt < :cursorPublishedAt " +
+            "     OR (c.publishedAt = :cursorPublishedAt AND c.id < :cursorId)) " +
+            "ORDER BY c.publishedAt DESC, c.id DESC")
+    List<NewsCluster> findForFeedByTagTypeAfterCursor(
+            @Param("status") ClusterStatus status,
+            @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
+            @Param("tagType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType tagType,
+            @Param("cursorPublishedAt") OffsetDateTime cursorPublishedAt,
+            @Param("cursorId") Long cursorId,
+            Pageable pageable);
+
+    @Query("SELECT DISTINCT c FROM NewsCluster c " +
+            "WHERE c.status = :status " +
+            "AND c.summaryStatus IN :summaryStatuses " +
+            "AND c.title IS NOT NULL " +
+            "AND EXISTS (SELECT 1 FROM NewsClusterArticle nca " +
+            "            JOIN NewsArticleTag t ON t.newsArticleId = nca.newsArticleId " +
+            "            WHERE nca.newsClusterId = c.id AND t.tagType = :tagType) " +
+            "ORDER BY c.publishedAt DESC, c.id DESC")
+    List<NewsCluster> findForFeedByTagTypeFirstPage(
+            @Param("status") ClusterStatus status,
+            @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
+            @Param("tagType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType tagType,
             Pageable pageable);
 }

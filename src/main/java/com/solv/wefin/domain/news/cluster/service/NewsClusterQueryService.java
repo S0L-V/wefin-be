@@ -52,23 +52,15 @@ public class NewsClusterQueryService {
      * @param userId            사용자 ID (null이면 isRead 항상 false)
      * @return 클러스터 목록 + 부가 정보
      */
+    /**
+     * @param tab "ALL" / "SECTOR" / "STOCK" — null이면 ALL 취급
+     */
     public ClusterFeedResult getFeed(OffsetDateTime cursorPublishedAt, Long cursorId,
-                                     int pageSize, UUID userId) {
+                                     int pageSize, UUID userId, String tab) {
         int fetchSize = pageSize + 1;
+        TagType tagTypeFilter = resolveTabFilter(tab);
 
-        List<NewsCluster> clusters;
-
-        // 커서가 있으면 이후 데이터, 없으면 첫 페이지 조회
-        if (cursorPublishedAt != null && cursorId != null) {
-            clusters = newsClusterRepository.findForFeedAfterCursor(
-                    ClusterStatus.ACTIVE, VISIBLE_STATUSES,
-                    cursorPublishedAt, cursorId,
-                    PageRequest.of(0, fetchSize));
-        } else {
-            clusters = newsClusterRepository.findForFeedFirstPage(
-                    ClusterStatus.ACTIVE, VISIBLE_STATUSES,
-                    PageRequest.of(0, fetchSize));
-        }
+        List<NewsCluster> clusters = fetchClusters(cursorPublishedAt, cursorId, fetchSize, tagTypeFilter);
 
         // 다음 페이지 존재 여부
         boolean hasNext = clusters.size() > pageSize;
@@ -131,6 +123,45 @@ public class NewsClusterQueryService {
                 .collect(Collectors.groupingBy(
                         NewsClusterArticle::getNewsClusterId,
                         Collectors.mapping(NewsClusterArticle::getNewsArticleId, Collectors.toList())));
+    }
+
+    /**
+     * tab 파라미터를 TagType으로 변환한다. ALL이면 null (필터 없음).
+     */
+    private TagType resolveTabFilter(String tab) {
+        if (tab == null || tab.isBlank() || "ALL".equalsIgnoreCase(tab)) {
+            return null;
+        }
+        return switch (tab.toUpperCase()) {
+            case "SECTOR" -> TagType.SECTOR;
+            case "STOCK" -> TagType.STOCK;
+            case "TOPIC" -> TagType.TOPIC;
+            default -> null;
+        };
+    }
+
+    /**
+     * 탭 필터 + 커서 조건에 따라 클러스터를 조회한다.
+     */
+    private List<NewsCluster> fetchClusters(OffsetDateTime cursorPublishedAt, Long cursorId,
+                                             int fetchSize, TagType tagTypeFilter) {
+        boolean hasCursor = cursorPublishedAt != null && cursorId != null;
+
+        if (tagTypeFilter == null) {
+            // 전체 탭
+            return hasCursor
+                    ? newsClusterRepository.findForFeedAfterCursor(
+                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, cursorPublishedAt, cursorId, PageRequest.of(0, fetchSize))
+                    : newsClusterRepository.findForFeedFirstPage(
+                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, PageRequest.of(0, fetchSize));
+        } else {
+            // 탭 필터 (SECTOR/STOCK/TOPIC)
+            return hasCursor
+                    ? newsClusterRepository.findForFeedByTagTypeAfterCursor(
+                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, tagTypeFilter, cursorPublishedAt, cursorId, PageRequest.of(0, fetchSize))
+                    : newsClusterRepository.findForFeedByTagTypeFirstPage(
+                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, tagTypeFilter, PageRequest.of(0, fetchSize));
+        }
     }
 
     /**
