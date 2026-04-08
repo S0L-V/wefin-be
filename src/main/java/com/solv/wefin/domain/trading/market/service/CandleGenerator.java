@@ -24,6 +24,10 @@ public class CandleGenerator {
 
     // 체결가 수신 시 호출
     public void onTrade(String stockCode, BigDecimal price, long volume, String tradeTime) {
+        if (tradeTime == null || tradeTime.length() < 4) {
+            log.warn("유효하지 않은 tradeTime: stockCode={}, tradeTime={}", stockCode, tradeTime);
+            return;
+        }
         // tradeTime "112654" → 분 키 "1126" 추출
         String minuteKey = tradeTime.substring(0, 4);
 
