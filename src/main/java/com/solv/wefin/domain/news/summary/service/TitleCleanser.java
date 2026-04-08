@@ -4,9 +4,6 @@ import java.util.regex.Pattern;
 
 /**
  * 단독 클러스터 title에서 언론사 태그, 특수 기호, 말줄임표를 제거한다.
- *
- * <p>규칙 기반 클렌징으로, AI 호출 없이 대부분의 제목을 정제할 수 있다.
- * 클렌징 후 결과가 너무 짧으면(MIN_CLEAN_LENGTH 미만) AI fallback이 필요하다는 신호.</p>
  */
 public class TitleCleanser {
 
@@ -20,11 +17,14 @@ public class TitleCleanser {
     // 특수 기호 제거: ①②③④⑤⑥⑦⑧⑨⑩☞★▶▷◆◇■□●○△▲▽▼◁◀
     private static final Pattern SPECIAL_CHARS = Pattern.compile("[①②③④⑤⑥⑦⑧⑨⑩☞★▶▷◆◇■□●○△▲▽▼◁◀]");
 
-    // 시작 말줄임표 제거: "...불안 부추기는"
-    private static final Pattern LEADING_ELLIPSIS = Pattern.compile("^\\.{2,}\\s*");
+    // 시작 말줄임표 제거: "...불안 부추기는" 또는 "…불안 부추기는"
+    private static final Pattern LEADING_ELLIPSIS = Pattern.compile("^(\\.{2,}|…)\\s*");
 
-    // 끝 말줄임표 정리: "가짜뉴스까지 기..." → "가짜뉴스까지 기"
-    private static final Pattern TRAILING_ELLIPSIS = Pattern.compile("\\s*\\.{2,}$");
+    // 끝 말줄임표 정리: "가짜뉴스까지 기..." 또는 "가짜뉴스까지 기…"
+    private static final Pattern TRAILING_ELLIPSIS = Pattern.compile("\\s*(\\.{2,}|…)\\s*$");
+
+    // 절단 감지용 — 원본 title 끝이 말줄임표인지 (needsAiFallback에서 사용)
+    private static final Pattern TRUNCATION_SUFFIX = Pattern.compile("(\\.{2,}|…)\\s*$");
 
     // 연속 공백 정리
     private static final Pattern MULTIPLE_SPACES = Pattern.compile("\\s{2,}");
@@ -54,11 +54,6 @@ public class TitleCleanser {
     }
 
     /**
-     * 클렌징 후 AI fallback이 필요한지 판단한다.
-     *
-     * @return true면 AI로 title 재생성 필요
-     */
-    /**
      * AI fallback이 필요한지 판단한다.
      *
      * @param cleansedTitle 클렌징된 title
@@ -69,8 +64,8 @@ public class TitleCleanser {
         if (cleansedTitle == null || cleansedTitle.length() < MIN_CLEAN_LENGTH) {
             return true;
         }
-        // 원본이 "..." 또는 "…"로 끝나면 뉴스 소스가 제목을 잘랐다는 의미 → AI가 완결된 title 생성
-        return originalTitle != null && (originalTitle.endsWith("...") || originalTitle.endsWith("…"));
+        // 원본이 말줄임표로 끝나면 뉴스 소스가 제목을 잘랐다는 의미 → AI가 완결된 title 생성
+        return originalTitle != null && TRUNCATION_SUFFIX.matcher(originalTitle).find();
     }
 
     /**

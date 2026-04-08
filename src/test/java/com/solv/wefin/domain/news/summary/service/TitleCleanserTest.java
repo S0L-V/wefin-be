@@ -43,9 +43,30 @@ class TitleCleanserTest {
     }
 
     @Test
-    @DisplayName("시작 말줄임표를 제거한다")
+    @DisplayName("시작 말줄임표를 제거한다 (ASCII)")
     void cleanse_leadingEllipsis() {
         assertThat(TitleCleanser.cleanse("...삼성전자 실적 발표"))
+                .isEqualTo("삼성전자 실적 발표");
+    }
+
+    @Test
+    @DisplayName("시작 Unicode 말줄임표를 제거한다")
+    void cleanse_leadingUnicodeEllipsis() {
+        assertThat(TitleCleanser.cleanse("…삼성전자 실적 발표"))
+                .isEqualTo("삼성전자 실적 발표");
+    }
+
+    @Test
+    @DisplayName("끝 Unicode 말줄임표를 제거한다")
+    void cleanse_trailingUnicodeEllipsis() {
+        assertThat(TitleCleanser.cleanse("가짜뉴스까지 기…"))
+                .isEqualTo("가짜뉴스까지 기");
+    }
+
+    @Test
+    @DisplayName("끝 말줄임표 뒤 공백도 함께 제거한다")
+    void cleanse_trailingEllipsisWithSpaces() {
+        assertThat(TitleCleanser.cleanse("삼성전자 실적 발표...  "))
                 .isEqualTo("삼성전자 실적 발표");
     }
 
@@ -130,9 +151,11 @@ class TitleCleanserTest {
     }
 
     @Test
-    @DisplayName("10자 이상이라도 원본이 ...로 끝나면 AI fallback 필요 (절단 감지)")
+    @DisplayName("10자 이상이라도 원본이 말줄임표로 끝나면 AI fallback 필요 (절단 감지)")
     void needsAiFallback_truncatedOriginal() {
         assertThat(TitleCleanser.needsAiFallback("불안 부추기는 가짜뉴스까지 기", "불안 부추기는 가짜뉴스까지 기...")).isTrue();
         assertThat(TitleCleanser.needsAiFallback("삼성전자 실적 발표", "삼성전자 실적 발표…")).isTrue();
+        assertThat(TitleCleanser.needsAiFallback("삼성전자 실적 발표", "삼성전자 실적 발표..")).isTrue();
+        assertThat(TitleCleanser.needsAiFallback("삼성전자 실적 발표", "삼성전자 실적 발표…  ")).isTrue();
     }
 }
