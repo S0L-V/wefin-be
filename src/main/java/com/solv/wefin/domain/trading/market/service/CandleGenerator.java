@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -24,7 +25,7 @@ public class CandleGenerator {
 
     // 체결가 수신 시 호출
     public void onTrade(String stockCode, BigDecimal price, long volume, String tradeTime) {
-        if (tradeTime == null || tradeTime.length() < 4) {
+        if (tradeTime == null || tradeTime.length() < 4 || !tradeTime.substring(0, 4).matches("\\d{4}")) {
             log.warn("유효하지 않은 tradeTime: stockCode={}, tradeTime={}", stockCode, tradeTime);
             return;
         }
@@ -58,7 +59,7 @@ public class CandleGenerator {
                 stockCode, data.minuteKey, data.open, data.high, data.low, data.close, data.volume);
 
         // "1126" → 오늘 날짜 11:26:00
-        LocalDateTime time = LocalDate.now()
+        LocalDateTime time = LocalDate.now(ZoneId.of("Asia/Seoul"))
                 .atTime(Integer.parseInt(data.minuteKey.substring(0, 2)),
                         Integer.parseInt(data.minuteKey.substring(2, 4)));
 
