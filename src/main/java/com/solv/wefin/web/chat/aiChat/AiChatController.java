@@ -10,13 +10,16 @@ import com.solv.wefin.web.chat.aiChat.dto.request.AiChatRequest;
 import com.solv.wefin.web.chat.aiChat.dto.response.AiChatMessagesResponse;
 import com.solv.wefin.web.chat.aiChat.dto.response.AiChatResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
+@Validated
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/chat/ai")
@@ -43,18 +46,10 @@ public class AiChatController {
     public ApiResponse<AiChatMessagesResponse> getMessages(
             @AuthenticationPrincipal UUID userId,
             @RequestParam(required = false) Long beforeMessageId,
-            @RequestParam(defaultValue = "30") int size
+            @RequestParam(defaultValue = "30") @Min(1) @Max(100) int size
     ) {
         AiChatMessagesInfo info = aiChatService.getMessages(userId, beforeMessageId, size);
 
-        List<AiChatResponse> messages = info.messages().stream()
-                .map(AiChatResponse::from)
-                .toList();
-
-        return ApiResponse.success(new AiChatMessagesResponse(
-                messages,
-                info.nextCursor(),
-                info.hasNext()
-        ));
+        return ApiResponse.success(AiChatMessagesResponse.from(info));
     }
 }

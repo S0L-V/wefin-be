@@ -17,5 +17,5 @@ public interface AiChatMessageRepository extends JpaRepository<AiChatMessage, Lo
             Pageable pageable
     );
 
-    List<AiChatMessage> findTop10ByUser_UserIdOrderByCreatedAtDesc(UUID userId);
+    List<AiChatMessage> findTop10ByUser_UserIdOrderByMessageIdDesc(UUID userId);
 }

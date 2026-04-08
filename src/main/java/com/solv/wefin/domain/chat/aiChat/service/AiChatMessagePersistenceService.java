@@ -34,7 +34,7 @@ public class AiChatMessagePersistenceService {
     }
 
     public List<AiChatMessage> getRecentHistory(UUID userId) {
-        return aiChatMessageRepository.findTop10ByUser_UserIdOrderByCreatedAtDesc(userId);
+        return aiChatMessageRepository.findTop10ByUser_UserIdOrderByMessageIdDesc(userId);
     }
 
     @Transactional

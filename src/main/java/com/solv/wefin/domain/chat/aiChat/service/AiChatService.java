@@ -39,14 +39,14 @@ public class AiChatService {
             fetched = fetched.subList(0, pageSize);
         }
 
+        Long nextCursor = hasNext && !fetched.isEmpty()
+                ? fetched.get(fetched.size() - 1).getMessageId()
+                :null;
+
         List<AiChatInfo> messages = fetched.stream()
                 .sorted(Comparator.comparing(AiChatMessage::getMessageId))
                 .map(this::toInfo)
                 .toList();
-
-        Long nextCursor = hasNext && !messages.isEmpty()
-                ? messages.get(0).messageId()
-                :null;
 
         return new AiChatMessagesInfo(messages, nextCursor, hasNext);
     }

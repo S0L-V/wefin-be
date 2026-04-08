@@ -38,6 +38,7 @@ public class GlobalChatService {
     private static final long SPAM_WINDOW_SECONDS = 3L;
     private static final String SYSTEM = "시스템";
     private static final int MAX_MESSAGE_LENGTH = 1000;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final Map<String, Object> chatLocks = new ConcurrentHashMap<>();
     @Transactional
@@ -136,7 +137,7 @@ public class GlobalChatService {
 
     public GlobalChatMessagesInfo getMessages(Long beforeMessageId, int size) {
 
-        int pageSize = Math.min(Math.max(size, 1), 100);
+        int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
         Pageable pageable = PageRequest.of(0, pageSize + 1);
 
         List<GlobalChatMessage> fetched = beforeMessageId == null
@@ -148,14 +149,14 @@ public class GlobalChatService {
             fetched = fetched.subList(0, pageSize);
         }
 
+        Long nextCursor = hasNext && !fetched.isEmpty()
+                ? fetched.get(fetched.size() - 1).getId()
+                :null;
+
         List<GlobalChatMessageInfo> messages = fetched.stream()
                 .sorted(Comparator.comparing(GlobalChatMessage::getId))
                 .map(this::toInfo)
                 .toList();
-
-        Long nextCursor = hasNext && !messages.isEmpty()
-                ? messages.get(0).messageId()
-                : null;
 
         return new GlobalChatMessagesInfo(messages, nextCursor, hasNext);
     }

@@ -44,6 +44,7 @@ public class ChatMessageService {
     private static final long SPAM_WINDOW_SECONDS = 3L;
     private static final String SYSTEM = "시스템";
     private static final int MAX_MESSAGE_LENGTH = 1000;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final Map<String, Object> chatLocks = new ConcurrentHashMap<>();
 
@@ -91,7 +92,7 @@ public class ChatMessageService {
         Group group = findActiveUserGroup(userId);
         Long groupId = group.getId();
 
-        int pageSize = Math.min(Math.max(size, 1), 100);
+        int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
         Pageable pageable = PageRequest.of(0, pageSize + 1);
 
         List<ChatMessage> fetched = beforeMessageId == null
@@ -103,14 +104,14 @@ public class ChatMessageService {
             fetched = fetched.subList(0, pageSize);
         }
 
+        Long nextCursor = hasNext && !fetched.isEmpty()
+                ? fetched.get(fetched.size() - 1).getId()
+                :null;
+
         List<ChatMessageInfo> messages = fetched.stream()
                 .sorted(Comparator.comparing(ChatMessage::getId))
                 .map(this::toInfo)
                 .toList();
-
-        Long nextCursor = hasNext && !messages.isEmpty()
-                ? messages.get(0).messageId()
-                : null;
 
         return new ChatMessagesInfo(messages, nextCursor, hasNext);
     }
