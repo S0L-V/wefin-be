@@ -15,6 +15,7 @@ import com.solv.wefin.domain.payment.repository.SubscriptionRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,9 +55,10 @@ public class PaymentService {
         }
 
         Optional<Payment> existingReady =
-                paymentRepository.findTopByUserUserIdAndPlanPlanIdAndStatusOrderByRequestedAtDesc(
+                paymentRepository.findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(
                         userId,
                         plan.getPlanId(),
+                        provider,
                         PaymentStatus.READY
                 );
 
@@ -64,21 +66,39 @@ public class PaymentService {
             return PaymentReadyInfo.from(existingReady.get());
         }
 
-        String orderId = orderIdGenerator.generate();
-
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        Payment payment = Payment.createReady(
-                plan,
-                user,
-                orderId,
-                provider,
-                plan.getPrice()
-        );
-
-        Payment saved = paymentRepository.save(payment);
+        Payment saved = savePaymentWithRetry(plan, user, provider);
 
         return PaymentReadyInfo.from(saved);
+    }
+
+    private Payment savePaymentWithRetry(
+            SubscriptionPlan plan,
+            User user,
+            PaymentProvider provider
+    ) {
+        for (int i = 0; i < 3; i++) {
+            String orderId = orderIdGenerator.generate();
+
+            Payment payment = Payment.createReady(
+                    plan,
+                    user,
+                    orderId,
+                    provider,
+                    plan.getPrice()
+            );
+
+            try {
+                return paymentRepository.save(payment);
+            } catch (DataIntegrityViolationException e) {
+                if (i == 2) {
+                    throw e;
+                }
+            }
+        }
+
+        throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
     }
 }

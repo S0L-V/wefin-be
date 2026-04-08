@@ -25,6 +25,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -120,7 +121,7 @@ class PaymentServiceTest {
         verify(subscriptionRepository).existsByUserUserIdAndStatus(userId, SubscriptionStatus.ACTIVE);
         verifyNoInteractions(userRepository, orderIdGenerator);
         verify(paymentRepository, never())
-                .findTopByUserUserIdAndPlanPlanIdAndStatusOrderByRequestedAtDesc(any(), any(), any());
+                .findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(any(), any(), any(), any());
         verify(paymentRepository, never()).save(any(Payment.class));
     }
 
@@ -139,8 +140,8 @@ class PaymentServiceTest {
 
         given(subscriptionRepository.existsByUserUserIdAndStatus(userId, SubscriptionStatus.ACTIVE))
                 .willReturn(false);
-        given(paymentRepository.findTopByUserUserIdAndPlanPlanIdAndStatusOrderByRequestedAtDesc(
-                userId, 1L, PaymentStatus.READY))
+        given(paymentRepository.findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(
+                userId, 1L, PaymentProvider.TOSS, PaymentStatus.READY))
                 .willReturn(Optional.of(existingPayment));
 
         given(existingPayment.getPaymentId()).willReturn(10L);
@@ -181,8 +182,8 @@ class PaymentServiceTest {
 
         given(subscriptionRepository.existsByUserUserIdAndStatus(userId, SubscriptionStatus.ACTIVE))
                 .willReturn(false);
-        given(paymentRepository.findTopByUserUserIdAndPlanPlanIdAndStatusOrderByRequestedAtDesc(
-                userId, 1L, PaymentStatus.READY))
+        given(paymentRepository.findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(
+                userId, 1L, PaymentProvider.TOSS, PaymentStatus.READY))
                 .willReturn(Optional.empty());
         given(orderIdGenerator.generate()).willReturn("ORDER-20260408-NEW12345");
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
@@ -211,5 +212,40 @@ class PaymentServiceTest {
         assertThat(result.status()).isEqualTo("READY");
 
         verify(paymentRepository).save(any(Payment.class));
+    }
+
+    @Test
+    @DisplayName("결제 저장 시 orderId unique 충돌이 발생하면 재시도 후 저장한다")
+    void createPayment_retries_whenOrderIdConflictOccurs() {
+        given(subscriptionPlanRepository.findById(command.planId()))
+                .willReturn(Optional.of(plan));
+        given(plan.isAvailable()).willReturn(true);
+        given(plan.getPlanId()).willReturn(1L);
+        given(plan.getPlanName()).willReturn("월간 이용권");
+        given(plan.getBillingCycle()).willReturn(BillingCycle.MONTHLY);
+        given(plan.getPrice()).willReturn(new BigDecimal("9900"));
+
+        given(subscriptionRepository.existsByUserUserIdAndStatus(userId, SubscriptionStatus.ACTIVE))
+                .willReturn(false);
+        given(paymentRepository.findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(
+                userId, 1L, PaymentProvider.TOSS, PaymentStatus.READY))
+                .willReturn(Optional.empty());
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+        given(orderIdGenerator.generate())
+                .willReturn("ORDER-20260408-CONFLICT1")
+                .willReturn("ORDER-20260408-SUCCESS2");
+
+        given(paymentRepository.save(any(Payment.class)))
+                .willThrow(new DataIntegrityViolationException("unique constraint violation"))
+                .willAnswer(invocation -> invocation.getArgument(0));
+
+        PaymentReadyInfo result = paymentService.createPayment(userId, command);
+
+        assertThat(result.orderId()).isEqualTo("ORDER-20260408-SUCCESS2");
+        assertThat(result.status()).isEqualTo("READY");
+
+        verify(orderIdGenerator, times(2)).generate();
+        verify(paymentRepository, times(2)).save(any(Payment.class));
     }
 }
