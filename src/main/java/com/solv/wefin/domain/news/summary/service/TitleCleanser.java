@@ -87,8 +87,13 @@ public class TitleCleanser {
 
         if (sanitized.length() > MAX_TITLE_LENGTH) {
             sanitized = sanitized.substring(0, MAX_TITLE_LENGTH);
+            // 단어 중간 절단 방지 — 마지막 공백 기준으로 자름
+            int lastSpace = sanitized.lastIndexOf(' ');
+            if (lastSpace > MIN_CLEAN_LENGTH) {
+                sanitized = sanitized.substring(0, lastSpace);
+            }
         }
 
-        return sanitized;
+        return sanitized.trim();
     }
 }

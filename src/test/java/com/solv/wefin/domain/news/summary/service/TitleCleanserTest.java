@@ -85,10 +85,11 @@ class TitleCleanserTest {
     }
 
     @Test
-    @DisplayName("null은 null, blank는 빈 문자열로 반환한다")
+    @DisplayName("null은 null, blank/공백만 있는 문자열은 빈 문자열로 반환한다")
     void cleanse_nullOrBlank() {
         assertThat(TitleCleanser.cleanse(null)).isNull();
         assertThat(TitleCleanser.cleanse("")).isEqualTo("");
+        assertThat(TitleCleanser.cleanse(" ")).isEqualTo("");
         assertThat(TitleCleanser.cleanse("  ")).isEqualTo("");
     }
 

@@ -227,7 +227,11 @@ public class OpenAiSummaryClient {
             }
 
             SummaryResult result = parseSummaryResult(firstChoice.getMessage().getContent());
-            return result.getTitle() != null && !result.getTitle().isBlank() ? result.getTitle() : null;
+            String title = result.getTitle();
+            if (title == null || title.isBlank()) {
+                return null;
+            }
+            return title.trim();
         } catch (OpenAiClientException e) {
             throw e;
         } catch (Exception e) {
