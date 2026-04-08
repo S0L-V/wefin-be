@@ -5,10 +5,12 @@ import com.solv.wefin.domain.trading.market.client.HantuMarketClient;
 import com.solv.wefin.domain.trading.market.client.dto.HantuCandleApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuOrderbookApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuPriceApiResponse;
+import com.solv.wefin.domain.trading.market.client.dto.HantuRecentTradeApiResponse;
 import com.solv.wefin.domain.trading.market.dto.CandleResponse;
 import com.solv.wefin.domain.trading.market.dto.OrderbookResponse;
 import com.solv.wefin.domain.trading.market.dto.PriceResponse;
 import com.solv.wefin.domain.trading.common.MarketPriceProvider;
+import com.solv.wefin.domain.trading.market.dto.RecentTradeResponse;
 import com.solv.wefin.domain.trading.stock.service.StockService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
@@ -169,6 +171,16 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
                     .map(CandleResponse::from)
                     .toList();
 
+    }
+
+    public List<RecentTradeResponse> getRecentTrades(String stockCode) {
+        validateStockCode(stockCode);
+
+        List<HantuRecentTradeApiResponse.Output> outputs = hantuMarketClient.fetchRecentTrades(stockCode).output();
+
+        return outputs.stream()
+                .map(RecentTradeResponse::from)
+                .toList();
     }
 
     private void validateStockCode(String stockCode) {
