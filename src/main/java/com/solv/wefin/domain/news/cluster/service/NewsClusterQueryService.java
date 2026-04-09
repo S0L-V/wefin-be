@@ -21,6 +21,7 @@ import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,21 +57,21 @@ public class NewsClusterQueryService {
     /**
      * 피드 목록을 커서 기반으로 조회한다.
      *
-     * @param cursorPublishedAt 커서 시각 (null이면 첫 페이지)
-     * @param cursorId          커서 ID (null이면 첫 페이지)
-     * @param pageSize          페이지 크기
-     * @param userId            사용자 ID (null이면 isRead 항상 false)
+     * @param cursorTime 커서 시각 (null이면 첫 페이지)
+     * @param cursorId   커서 ID (null이면 첫 페이지)
+     * @param pageSize   페이지 크기
+     * @param userId     사용자 ID (null이면 isRead 항상 false)
+     * @param tab        "ALL" / "FINANCE" / "TECH" / "INDUSTRY" / "ENERGY" / "BIO" / "CRYPTO" — null이면 ALL 취급
+     * @param sortBy     정렬 기준 ("publishedAt" 또는 "updatedAt", 기본 publishedAt)
      * @return 클러스터 목록 + 부가 정보
      */
-    /**
-     * @param tab "ALL" / "FINANCE" / "TECH" / "INDUSTRY" / "ENERGY" / "BIO" / "CRYPTO" — null이면 ALL 취급
-     */
-    public ClusterFeedResult getFeed(OffsetDateTime cursorPublishedAt, Long cursorId,
-                                     int pageSize, UUID userId, String tab) {
+    public ClusterFeedResult getFeed(OffsetDateTime cursorTime, Long cursorId,
+                                     int pageSize, UUID userId, String tab, String sortBy) {
         int fetchSize = pageSize + 1;
         String categoryCode = resolveCategoryCode(tab);
+        boolean sortByUpdatedAt = "updatedAt".equalsIgnoreCase(sortBy);
 
-        List<NewsCluster> clusters = fetchClusters(cursorPublishedAt, cursorId, fetchSize, categoryCode);
+        List<NewsCluster> clusters = fetchClusters(cursorTime, cursorId, fetchSize, categoryCode, sortByUpdatedAt);
 
         // 다음 페이지 존재 여부
         boolean hasNext = clusters.size() > pageSize;
@@ -121,10 +122,11 @@ public class NewsClusterQueryService {
                 ))
                 .toList();
 
-        // 다음 커서 생성 (마지막 데이터 기준)
+        // 다음 커서 생성 (마지막 데이터 기준, 정렬 필드에 맞춰 커서 시각 결정)
         NewsCluster last = clusters.get(clusters.size() - 1);
+        OffsetDateTime nextCursorTime = sortByUpdatedAt ? last.getUpdatedAt() : last.getPublishedAt();
 
-        return new ClusterFeedResult(items, hasNext, last.getPublishedAt(), last.getId());
+        return new ClusterFeedResult(items, hasNext, nextCursorTime, last.getId());
     }
 
     /**
@@ -154,24 +156,41 @@ public class NewsClusterQueryService {
     }
 
     /**
-     * 카테고리 필터 + 커서 조건에 따라 클러스터를 조회한다.
+     * 카테고리 필터 + 커서 조건 + 정렬 기준에 따라 클러스터를 조회한다.
      */
-    private List<NewsCluster> fetchClusters(OffsetDateTime cursorPublishedAt, Long cursorId,
-                                             int fetchSize, String categoryCode) {
-        boolean hasCursor = cursorPublishedAt != null && cursorId != null;
+    private List<NewsCluster> fetchClusters(OffsetDateTime cursorTime, Long cursorId,
+                                             int fetchSize, String categoryCode, boolean sortByUpdatedAt) {
+        boolean hasCursor = cursorTime != null && cursorId != null;
+        Pageable pageable = PageRequest.of(0, fetchSize);
 
         if (categoryCode == null) {
-            return hasCursor
-                    ? newsClusterRepository.findForFeedAfterCursor(
-                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, cursorPublishedAt, cursorId, PageRequest.of(0, fetchSize))
-                    : newsClusterRepository.findForFeedFirstPage(
-                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, PageRequest.of(0, fetchSize));
+            if (sortByUpdatedAt) {
+                return hasCursor
+                        ? newsClusterRepository.findForFeedAfterCursorByUpdatedAt(
+                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, cursorTime, cursorId, pageable)
+                        : newsClusterRepository.findForFeedFirstPageByUpdatedAt(
+                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, pageable);
+            } else {
+                return hasCursor
+                        ? newsClusterRepository.findForFeedAfterCursorByPublishedAt(
+                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, cursorTime, cursorId, pageable)
+                        : newsClusterRepository.findForFeedFirstPageByPublishedAt(
+                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, pageable);
+            }
         } else {
-            return hasCursor
-                    ? newsClusterRepository.findForFeedByCategoryAfterCursor(
-                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, TagType.SECTOR, categoryCode, cursorPublishedAt, cursorId, PageRequest.of(0, fetchSize))
-                    : newsClusterRepository.findForFeedByCategoryFirstPage(
-                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, TagType.SECTOR, categoryCode, PageRequest.of(0, fetchSize));
+            if (sortByUpdatedAt) {
+                return hasCursor
+                        ? newsClusterRepository.findForFeedByCategoryAfterCursorByUpdatedAt(
+                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, TagType.SECTOR, categoryCode, cursorTime, cursorId, pageable)
+                        : newsClusterRepository.findForFeedByCategoryFirstPageByUpdatedAt(
+                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, TagType.SECTOR, categoryCode, pageable);
+            } else {
+                return hasCursor
+                        ? newsClusterRepository.findForFeedByCategoryAfterCursorByPublishedAt(
+                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, TagType.SECTOR, categoryCode, cursorTime, cursorId, pageable)
+                        : newsClusterRepository.findForFeedByCategoryFirstPageByPublishedAt(
+                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, TagType.SECTOR, categoryCode, pageable);
+            }
         }
     }
 
@@ -328,11 +347,19 @@ public class NewsClusterQueryService {
         boolean isRead = userId != null
                 && readRepository.existsByUserIdAndNewsClusterId(userId, clusterId);
 
+        // 단독 클러스터(기사 1건 + 섹션 없음)는 기사 전문을 내려준다
+        String articleContent = null;
+        if (articleIds.size() == 1 && sectionDetails.isEmpty()) {
+            articleContent = newsArticleRepository.findById(articleIds.get(0))
+                    .map(article -> article.getContent())
+                    .orElse(null);
+        }
+
         return new ClusterDetailResult(
                 cluster.getId(), cluster.getTitle(), cluster.getSummary(),
                 cluster.getThumbnailUrl(), cluster.getPublishedAt(),
                 cluster.getArticleCount(), sources, stocks, marketTags, isRead,
-                sectionDetails
+                sectionDetails, articleContent
         );
     }
 
@@ -478,7 +505,8 @@ public class NewsClusterQueryService {
             List<StockInfo> relatedStocks,
             List<String> marketTags,
             boolean isRead,
-            List<SectionDetail> sections
+            List<SectionDetail> sections,
+            String articleContent
     ) {
     }
 

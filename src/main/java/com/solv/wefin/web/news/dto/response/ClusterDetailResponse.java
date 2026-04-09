@@ -24,7 +24,8 @@ public record ClusterDetailResponse(
         List<StockResponse> relatedStocks,
         List<String> marketTags,
         boolean isRead,
-        List<SectionResponse> sections
+        List<SectionResponse> sections,
+        String articleContent
 ) {
 
     /**
@@ -47,7 +48,7 @@ public record ClusterDetailResponse(
                 result.clusterId(), result.title(), result.summary(),
                 result.thumbnailUrl(), result.publishedAt(),
                 result.sourceCount(), sources, stocks, result.marketTags(),
-                result.isRead(), sections
+                result.isRead(), sections, result.articleContent()
         );
     }
 

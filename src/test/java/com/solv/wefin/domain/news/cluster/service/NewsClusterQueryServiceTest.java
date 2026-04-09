@@ -68,7 +68,7 @@ class NewsClusterQueryServiceTest {
         NewsCluster cluster = createCluster(1L, "삼성전자 실적 호조", "반도체 부문 회복...",
                 OffsetDateTime.now(), 3);
 
-        given(newsClusterRepository.findForFeedFirstPage(any(), any(), any()))
+        given(newsClusterRepository.findForFeedFirstPageByPublishedAt(any(), any(), any()))
                 .willReturn(List.of(cluster));
         given(clusterArticleRepository.findByNewsClusterIdIn(any()))
                 .willReturn(List.of(NewsClusterArticle.create(1L, 100L, 0, false)));
@@ -77,7 +77,7 @@ class NewsClusterQueryServiceTest {
         given(articleTagRepository.findByNewsArticleIdInAndTagType(any(), any()))
                 .willReturn(List.of(createTag(100L, TagType.STOCK, "005930", "삼성전자")));
 
-        ClusterFeedResult result = queryService.getFeed(null, null, 10, null, null);
+        ClusterFeedResult result = queryService.getFeed(null, null, 10, null, null, null);
 
         assertThat(result.items()).hasSize(1);
         assertThat(result.items().get(0).title()).isEqualTo("삼성전자 실적 호조");
@@ -97,11 +97,11 @@ class NewsClusterQueryServiceTest {
         NewsCluster c2 = createCluster(2L, "title2", "summary2", OffsetDateTime.now().minusMinutes(1), 1);
 
         // pageSize=1이면 2건 조회 → hasNext=true
-        given(newsClusterRepository.findForFeedFirstPage(any(), any(), any()))
+        given(newsClusterRepository.findForFeedFirstPageByPublishedAt(any(), any(), any()))
                 .willReturn(List.of(c1, c2));
         given(clusterArticleRepository.findByNewsClusterIdIn(any())).willReturn(List.of());
 
-        ClusterFeedResult result = queryService.getFeed(null, null, 1, null, null);
+        ClusterFeedResult result = queryService.getFeed(null, null, 1, null, null, null);
 
         assertThat(result.items()).hasSize(1);
         assertThat(result.hasNext()).isTrue();
@@ -114,13 +114,13 @@ class NewsClusterQueryServiceTest {
         UUID userId = UUID.randomUUID();
         NewsCluster cluster = createCluster(1L, "title", "summary", OffsetDateTime.now(), 1);
 
-        given(newsClusterRepository.findForFeedFirstPage(any(), any(), any()))
+        given(newsClusterRepository.findForFeedFirstPageByPublishedAt(any(), any(), any()))
                 .willReturn(List.of(cluster));
         given(clusterArticleRepository.findByNewsClusterIdIn(any())).willReturn(List.of());
         given(readRepository.findByUserIdAndNewsClusterIdIn(eq(userId), any()))
                 .willReturn(List.of(UserNewsClusterRead.create(userId, 1L)));
 
-        ClusterFeedResult result = queryService.getFeed(null, null, 10, userId, null);
+        ClusterFeedResult result = queryService.getFeed(null, null, 10, userId, null, null);
 
         assertThat(result.items().get(0).isRead()).isTrue();
     }
@@ -128,10 +128,10 @@ class NewsClusterQueryServiceTest {
     @Test
     @DisplayName("빈 결과")
     void getFeed_empty() {
-        given(newsClusterRepository.findForFeedFirstPage(any(), any(), any()))
+        given(newsClusterRepository.findForFeedFirstPageByPublishedAt(any(), any(), any()))
                 .willReturn(List.of());
 
-        ClusterFeedResult result = queryService.getFeed(null, null, 10, null, null);
+        ClusterFeedResult result = queryService.getFeed(null, null, 10, null, null, null);
 
         assertThat(result.items()).isEmpty();
         assertThat(result.hasNext()).isFalse();
@@ -143,11 +143,11 @@ class NewsClusterQueryServiceTest {
         OffsetDateTime cursor = OffsetDateTime.now().minusHours(1);
         NewsCluster cluster = createCluster(5L, "older", "summary", cursor.minusMinutes(10), 1);
 
-        given(newsClusterRepository.findForFeedAfterCursor(any(), any(), eq(cursor), eq(10L), any()))
+        given(newsClusterRepository.findForFeedAfterCursorByPublishedAt(any(), any(), eq(cursor), eq(10L), any()))
                 .willReturn(List.of(cluster));
         given(clusterArticleRepository.findByNewsClusterIdIn(any())).willReturn(List.of());
 
-        ClusterFeedResult result = queryService.getFeed(cursor, 10L, 10, null, null);
+        ClusterFeedResult result = queryService.getFeed(cursor, 10L, 10, null, null, null);
 
         assertThat(result.items()).hasSize(1);
         assertThat(result.items().get(0).clusterId()).isEqualTo(5L);
