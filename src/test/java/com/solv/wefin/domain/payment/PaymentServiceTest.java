@@ -178,7 +178,6 @@ class PaymentServiceTest {
         given(plan.getPlanId()).willReturn(1L);
         given(plan.getPlanName()).willReturn("월간 이용권");
         given(plan.getBillingCycle()).willReturn(BillingCycle.MONTHLY);
-        given(plan.getPrice()).willReturn(new BigDecimal("9900"));
 
         given(subscriptionRepository.existsByUserUserIdAndStatus(userId, SubscriptionStatus.ACTIVE))
                 .willReturn(false);
@@ -266,7 +265,6 @@ class PaymentServiceTest {
                 .willReturn(Optional.of(plan));
         given(plan.isAvailable()).willReturn(true);
         given(plan.getPlanId()).willReturn(1L);
-        given(plan.getPrice()).willReturn(new BigDecimal("9900"));
 
         given(subscriptionRepository.existsByUserUserIdAndStatus(userId, SubscriptionStatus.ACTIVE))
                 .willReturn(false);
