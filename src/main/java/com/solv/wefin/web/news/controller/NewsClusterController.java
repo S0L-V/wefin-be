@@ -79,9 +79,11 @@ public class NewsClusterController {
             if (!"ALL".equalsIgnoreCase(tab)) {
                 throw new BusinessException(ErrorCode.FEED_TAG_AND_TAB_CONFLICT);
             }
+            boolean shouldUpperCase = resolvedTagType == TagType.SECTOR;
             resolvedTagCodes = tagCodes.stream()
                     .map(String::trim)
                     .filter(s -> !s.isEmpty())
+                    .map(s -> shouldUpperCase ? s.toUpperCase(java.util.Locale.ROOT) : s)
                     .distinct()
                     .toList();
             if (resolvedTagCodes.isEmpty()) {
