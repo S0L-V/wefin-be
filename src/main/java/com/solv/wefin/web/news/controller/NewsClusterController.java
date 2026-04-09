@@ -59,7 +59,8 @@ public class NewsClusterController {
             @RequestParam(name = "sort", defaultValue = "publishedAt") String sort,
             @AuthenticationPrincipal UUID userId
     ) {
-        if (!VALID_SORT_VALUES.contains(sort)) {
+        String normalizedSort = sort.trim();
+        if (!VALID_SORT_VALUES.contains(normalizedSort)) {
             throw new BusinessException(ErrorCode.FEED_SORT_UNSUPPORTED);
         }
 
@@ -112,7 +113,7 @@ public class NewsClusterController {
         }
 
         ClusterFeedResult result = newsClusterQueryService.getFeed(
-                cursorTime, cursorId, pageSize, userId, tab, sort,
+                cursorTime, cursorId, pageSize, userId, tab, normalizedSort,
                 resolvedTagType, resolvedTagCodes);
 
         return ApiResponse.success(ClusterFeedResponse.from(result));
