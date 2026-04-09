@@ -350,7 +350,7 @@ class SummaryServiceTest {
     }
 
     @Test
-    @DisplayName("CAS 불일치(StaleClusterException) 시 markFailed를 호출하지 않는다")
+    @DisplayName("기사 집합 불일치(StaleClusterException) 시 markFailed를 호출하지 않는다")
     void generatePendingSummaries_staleCluster_skipWithoutMarkFailed() {
         // given
         NewsCluster cluster = createCluster(10L, 3, SummaryStatus.STALE);

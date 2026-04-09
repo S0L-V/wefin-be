@@ -121,13 +121,13 @@ public class SummaryService {
                     throw new BusinessException(ErrorCode.SUMMARY_NO_VALID_SECTIONS);
                 }
 
-                // 7) 저장 — CAS(Compare-And-Swap, 비교 후 교체) 검증 후 섹션/출처 저장, 마지막에 GENERATED 마킹
+                // 7) 저장 — 기사 집합 변경 감지 후 섹션/출처 저장, 마지막에 GENERATED 마킹
                 persistenceService.markGeneratedWithSections(cluster.getId(), result.getTitle(),
                         result.getLeadSummary(), result.getSections(), articleIds);
                 successCount++;
 
             } catch (StaleClusterException e) {
-                // CAS 불일치: 클러스터가 변경되어 저장을 건너뜀. FAILED로 마킹하지 않는다
+                // 기사 집합 불일치: 클러스터가 변경되어 저장을 건너뜀. FAILED로 마킹하지 않는다
                 log.info("요약 저장 스킵 — clusterId: {}, reason: {}", cluster.getId(), e.getMessage());
             } catch (Exception e) {
                 log.warn("요약 생성 실패 — clusterId: {}, error: {}", cluster.getId(), e.getMessage());
@@ -147,7 +147,7 @@ public class SummaryService {
      * 단독 클러스터(기사 1건)는 AI 호출 없이 기사 제목/요약을 그대로 사용한다
      *
      * @param cluster 요약 대상 클러스터
-     * @param expectedArticleIds 조회 시점의 기사 ID 목록 (CAS 검증용)
+     * @param expectedArticleIds 조회 시점의 기사 ID 목록 (기사 집합 변경 감지용)
      * @return true면 성공, false면 기사를 찾지 못해 실패
      * @throws StaleClusterException 저장 직전 기사 집합이 변경된 경우
      */

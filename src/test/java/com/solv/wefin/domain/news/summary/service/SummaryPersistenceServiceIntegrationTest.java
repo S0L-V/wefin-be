@@ -162,7 +162,7 @@ class SummaryPersistenceServiceIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @DisplayName("CAS 불일치 — 기사 집합 변경 시 StaleClusterException 발생")
+    @DisplayName("기사 집합 불일치 — 기사 집합 변경 시 StaleClusterException 발생")
     void markGenerated_membershipChanged_throwsStaleClusterException() {
         // given: 기사 2개로 클러스터 생성, 매핑은 1개만 등록 (불일치)
         NewsArticle article1 = createAndSaveArticle();
@@ -183,7 +183,7 @@ class SummaryPersistenceServiceIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @DisplayName("CAS 불일치 — 개수는 같지만 기사 집합이 다르면 StaleClusterException 발생")
+    @DisplayName("기사 집합 불일치 — 개수는 같지만 기사 집합이 다르면 StaleClusterException 발생")
     void markGenerated_sameCountDifferentSet_throwsStaleClusterException() {
         // given: A,B로 요약했는데, 저장 시점에는 A,C로 교체됨
         NewsArticle articleA = createAndSaveArticle();

@@ -45,7 +45,7 @@ public class SummaryPersistenceService {
      * @param clusterId 클러스터 ID
      * @param title 대표 제목
      * @param summary Lead 요약
-     * @param expectedArticleIds 조회 시점의 기사 ID 목록 (CAS 검증용)
+     * @param expectedArticleIds 조회 시점의 기사 ID 목록 (기사 집합 변경 감지용)
      * @throws StaleClusterException 기사 집합이 변경된 경우
      */
     @Transactional
@@ -66,7 +66,7 @@ public class SummaryPersistenceService {
     /**
      * 다건 클러스터의 AI 요약 생성 성공을 반영한다 (섹션 포함)
      *
-     * 저장 순서: CAS(Compare-And-Swap, 비교 후 교체) 검증 → 기존 섹션 삭제 → 새 섹션/출처 저장 → 마지막에 GENERATED 마킹.
+     * 저장 순서: 기사 집합 변경 감지 → 기존 섹션 삭제 → 새 섹션/출처 저장 → 마지막에 GENERATED 마킹.
      * 저장 직전 기사 집합이 변경되었으면 StaleClusterException을 던진다.
      * 유효한 출처가 없는 섹션은 저장하지 않는다(드롭).
      * 모든 섹션이 드롭되면 예외를 던진다
@@ -75,7 +75,7 @@ public class SummaryPersistenceService {
      * @param title 대표 제목
      * @param leadSummary Lead 요약
      * @param sections AI가 생성한 섹션 목록 (nullable)
-     * @param articleIds 프롬프트에 전달된 기사 ID 목록 (인덱스 매핑 + CAS 검증용)
+     * @param articleIds 프롬프트에 전달된 기사 ID 목록 (인덱스 매핑 + 기사 집합 변경 감지용)
      * @throws StaleClusterException 기사 집합이 변경된 경우
      */
     @Transactional
