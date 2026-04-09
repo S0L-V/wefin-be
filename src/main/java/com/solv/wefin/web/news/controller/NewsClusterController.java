@@ -1,5 +1,6 @@
 package com.solv.wefin.web.news.controller;
 
+import com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterDetailResult;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterFeedResult;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -35,9 +37,15 @@ public class NewsClusterController {
     /**
      * 뉴스 클러스터 피드 목록을 조회한다.
      *
+     * 필터링 방법 (tab과 tagType/tagCodes는 상호 배타적):
+     * - tab: 홈 카테고리 탭 (ALL/FINANCE/TECH/INDUSTRY/ENERGY/BIO/CRYPTO)
+     * - tagType + tagCodes: 특정 태그들로 필터 (SECTOR/STOCK + 태그코드 목록)
+     *
      * @param cursor "timestamp_id" 형식의 커서 (첫 페이지면 null)
      * @param pageSize 페이지 크기 (기본 10, 최대 50)
-     * @param tab 카테고리 탭 (ALL/FINANCE/TECH/INDUSTRY/ENERGY/BIO/CRYPTO)
+     * @param tab 카테고리 탭 (기본 ALL)
+     * @param tagType 태그 유형 (SECTOR 또는 STOCK)
+     * @param tagCodes 태그 코드 목록 (tagType과 함께 사용)
      * @param sort 정렬 기준 (publishedAt 또는 updatedAt, 기본 publishedAt)
      * @param userId 사용자 ID (비인증 시 null)
      */
@@ -46,11 +54,39 @@ public class NewsClusterController {
             @RequestParam(name = "cursor", required = false) String cursor,
             @RequestParam(name = "size", defaultValue = "" + DEFAULT_PAGE_SIZE) int pageSize,
             @RequestParam(name = "tab", defaultValue = "ALL") String tab,
+            @RequestParam(name = "tagType", required = false) String tagType,
+            @RequestParam(name = "tagCodes", required = false) List<String> tagCodes,
             @RequestParam(name = "sort", defaultValue = "publishedAt") String sort,
             @AuthenticationPrincipal UUID userId
     ) {
         if (!VALID_SORT_VALUES.contains(sort)) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "지원하지 않는 sort 값입니다: " + sort);
+            throw new BusinessException(ErrorCode.FEED_SORT_UNSUPPORTED);
+        }
+
+        boolean hasTagType = tagType != null && !tagType.isBlank();
+        boolean hasTagCodes = tagCodes != null && !tagCodes.isEmpty();
+        if (hasTagType != hasTagCodes) {
+            throw new BusinessException(ErrorCode.FEED_TAG_PARAMS_INCOMPLETE);
+        }
+
+        TagType resolvedTagType = null;
+        List<String> resolvedTagCodes = null;
+        if (hasTagType) {
+            resolvedTagType = TagType.fromStringOrNull(tagType);
+            if (resolvedTagType == null || !resolvedTagType.isFilterable()) {
+                throw new BusinessException(ErrorCode.FEED_TAG_TYPE_UNSUPPORTED);
+            }
+            if (!"ALL".equalsIgnoreCase(tab)) {
+                throw new BusinessException(ErrorCode.FEED_TAG_AND_TAB_CONFLICT);
+            }
+            resolvedTagCodes = tagCodes.stream()
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .distinct()
+                    .toList();
+            if (resolvedTagCodes.isEmpty()) {
+                throw new BusinessException(ErrorCode.FEED_TAG_CODES_EMPTY);
+            }
         }
 
         pageSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
@@ -73,7 +109,8 @@ public class NewsClusterController {
         }
 
         ClusterFeedResult result = newsClusterQueryService.getFeed(
-                cursorTime, cursorId, pageSize, userId, tab, sort);
+                cursorTime, cursorId, pageSize, userId, tab, sort,
+                resolvedTagType, resolvedTagCodes);
 
         return ApiResponse.success(ClusterFeedResponse.from(result));
     }

@@ -115,6 +115,15 @@ public enum ErrorCode {
     SUMMARY_ARTICLE_MISMATCH(500, "프롬프트 기사 수와 실제 조회 기사 수가 불일치합니다."),
     CLUSTER_NOT_FOUND(404, "클러스터를 찾을 수 없습니다."),
 
+    // Feed Filter
+    FEED_TAG_PARAMS_INCOMPLETE(400, "tagType과 tagCodes는 반드시 함께 제공해야 합니다."),
+    FEED_TAG_TYPE_UNSUPPORTED(400, "지원하지 않는 tagType입니다."),
+    FEED_TAG_AND_TAB_CONFLICT(400, "tab과 tagType/tagCodes는 동시에 사용할 수 없습니다."),
+    FEED_TAG_CODES_EMPTY(400, "유효한 tagCodes가 없습니다."),
+    FEED_SORT_UNSUPPORTED(400, "지원하지 않는 정렬 기준입니다."),
+    TAG_TYPE_UNSUPPORTED(400, "지원하지 않는 태그 유형입니다."),
+    TAG_LIMIT_INVALID(400, "limit은 0 이상이어야 합니다."),
+
     // GameRoom
     ROOM_NOT_FOUND(404, "게임장을 찾을 수 없습니다."),
     ROOM_ALREADY_EXISTS(409, "이미 진행 중이거나 대기 중인 게임방이 있습니다."),
