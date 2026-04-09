@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -78,7 +79,7 @@ class StockSearchServiceTest {
                 .willReturn(Optional.of(participant));
         given(gameTurnRepository.findByGameRoomAndStatus(gameRoom, TurnStatus.ACTIVE))
                 .willReturn(Optional.of(activeTurn));
-        given(stockDailyRepository.searchByKeywordAndTradeDate("%삼성%", TURN_DATE))
+        given(stockDailyRepository.searchByKeywordAndTradeDate(eq("%삼성%"), eq(TURN_DATE), any(Pageable.class)))
                 .willReturn(List.of(daily1, daily2));
 
         // When
@@ -90,7 +91,7 @@ class StockSearchServiceTest {
         assertThat(result.get(0).getOpenPrice()).isEqualTo(new BigDecimal("71000"));
         assertThat(result.get(1).getStockInfo().getStockName()).isEqualTo("삼성SDI");
 
-        verify(stockDailyRepository).searchByKeywordAndTradeDate("%삼성%", TURN_DATE);
+        verify(stockDailyRepository).searchByKeywordAndTradeDate(eq("%삼성%"), eq(TURN_DATE), any(Pageable.class));
     }
 
     @Test
@@ -108,7 +109,7 @@ class StockSearchServiceTest {
                 .willReturn(Optional.of(participant));
         given(gameTurnRepository.findByGameRoomAndStatus(gameRoom, TurnStatus.ACTIVE))
                 .willReturn(Optional.of(activeTurn));
-        given(stockDailyRepository.searchByKeywordAndTradeDate("%없는종목%", TURN_DATE))
+        given(stockDailyRepository.searchByKeywordAndTradeDate(eq("%없는종목%"), eq(TURN_DATE), any(Pageable.class)))
                 .willReturn(Collections.emptyList());
 
         // When
@@ -136,7 +137,7 @@ class StockSearchServiceTest {
 
         // 방을 못 찾았으니 턴 조회, 종목 검색은 호출되면 안 된다
         verify(gameTurnRepository, never()).findByGameRoomAndStatus(any(), any());
-        verify(stockDailyRepository, never()).searchByKeywordAndTradeDate(any(), any());
+        verify(stockDailyRepository, never()).searchByKeywordAndTradeDate(any(), any(), any());
     }
 
     @Test
@@ -163,7 +164,7 @@ class StockSearchServiceTest {
                 });
 
         // 턴이 없으니 종목 검색은 호출되면 안 된다
-        verify(stockDailyRepository, never()).searchByKeywordAndTradeDate(any(), any());
+        verify(stockDailyRepository, never()).searchByKeywordAndTradeDate(any(), any(), any());
     }
 
     @Test
@@ -188,7 +189,39 @@ class StockSearchServiceTest {
                 });
 
         verify(gameTurnRepository, never()).findByGameRoomAndStatus(any(), any());
-        verify(stockDailyRepository, never()).searchByKeywordAndTradeDate(any(), any());
+        verify(stockDailyRepository, never()).searchByKeywordAndTradeDate(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("종목 검색 — 공백만 있는 keyword는 빈 리스트 반환, Repository 호출 안 함")
+    void searchStocks_blankKeyword() {
+        // Given — keyword가 공백 문자열
+        UUID roomId = UUID.fromString("00000000-0000-4000-a000-000000000010");
+
+        // When
+        List<StockDaily> result = stockSearchService.searchStocks(roomId, TEST_USER_ID, "   ");
+
+        // Then — 빈 리스트 반환, 그리고 그 어떤 Repository도 호출되지 않음
+        // (방/참가자/턴 조회조차 없이 즉시 종료되어야 함)
+        assertThat(result).isEmpty();
+        verify(gameRoomRepository, never()).findById(any());
+        verify(gameParticipantRepository, never()).findByGameRoomAndUserId(any(), any());
+        verify(gameTurnRepository, never()).findByGameRoomAndStatus(any(), any());
+        verify(stockDailyRepository, never()).searchByKeywordAndTradeDate(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("종목 검색 — null keyword도 빈 리스트 반환")
+    void searchStocks_nullKeyword() {
+        // Given — keyword가 null
+        UUID roomId = UUID.fromString("00000000-0000-4000-a000-000000000010");
+
+        // When
+        List<StockDaily> result = stockSearchService.searchStocks(roomId, TEST_USER_ID, null);
+
+        // Then
+        assertThat(result).isEmpty();
+        verify(stockDailyRepository, never()).searchByKeywordAndTradeDate(any(), any(), any());
     }
 
     // === 헬퍼 메서드 ===
