@@ -50,12 +50,22 @@ public class GroupMember {
         this.status = status;
     }
 
-    public static GroupMember createLeader(User user, Group group, GroupMemberStatus status) {
-        return new GroupMember(user, group, GroupMemberRole.LEADER, status);
+    public static GroupMember createLeader(User user, Group group) {
+        return GroupMember.builder()
+                .user(user)
+                .group(group)
+                .role(GroupMemberRole.LEADER)
+                .status(GroupMemberStatus.ACTIVE)
+                .build();
     }
 
-    public static GroupMember createMember(User user, Group group, GroupMemberStatus status) {
-        return new GroupMember(user, group, GroupMemberRole.MEMBER, status);
+    public static GroupMember createMember(User user, Group group) {
+        return GroupMember.builder()
+                .user(user)
+                .group(group)
+                .role(GroupMemberRole.MEMBER)
+                .status(GroupMemberStatus.ACTIVE)
+                .build();
     }
 
     @PrePersist

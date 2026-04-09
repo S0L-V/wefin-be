@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.OffsetDateTime;
+
 @Entity
 @Table(name = "groups")
 @Getter
@@ -24,6 +26,9 @@ public class Group {
     @Column(name = "group_type", nullable = false, length = 20)
     private GroupType groupType;
 
+    @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
+    private OffsetDateTime createdAt;
+
     @Builder
     private Group(String name, GroupType groupType) {
         this.name = name;
@@ -31,11 +36,17 @@ public class Group {
     }
 
     public static Group createHomeGroup(String name) {
-        return new Group(name, GroupType.HOME);
+        return Group.builder()
+                .name(name)
+                .groupType(GroupType.HOME)
+                .build();
     }
 
     public static Group createSharedGroup(String name) {
-        return new Group(name, GroupType.SHARED);
+        return Group.builder()
+                .name(name)
+                .groupType(GroupType.SHARED)
+                .build();
     }
 
     public boolean isHomeGroup() {

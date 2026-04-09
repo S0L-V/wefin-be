@@ -39,8 +39,7 @@ public class GroupService {
 
         GroupMember groupMember = GroupMember.createLeader(
                 user,
-                savedGroup,
-                GroupMember.GroupMemberStatus.ACTIVE
+                savedGroup
         );
 
         groupMemberRepository.save(groupMember);
@@ -150,8 +149,7 @@ public class GroupService {
 
         GroupMember newMember = GroupMember.createMember(
                 user,
-                targetGroup,
-                GroupMember.GroupMemberStatus.ACTIVE
+                targetGroup
         );
 
         groupMemberRepository.save(newMember);
