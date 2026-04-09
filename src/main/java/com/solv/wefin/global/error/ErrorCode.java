@@ -45,6 +45,12 @@ public enum ErrorCode {
     AUTH_INVALID_TOKEN(401, "유효하지 않은 인증 토큰입니다."),
     AUTH_UNAUTHORIZED(401, "인증이 필요합니다."),
 
+    // Payment
+    PLAN_NOT_FOUND(404, "구독 상품을 찾을 수 없습니다."),
+    PLAN_INACTIVE(400, "비활성화된 구독 상품입니다."),
+    ACTIVE_SUBSCRIPTION_ALREADY_EXISTS(409, "이미 활성 구독이 존재합니다."),
+    INVALID_PROVIDER(400, "지원하지 않는 결제사입니다."),
+
     // Order - BUY
     ORDER_INSUFFICIENT_BALANCE(400, "예수금이 부족합니다."),
     ORDER_INVALID_QUANTITY(400, "주문 수량은 1 이상이어야 합니다."),
