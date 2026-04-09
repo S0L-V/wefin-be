@@ -63,7 +63,8 @@ public class NewsClusterController {
             throw new BusinessException(ErrorCode.FEED_SORT_UNSUPPORTED);
         }
 
-        boolean hasTagType = tagType != null && !tagType.isBlank();
+        String normalizedTagType = tagType == null ? null : tagType.trim();
+        boolean hasTagType = normalizedTagType != null && !normalizedTagType.isEmpty();
         boolean hasTagCodes = tagCodes != null && !tagCodes.isEmpty();
         if (hasTagType != hasTagCodes) {
             throw new BusinessException(ErrorCode.FEED_TAG_PARAMS_INCOMPLETE);
@@ -72,7 +73,7 @@ public class NewsClusterController {
         TagType resolvedTagType = null;
         List<String> resolvedTagCodes = null;
         if (hasTagType) {
-            resolvedTagType = TagType.fromStringOrNull(tagType);
+            resolvedTagType = TagType.fromStringOrNull(normalizedTagType);
             if (resolvedTagType == null || !resolvedTagType.isFilterable()) {
                 throw new BusinessException(ErrorCode.FEED_TAG_TYPE_UNSUPPORTED);
             }
