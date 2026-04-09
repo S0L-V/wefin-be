@@ -9,6 +9,7 @@ import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.news.dto.response.ClusterDetailResponse;
 import com.solv.wefin.web.news.dto.response.ClusterFeedResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -36,7 +37,7 @@ public class NewsClusterController {
      * @param pageSize 페이지 크기 (기본 10, 최대 50)
      * @param tab 카테고리 탭 (ALL/FINANCE/TECH/INDUSTRY/ENERGY/BIO/CRYPTO)
      * @param sort 정렬 기준 (publishedAt 또는 updatedAt, 기본 publishedAt)
-     * @param userId 사용자 ID (인증 시 헤더에서 주입, 없으면 null)
+     * @param userId 사용자 ID (비인증 시 null)
      */
     @GetMapping
     public ApiResponse<ClusterFeedResponse> getFeed(
@@ -44,7 +45,7 @@ public class NewsClusterController {
             @RequestParam(name = "size", defaultValue = "" + DEFAULT_PAGE_SIZE) int pageSize,
             @RequestParam(name = "tab", defaultValue = "ALL") String tab,
             @RequestParam(name = "sort", defaultValue = "publishedAt") String sort,
-            @RequestHeader(name = "X-User-Id", required = false) UUID userId
+            @AuthenticationPrincipal UUID userId
     ) {
         pageSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
 
@@ -76,12 +77,12 @@ public class NewsClusterController {
      * 섹션(소제목 + 단락)과 섹션별 근거 기사 출처를 포함한다
      *
      * @param clusterId 클러스터 ID
-     * @param userId 사용자 ID (인증 시 헤더에서 주입, 없으면 null)
+     * @param userId 사용자 ID (비인증 시 null)
      */
     @GetMapping("/{clusterId}")
     public ApiResponse<ClusterDetailResponse> getDetail(
             @PathVariable Long clusterId,
-            @RequestHeader(name = "X-User-Id", required = false) UUID userId
+            @AuthenticationPrincipal UUID userId
     ) {
         ClusterDetailResult result = newsClusterQueryService.getDetail(clusterId, userId);
         return ApiResponse.success(ClusterDetailResponse.from(result));
