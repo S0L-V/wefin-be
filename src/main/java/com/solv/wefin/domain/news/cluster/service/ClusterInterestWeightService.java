@@ -5,11 +5,9 @@ import com.solv.wefin.domain.news.article.repository.NewsArticleTagRepository;
 import com.solv.wefin.domain.news.cluster.entity.NewsClusterArticle;
 import com.solv.wefin.domain.news.cluster.entity.UserNewsClusterFeedback.FeedbackType;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepository;
-import com.solv.wefin.domain.user.entity.UserInterest;
 import com.solv.wefin.domain.user.repository.UserInterestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,18 +59,7 @@ public class ClusterInterestWeightService {
                 .collect(Collectors.toSet());
 
         for (TagKey key : tagKeys) {
-            int updated = userInterestRepository.addWeightAtomically(
-                    userId, key.type(), key.code(), delta);
-
-            if (updated == 0) {
-                try {
-                    userInterestRepository.saveAndFlush(
-                            UserInterest.create(userId, key.type(), key.code(), delta));
-                } catch (DataIntegrityViolationException e) {
-                    userInterestRepository.addWeightAtomically(
-                            userId, key.type(), key.code(), delta);
-                }
-            }
+            userInterestRepository.upsertWeight(userId, key.type(), key.code(), delta);
         }
 
         log.info("피드백 가중치 업데이트 — userId: {}, clusterId: {}, type: {}, 태그 수: {}",

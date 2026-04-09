@@ -16,15 +16,18 @@ public interface UserInterestRepository extends JpaRepository<UserInterest, Long
             UUID userId, String interestType, String interestValue);
 
     /**
-     * 가중치를 원자적으로 증감한다. Lost Update 방지
-     *
-     * @return 업데이트된 행 수 (0이면 해당 관심사가 없음)
+     * 가중치를 원자적으로 upsert한다.
+     * 존재하면 weight를 증감하고, 없으면 새로 생성한다.
+     * PostgreSQL INSERT ON CONFLICT DO UPDATE로 단일 쿼리 실행
      */
     @Modifying
-    @Query("UPDATE UserInterest u SET u.weight = COALESCE(u.weight, 0) + :delta " +
-            "WHERE u.userId = :userId AND u.interestType = :type AND u.interestValue = :value")
-    int addWeightAtomically(@Param("userId") UUID userId,
-                            @Param("type") String type,
-                            @Param("value") String value,
-                            @Param("delta") BigDecimal delta);
+    @Query(value = "INSERT INTO user_interest (user_id, interest_type, interest_value, weight, created_at) " +
+            "VALUES (:userId, :type, :value, :delta, NOW()) " +
+            "ON CONFLICT (user_id, interest_type, interest_value) " +
+            "DO UPDATE SET weight = COALESCE(user_interest.weight, 0) + :delta",
+            nativeQuery = true)
+    void upsertWeight(@Param("userId") UUID userId,
+                      @Param("type") String type,
+                      @Param("value") String value,
+                      @Param("delta") BigDecimal delta);
 }
