@@ -85,6 +85,10 @@ public class GroupMember {
         this.leftAt = OffsetDateTime.now();
     }
 
+    public void changeRoleToLeader() {
+        this.role = GroupMemberRole.LEADER;
+    }
+
     public boolean isActive() {
         return this.status == GroupMemberStatus.ACTIVE;
     }

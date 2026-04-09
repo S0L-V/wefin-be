@@ -4,6 +4,7 @@ import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.group.dto.GroupInviteInfo;
 import com.solv.wefin.domain.group.dto.GroupMemberInfo;
+import com.solv.wefin.domain.group.dto.LeaveGroupInfo;
 import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.entity.GroupInvite;
 import com.solv.wefin.domain.group.entity.GroupMember;
@@ -283,6 +284,251 @@ class GroupServiceTest {
             verify(groupMemberRepository, never()).countByGroupAndStatus(any(), any());
             verify(groupMemberRepository, never()).findByUser_UserIdAndGroup_Id(any(), anyLong());
             verify(groupMemberRepository, never()).save(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("leaveGroup")
+    class LeaveGroupTest {
+
+        @Test
+        @DisplayName("단체 그룹 탈퇴 시 홈 그룹으로 전환된다")
+        void leaveGroup_success() throws Exception {
+            // given
+            UUID userId = UUID.randomUUID();
+
+            Group sharedGroup = createGroup(1L, "공유 그룹", GroupType.SHARED);
+            Group homeGroup = createGroup(100L, "홈 그룹", GroupType.HOME);
+
+            User user = createUser(userId, "test@test.com", "유저", "pw");
+
+            GroupMember leavingMember = createGroupMember(
+                    10L,
+                    user,
+                    sharedGroup,
+                    GroupMember.GroupMemberRole.LEADER,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            );
+
+            GroupMember homeGroupMember = createGroupMember(
+                    20L,
+                    user,
+                    homeGroup,
+                    GroupMember.GroupMemberRole.LEADER,
+                    GroupMember.GroupMemberStatus.INACTIVE
+            );
+
+            when(groupRepository.findByIdForUpdate(1L))
+                    .thenReturn(Optional.of(sharedGroup));
+            when(groupMemberRepository.findByUser_UserIdAndGroup_Id(userId, 1L))
+                    .thenReturn(Optional.of(leavingMember));
+            when(groupMemberRepository.countByGroupAndStatus(
+                    sharedGroup,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            )).thenReturn(0L);
+            when(userRepository.findById(userId))
+                    .thenReturn(Optional.of(user));
+            when(groupMemberRepository.findByUser_UserIdAndGroup_GroupType(userId, GroupType.HOME))
+                    .thenReturn(Optional.of(homeGroupMember));
+
+            // when
+            LeaveGroupInfo result = groupService.leaveGroup(1L, userId);
+
+            // then
+            assertAll(
+                    () -> assertThat(result.leftGroupId()).isEqualTo(1L),
+                    () -> assertThat(result.currentGroupId()).isEqualTo(100L),
+                    () -> assertThat(leavingMember.isActive()).isFalse(),
+                    () -> assertThat(homeGroupMember.isActive()).isTrue()
+            );
+        }
+
+        @Test
+        @DisplayName("리더가 탈퇴하면 남은 ACTIVE 멤버에게 리더를 위임한다")
+        void leaveGroup_success_when_leader_transfers_leadership() throws Exception {
+            // given
+            UUID userId = UUID.randomUUID();
+            UUID memberUserId = UUID.randomUUID();
+
+            Group sharedGroup = createGroup(1L, "공유 그룹", GroupType.SHARED);
+            Group homeGroup = createGroup(100L, "홈 그룹", GroupType.HOME);
+
+            User leaderUser = createUser(userId, "leader@test.com", "리더", "pw");
+            User memberUser = createUser(memberUserId, "member@test.com", "멤버", "pw");
+
+            GroupMember leavingLeader = createGroupMember(
+                    10L,
+                    leaderUser,
+                    sharedGroup,
+                    GroupMember.GroupMemberRole.LEADER,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            );
+
+            GroupMember remainingMember = createGroupMember(
+                    11L,
+                    memberUser,
+                    sharedGroup,
+                    GroupMember.GroupMemberRole.MEMBER,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            );
+
+            GroupMember homeGroupMember = createGroupMember(
+                    20L,
+                    leaderUser,
+                    homeGroup,
+                    GroupMember.GroupMemberRole.LEADER,
+                    GroupMember.GroupMemberStatus.INACTIVE
+            );
+
+            when(groupRepository.findByIdForUpdate(1L))
+                    .thenReturn(Optional.of(sharedGroup));
+            when(groupMemberRepository.findByUser_UserIdAndGroup_Id(userId, 1L))
+                    .thenReturn(Optional.of(leavingLeader));
+            when(groupMemberRepository.countByGroupAndStatus(
+                    sharedGroup,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            )).thenReturn(1L);
+            when(userRepository.findById(userId))
+                    .thenReturn(Optional.of(leaderUser));
+            when(groupMemberRepository.findFirstByGroupAndStatusAndUser_UserIdNotOrderByIdAsc(
+                    sharedGroup,
+                    GroupMember.GroupMemberStatus.ACTIVE,
+                    userId
+            )).thenReturn(Optional.of(remainingMember));
+            when(groupMemberRepository.findByUser_UserIdAndGroup_GroupType(userId, GroupType.HOME))
+                    .thenReturn(Optional.of(homeGroupMember));
+
+            // when
+            LeaveGroupInfo result = groupService.leaveGroup(1L, userId);
+
+            // then
+            assertAll(
+                    () -> assertThat(result.leftGroupId()).isEqualTo(1L),
+                    () -> assertThat(result.currentGroupId()).isEqualTo(100L),
+                    () -> assertThat(leavingLeader.isActive()).isFalse(),
+                    () -> assertThat(homeGroupMember.isActive()).isTrue(),
+                    () -> assertThat(remainingMember.isLeader()).isTrue()
+            );
+        }
+
+        @Test
+        @DisplayName("홈 그룹은 탈퇴할 수 없다")
+        void leaveGroup_fail_when_home_group() throws Exception {
+            // given
+            UUID userId = UUID.randomUUID();
+            Group homeGroup = createGroup(1L, "홈 그룹", GroupType.HOME);
+
+            when(groupRepository.findByIdForUpdate(1L))
+                    .thenReturn(Optional.of(homeGroup));
+
+            // when
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> groupService.leaveGroup(1L, userId)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.GROUP_HOME_LEAVE_NOT_ALLOWED);
+
+            verify(groupMemberRepository, never()).findByUser_UserIdAndGroup_Id(any(), anyLong());
+            verify(groupMemberRepository, never()).findByUser_UserIdAndGroup_GroupType(any(), any());
+        }
+
+        @Test
+        @DisplayName("이미 비활성화된 그룹 멤버는 탈퇴할 수 없다")
+        void leaveGroup_fail_when_member_already_inactive() throws Exception {
+            // given
+            UUID userId = UUID.randomUUID();
+
+            Group sharedGroup = createGroup(1L, "공유 그룹", GroupType.SHARED);
+            User user = createUser(userId, "test@test.com", "유저", "pw");
+
+            GroupMember inactiveMember = createGroupMember(
+                    10L,
+                    user,
+                    sharedGroup,
+                    GroupMember.GroupMemberRole.MEMBER,
+                    GroupMember.GroupMemberStatus.INACTIVE
+            );
+
+            when(groupRepository.findByIdForUpdate(1L))
+                    .thenReturn(Optional.of(sharedGroup));
+            when(groupMemberRepository.findByUser_UserIdAndGroup_Id(userId, 1L))
+                    .thenReturn(Optional.of(inactiveMember));
+
+            // when
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> groupService.leaveGroup(1L, userId)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.GROUP_MEMBER_ALREADY_INACTIVE);
+
+            verify(groupMemberRepository, never()).countByGroupAndStatus(any(), any());
+            verify(groupMemberRepository, never()).findByUser_UserIdAndGroup_GroupType(any(), any());
+        }
+
+        @Test
+        @DisplayName("홈 그룹 멤버십이 없으면 홈 그룹을 새로 생성한 뒤 전환한다")
+        void leaveGroup_success_when_home_membership_missing() throws Exception {
+            // given
+            UUID userId = UUID.randomUUID();
+
+            Group sharedGroup = createGroup(1L, "공유 그룹", GroupType.SHARED);
+            Group createdHomeGroup = createGroup(100L, "유저의 그룹", GroupType.HOME);
+
+            User user = createUser(userId, "test@test.com", "유저", "pw");
+
+            GroupMember leavingMember = createGroupMember(
+                    10L,
+                    user,
+                    sharedGroup,
+                    GroupMember.GroupMemberRole.LEADER,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            );
+
+            GroupMember createdHomeGroupMember = createGroupMember(
+                    20L,
+                    user,
+                    createdHomeGroup,
+                    GroupMember.GroupMemberRole.LEADER,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            );
+
+            when(groupRepository.findByIdForUpdate(1L))
+                    .thenReturn(Optional.of(sharedGroup));
+            when(groupMemberRepository.findByUser_UserIdAndGroup_Id(userId, 1L))
+                    .thenReturn(Optional.of(leavingMember));
+            when(groupMemberRepository.countByGroupAndStatus(
+                    sharedGroup,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            )).thenReturn(0L);
+            when(userRepository.findById(userId))
+                    .thenReturn(Optional.of(user));
+
+            when(groupMemberRepository.findByUser_UserIdAndGroup_GroupType(userId, GroupType.HOME))
+                    .thenReturn(Optional.empty())
+                    .thenReturn(Optional.of(createdHomeGroupMember));
+
+            when(groupRepository.save(any(Group.class)))
+                    .thenReturn(createdHomeGroup);
+
+            // when
+            LeaveGroupInfo result = groupService.leaveGroup(1L, userId);
+
+            // then
+            assertAll(
+                    () -> assertThat(result.leftGroupId()).isEqualTo(1L),
+                    () -> assertThat(result.currentGroupId()).isEqualTo(100L),
+                    () -> assertThat(leavingMember.isActive()).isFalse(),
+                    () -> assertThat(createdHomeGroupMember.isActive()).isTrue()
+            );
+
+            verify(groupRepository).save(any(Group.class));
+            verify(groupMemberRepository).save(any(GroupMember.class));
         }
     }
 

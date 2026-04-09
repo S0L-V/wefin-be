@@ -13,16 +13,19 @@ public enum ErrorCode {
     // Group
     GROUP_NOT_FOUND(404, "그룹을 찾을 수 없습니다."),
     GROUP_MEMBER_FORBIDDEN(403, "해당 그룹의 멤버만 조회할 수 있습니다."),
+    GROUP_MEMBER_NOT_FOUND(404, "그룹 멤버를 찾을 수 없습니다."),
+    GROUP_MEMBER_ALREADY_INACTIVE(400, "이미 비활성화된 그룹 멤버입니다."),
     GROUP_INVITE_FORBIDDEN(403, "해당 그룹의 초대 코드를 생성할 권한이 없습니다."),
     GROUP_INVITE_NOT_FOUND(404, "초대 코드를 찾을 수 없습니다."),
     GROUP_INVITE_EXPIRED(400, "만료된 초대 코드입니다."),
     GROUP_INVITE_ALREADY_USED(400, "이미 사용된 초대 코드입니다."),
     GROUP_FULL(400, "그룹 인원이 가득 찼습니다."),
-    ALREADY_JOINED_GROUP(409, "이미 참여한 그룹입니다."),
+    GROUP_ALREADY_JOINED(409, "이미 참여한 그룹입니다."),
     GROUP_HOME_INVITE_NOT_ALLOWED(400, "홈 그룹에는 초대 코드를 생성할 수 없습니다."),
     GROUP_HOME_JOIN_NOT_ALLOWED(400, "홈 그룹에는 참여할 수 없습니다."),
     GROUP_HOME_LEAVE_NOT_ALLOWED(400, "홈 그룹은 탈퇴할 수 없습니다."),
-    GROUP_HOME_GROUP_NOT_FOUND(404, "홈 그룹을 찾을 수 없습니다."),
+    GROUP_HOME_MEMBERSHIP_NOT_FOUND(404, "홈 그룹 멤버십을 찾을 수 없습니다."),
+    GROUP_LEADER_TRANSFER_FAILED(500, "리더 권한 위임에 실패했습니다."),
 
     // Chat
     CHAT_MESSAGE_EMPTY(400, "메시지 내용은 비어 있을 수 없습니다."),

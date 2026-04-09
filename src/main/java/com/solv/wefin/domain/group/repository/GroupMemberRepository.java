@@ -28,6 +28,12 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             GroupType groupType
     );
 
+    Optional<GroupMember> findFirstByGroupAndStatusAndUser_UserIdNotOrderByIdAsc(
+            Group group,
+            GroupMember.GroupMemberStatus status,
+            UUID userId
+    );
+
     boolean existsByUser_UserIdAndGroupAndStatus(
             UUID userId,
             Group group,
