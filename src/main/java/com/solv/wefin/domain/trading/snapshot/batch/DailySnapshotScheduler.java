@@ -21,7 +21,7 @@ public class DailySnapshotScheduler {
 
 	private final AtomicBoolean running = new AtomicBoolean(false);
 
-	@Scheduled(cron = "0 40 15 * * MON-FRI")
+	@Scheduled(cron = "0 40 15 * * MON-FRI", zone = "Asia/Seoul")
 	public void createDailySnapshots() {
 		if (!running.compareAndSet(false, true)) {
 			log.info("스냅샷 배치 이미 실행 중, 스킵");

@@ -51,11 +51,11 @@ public class SnapshotService {
 	 */
 	@Transactional(readOnly = true)
 	public List<DailySnapshot> getAssetHistory(Long virtualAccountId, LocalDate from, LocalDate to) {
-		if (from == null) {
-			from = LocalDate.now().minusDays(30);
-		}
 		if (to == null) {
 			to = LocalDate.now();
+		}
+		if (from == null) {
+			from = to.minusDays(30);
 		}
 		if (from.isAfter(to)) {
 			throw new BusinessException(ErrorCode.MARKET_INVALID_DATE);
