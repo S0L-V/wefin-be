@@ -6,8 +6,14 @@ import com.solv.wefin.domain.game.room.dto.RoomDetailInfo;
 import com.solv.wefin.domain.game.room.dto.RoomListInfo;
 import com.solv.wefin.domain.game.room.dto.StartRoomInfo;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
+import com.solv.wefin.domain.auth.entity.User;
+import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.game.room.service.GameRoomService;
+import com.solv.wefin.domain.group.entity.GroupMember;
+import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.global.common.ApiResponse;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.game.room.dto.LeaveRoomResponse;
 import com.solv.wefin.web.game.room.dto.request.CreateRoomRequest;
 import com.solv.wefin.web.game.room.dto.response.*;
@@ -15,30 +21,32 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/rooms")
 @RequiredArgsConstructor
-public class GameRoomController {
+public class
+GameRoomController {
 
     private final GameRoomService gameRoomService;
-
-    //로그인 구현 전 묵데이터
-    //private static final UUID TEMP_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000001");
-    private static final Long TEMP_GROUP_ID = 1L;
+    private final GroupMemberRepository groupMemberRepository;
+    private final UserRepository userRepository;
 
     @PostMapping
     public ResponseEntity<ApiResponse<CreateRoomResponse>> createRoom(
-            @RequestHeader("X-User-Id") UUID userId, @Valid @RequestBody CreateRoomRequest request) {
+            @AuthenticationPrincipal UUID userId, @Valid @RequestBody CreateRoomRequest request) {
 
+        Long groupId = getActiveGroupId(userId);
         CreateRoomCommand command = new CreateRoomCommand(
                 request.getSeedMoney(), request.getPeriodMonths(), request.getMoveDays());
-        GameRoom gameRoom = gameRoomService.createRoom(userId, TEMP_GROUP_ID, command);
+        GameRoom gameRoom = gameRoomService.createRoom(userId, groupId, command);
         CreateRoomResponse response = CreateRoomResponse.from(gameRoom);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(201, response));
@@ -50,8 +58,9 @@ public class GameRoomController {
      get /api/rooms
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<List<RoomListResponse>>> getRooms(@RequestHeader("X-User-Id") UUID userId) {
-        List<RoomListInfo> rooms = gameRoomService.getRooms(TEMP_GROUP_ID, userId);
+    public ResponseEntity<ApiResponse<List<RoomListResponse>>> getRooms(@AuthenticationPrincipal UUID userId) {
+        Long groupId = getActiveGroupId(userId);
+        List<RoomListInfo> rooms = gameRoomService.getRooms(groupId, userId);
         List<RoomListResponse> response = rooms.stream().map(
                 r -> RoomListResponse.from(r.room(), r.playerCount())).collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -62,8 +71,13 @@ public class GameRoomController {
 
         RoomDetailInfo detail = gameRoomService.getRoomDetail(roomId);
 
+        List<UUID> userIds = detail.participants().stream()
+                .map(GameParticipant::getUserId).toList();
+        Map<UUID, String> nicknameMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getUserId, User::getNickname));
+
         List<ParticipantDetailDto> participantDtos = detail.participants().stream().map(
-                p -> ParticipantDetailDto.from(p, "묵데이터유저")
+                p -> ParticipantDetailDto.from(p, nicknameMap.getOrDefault(p.getUserId(), "알 수 없음"))
         ).collect(Collectors.toList());
 
         RoomDetailResponse response = RoomDetailResponse.from(detail.room(), participantDtos);
@@ -72,7 +86,7 @@ public class GameRoomController {
 
     // 게임방 입장
     @PostMapping("/{roomId}/join")
-    public ResponseEntity<ApiResponse<JoinRoomResponse>> joinRoom(@PathVariable UUID roomId, @RequestHeader("X-User-Id") UUID userId) {
+    public ResponseEntity<ApiResponse<JoinRoomResponse>> joinRoom(@PathVariable UUID roomId, @AuthenticationPrincipal UUID userId) {
 
         GameParticipant participant = gameRoomService.joinRoom(roomId, userId);
         JoinRoomResponse response = JoinRoomResponse.from(participant);
@@ -82,7 +96,7 @@ public class GameRoomController {
 
     //게임방 퇴장
     @DeleteMapping("/{roomId}/leave")
-    public ResponseEntity<ApiResponse<LeaveRoomResponse>> leaveRoom(@PathVariable UUID roomId, @RequestHeader("X-User-Id") UUID userId) {
+    public ResponseEntity<ApiResponse<LeaveRoomResponse>> leaveRoom(@PathVariable UUID roomId, @AuthenticationPrincipal UUID userId) {
 
         gameRoomService.leaveRoom(roomId, userId);
         LeaveRoomResponse response = LeaveRoomResponse.success();
@@ -93,16 +107,20 @@ public class GameRoomController {
     //게임 시작
     @PostMapping("/{roomId}/start")
     public ResponseEntity<ApiResponse<StartRoomResponse>> startRoom(
-            @PathVariable UUID roomId, @RequestHeader("X-User-Id") UUID userId) {
+            @PathVariable UUID roomId, @AuthenticationPrincipal UUID userId) {
 
         StartRoomInfo info = gameRoomService.startRoom(roomId, userId);
-
-        TurnDetailDto turnDto = TurnDetailDto.from(info.firstTurn());
         StartRoomResponse response = StartRoomResponse.from(info);
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    private Long getActiveGroupId(UUID userId) {
+        return groupMemberRepository
+                .findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND))
+                .getGroup().getId();
+    }
 }
 
 /**

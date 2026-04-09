@@ -17,7 +17,18 @@ public interface StockDailyRepository extends JpaRepository<StockDaily, UUID> {
     List<StockDaily> findByStockInfoAndTradeDateBetweenOrderByTradeDateAsc(
             StockInfo stockInfo, LocalDate startDate, LocalDate endDate);
 
-    @Query("SELECT sd.tradeDate FROM StockDaily sd WHERE sd.stockInfo = :stockInfo AND sd.tradeDate IN :dates")
+    @Query("SELECT sd.tradeDate " +
+            "FROM StockDaily sd " +
+            "WHERE sd.stockInfo = :stockInfo " +
+            "AND sd.tradeDate IN :dates ")
     Set<LocalDate> findExistingDates(@Param("stockInfo") StockInfo stockInfo,
                                      @Param("dates") List<LocalDate> dates);
+
+    @Query("SELECT sd FROM StockDaily sd " +
+            "JOIN FETCH sd.stockInfo si " +
+            "WHERE sd.tradeDate = :tradeDate " +
+            "AND (si.stockName LIKE :keyword ESCAPE '\\' OR si.symbol LIKE :keyword ESCAPE '\\') " +
+            "ORDER BY si.stockName ASC")
+    List<StockDaily> searchByKeywordAndTradeDate(@Param("keyword") String keyword,
+                                                 @Param("tradeDate") LocalDate tradeDate);
 }

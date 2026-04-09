@@ -15,7 +15,6 @@ import com.solv.wefin.domain.game.turn.entity.GameTurn;
 import com.solv.wefin.domain.game.turn.repository.GameTurnRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
-import com.solv.wefin.web.game.room.dto.response.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -65,7 +64,7 @@ public class GameRoomService {
         }
 
         //endDate 계산
-        LocalDate rangeStart = LocalDate.of(2020, 1, 1);
+        LocalDate rangeStart = LocalDate.of(2021, 1, 1);
         LocalDate rangeEnd = LocalDate.of(2024, 12, 31).minusMonths(command.periodMonths());
         long daysBetween = ChronoUnit.DAYS.between(rangeStart, rangeEnd);
         long randomDays = ThreadLocalRandom.current().nextLong(daysBetween + 1);
@@ -319,7 +318,5 @@ gameParticipant.builder()
 
 
  */
-
-
 
 

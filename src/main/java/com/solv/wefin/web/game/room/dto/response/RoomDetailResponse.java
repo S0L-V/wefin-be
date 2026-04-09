@@ -5,7 +5,6 @@ import com.solv.wefin.domain.game.room.entity.RoomStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import java.math.BigInteger;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;

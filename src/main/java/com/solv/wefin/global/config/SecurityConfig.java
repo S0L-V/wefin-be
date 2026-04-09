@@ -36,7 +36,6 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/news/**", "/api/market/**").permitAll()
                         .requestMatchers("/api/admin/**").permitAll() // 임시
-                        .requestMatchers("/api/rooms/**").permitAll() // 임시
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

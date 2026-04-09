@@ -101,9 +101,13 @@ public enum ErrorCode {
     ROOM_NOT_PARTICIPANT(404, "참가자가 아닙니다."),
     ROOM_NOT_HOST(403,"방장만 게임을 시작할 수 있습니다."),
     ROOM_MIN_PLAYERS(400, "2명 이상의 참가자가 필요합니다."),
-    ROOM_NOT_WAITING(400, "대기 상태가 아닙니다");
+    ROOM_NOT_WAITING(400, "대기 상태가 아닙니다."),
 
     // GameTurn
+    GAME_NOT_STARTED(400, "게임이 시작되지 않았습니다."),
+
+    // GameStock
+    GAME_STOCK_NOT_FOUND(404, "해당 종목을 찾을 수 없습니다.");
 
     private final int status;
     private final String message;
