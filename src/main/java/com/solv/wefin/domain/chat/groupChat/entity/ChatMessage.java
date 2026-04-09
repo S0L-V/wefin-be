@@ -67,13 +67,13 @@ public class ChatMessage {
                 .build();
     }
 
-    public static ChatMessage createNewsMessage(User user, Group group, ChatMessage replyToMessage) {
+    public static ChatMessage createNewsMessage(User user, Group group, String title) {
         return ChatMessage.builder()
                 .user(user)
                 .group(group)
                 .messageType(MessageType.NEWS)
-                .content("")
-                .replyToMessage(replyToMessage)
+                .content(title)
+                .replyToMessage(null)
                 .createdAt(OffsetDateTime.now())
                 .build();
     }

@@ -163,7 +163,7 @@ class GroupChatControllerTest {
 
         when(chatMessageService.shareNews(
                 userId,
-                new com.solv.wefin.domain.chat.groupChat.dto.command.ShareNewsCommand(55L, null)
+                new com.solv.wefin.domain.chat.groupChat.dto.command.ShareNewsCommand(55L)
         )).thenReturn(info);
 
         // when // then
@@ -192,7 +192,7 @@ class GroupChatControllerTest {
 
         when(chatMessageService.shareNews(
                 userId,
-                new com.solv.wefin.domain.chat.groupChat.dto.command.ShareNewsCommand(999L, null)
+                new com.solv.wefin.domain.chat.groupChat.dto.command.ShareNewsCommand(999L)
         )).thenThrow(new BusinessException(ErrorCode.NEWS_CLUSTER_NOT_FOUND));
 
         // when // then

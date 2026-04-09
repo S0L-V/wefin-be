@@ -44,7 +44,7 @@ public class GroupChatController {
     ) {
         chatMessageService.shareNews(
                 userId,
-                new ShareNewsCommand(request.newsClusterId(), request.replyToMessageId())
+                new ShareNewsCommand(request.newsClusterId())
         );
 
         return ApiResponse.success(null);

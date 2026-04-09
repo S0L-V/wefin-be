@@ -4,7 +4,6 @@ import jakarta.validation.constraints.NotNull;
 
 public record ShareNewsRequest(
         @NotNull
-        Long newsClusterId,
-        Long replyToMessageId
+        Long newsClusterId
 ) {
 }

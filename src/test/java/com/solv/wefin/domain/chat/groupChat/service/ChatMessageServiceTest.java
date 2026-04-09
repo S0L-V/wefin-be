@@ -477,7 +477,7 @@ class ChatMessageServiceTest {
                 .user(user)
                 .group(group)
                 .messageType(MessageType.NEWS)
-                .content("")
+                .content("cluster title")
                 .createdAt(OffsetDateTime.now())
                 .build();
         ReflectionTestUtils.setField(savedMessage, "id", 10L);
@@ -495,12 +495,12 @@ class ChatMessageServiceTest {
                 });
 
         // when
-        var result = chatMessageService.shareNews(userId, new ShareNewsCommand(55L, null));
+        var result = chatMessageService.shareNews(userId, new ShareNewsCommand(55L));
 
         // then
         verify(chatMessageRepository).save(argThat(message ->
                 message.getMessageType() == MessageType.NEWS
-                        && "".equals(message.getContent())
+                        && "cluster title".equals(message.getContent())
                         && message.getReplyToMessage() == null
         ));
         verify(chatMessageNewsShareService).save(savedMessage, newsCluster);
@@ -548,7 +548,7 @@ class ChatMessageServiceTest {
         // when
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> chatMessageService.shareNews(userId, new ShareNewsCommand(999L, null))
+                () -> chatMessageService.shareNews(userId, new ShareNewsCommand(999L))
         );
 
         // then

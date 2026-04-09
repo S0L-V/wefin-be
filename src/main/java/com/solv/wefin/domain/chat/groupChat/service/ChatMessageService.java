@@ -108,14 +108,8 @@ public class ChatMessageService {
         NewsCluster newsCluster = newsClusterRepository.findById(command.newsClusterId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NEWS_CLUSTER_NOT_FOUND));
 
-        ChatMessage replyToMessage = null;
-        if (command.replyToMessageId() != null) {
-            replyToMessage = chatMessageRepository.findByIdAndGroup_Id(command.replyToMessageId(), group.getId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_FOUND));
-        }
-
         ChatMessage chatMessage = chatMessageRepository.save(
-                ChatMessage.createNewsMessage(user, group, replyToMessage)
+                ChatMessage.createNewsMessage(user, group, newsCluster.getTitle())
         );
 
         chatMessageNewsShareService.save(chatMessage, newsCluster);
@@ -187,16 +181,10 @@ public class ChatMessageService {
             return null;
         }
 
-        String previewContent = replyMessage.getContent();
-
-        if (replyMessage.getMessageType() == MessageType.NEWS && replyMessage.getNewsShare() != null) {
-            previewContent = "[뉴스] " + replyMessage.getNewsShare().getSharedTitle();
-        }
-
         return new ReplyMessageInfo(
                 replyMessage.getId(),
                 resolveSender(replyMessage),
-                previewContent
+                replyMessage.getContent()
         );
     }
 
