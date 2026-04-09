@@ -3,6 +3,7 @@ package com.solv.wefin.domain.group.repository;
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.entity.GroupMember;
+import com.solv.wefin.domain.group.entity.GroupType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,6 +21,13 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             GroupMember.GroupMemberStatus status
     );
 
+    Optional<GroupMember> findByUser_UserIdAndGroup_Id(UUID userId, Long groupId);
+
+    Optional<GroupMember> findByUser_UserIdAndGroup_GroupType(
+            UUID userId,
+            GroupType groupType
+    );
+
     boolean existsByUser_UserIdAndGroupAndStatus(
             UUID userId,
             Group group,
@@ -33,8 +41,10 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             where gm.group = :group
               and gm.status = :status
             """)
-    List<GroupMember> findByGroupAndStatusWithUser(@Param("group") Group group,
-                                                   @Param("status") GroupMember.GroupMemberStatus status);
+    List<GroupMember> findByGroupAndStatusWithUser(
+            @Param("group") Group group,
+            @Param("status") GroupMember.GroupMemberStatus status
+    );
 
     long countByGroupAndStatus(Group group, GroupMember.GroupMemberStatus status);
 }

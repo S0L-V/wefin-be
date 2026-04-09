@@ -7,6 +7,7 @@ import com.solv.wefin.domain.group.dto.GroupMemberInfo;
 import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.entity.GroupInvite;
 import com.solv.wefin.domain.group.entity.GroupMember;
+import com.solv.wefin.domain.group.entity.GroupType;
 import com.solv.wefin.domain.group.repository.GroupInviteRepository;
 import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.domain.group.repository.GroupRepository;
@@ -22,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -57,7 +59,7 @@ class GroupServiceTest {
         @DisplayName("그룹이 존재하면 ACTIVE 멤버 목록을 반환한다")
         void getActiveMembers_success() throws Exception {
             // given
-            Group group = createGroup(1L, "테스트 그룹");
+            Group group = createGroup(1L, "테스트 그룹", GroupType.SHARED);
 
             User leaderUser = createUser(
                     UUID.randomUUID(),
@@ -137,12 +139,12 @@ class GroupServiceTest {
     class CreateInviteCodeTest {
 
         @Test
-        @DisplayName("그룹의 ACTIVE 멤버면 초대 코드를 생성한다")
+        @DisplayName("공유 그룹의 ACTIVE 멤버면 초대 코드를 생성한다")
         void createInviteCode_success() throws Exception {
             // given
             UUID userId = UUID.randomUUID();
 
-            Group group = createGroup(1L, "테스트 그룹");
+            Group group = createGroup(1L, "테스트 그룹", GroupType.SHARED);
             User user = createUser(
                     userId,
                     "leader@test.com",
@@ -190,11 +192,33 @@ class GroupServiceTest {
         }
 
         @Test
-        @DisplayName("그룹의 멤버가 아니면 예외가 발생한다")
-        void createInviteCode_fail_when_not_member() {
+        @DisplayName("홈 그룹이면 초대 코드 생성이 불가하다")
+        void createInviteCode_fail_when_home_group() throws Exception {
             // given
             UUID userId = UUID.randomUUID();
-            Group group = mock(Group.class);
+            Group homeGroup = createGroup(1L, "리더의 그룹", GroupType.HOME);
+
+            when(groupRepository.findById(1L)).thenReturn(Optional.of(homeGroup));
+
+            // when
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> groupService.createInviteCode(1L, userId)
+            );
+
+            // then
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_HOME_INVITE_NOT_ALLOWED);
+            verify(groupMemberRepository, never()).existsByUser_UserIdAndGroupAndStatus(any(), any(), any());
+            verify(userRepository, never()).findById(any());
+            verify(groupInviteRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("공유 그룹의 ACTIVE 멤버가 아니면 예외가 발생한다")
+        void createInviteCode_fail_when_not_member() throws Exception {
+            // given
+            UUID userId = UUID.randomUUID();
+            Group group = createGroup(1L, "테스트 그룹", GroupType.SHARED);
 
             when(groupRepository.findById(1L)).thenReturn(Optional.of(group));
             when(groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
@@ -211,16 +235,61 @@ class GroupServiceTest {
 
             // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_INVITE_FORBIDDEN);
-
             verify(userRepository, never()).findById(any());
             verify(groupInviteRepository, never()).save(any());
         }
     }
 
-    private Group createGroup(Long id, String name) throws Exception {
-        Constructor<Group> constructor = Group.class.getDeclaredConstructor(String.class);
+    @Nested
+    @DisplayName("joinGroup")
+    class JoinGroupTest {
+
+        @Test
+        @DisplayName("홈 그룹에는 참여할 수 없다")
+        void joinGroup_fail_when_home_group() throws Exception {
+            // given
+            UUID userId = UUID.randomUUID();
+            UUID inviteCode = UUID.randomUUID();
+
+            Group homeGroup = createGroup(1L, "홈 그룹", GroupType.HOME);
+            User user = createUser(userId, "test@test.com", "유저", "pw");
+
+            GroupInvite invite = createGroupInvite(
+                    10L,
+                    homeGroup,
+                    user,
+                    inviteCode,
+                    GroupInvite.InviteStatus.PENDING
+            );
+
+            when(groupInviteRepository.findByInviteCode(inviteCode))
+                    .thenReturn(Optional.of(invite));
+
+            when(groupRepository.findByIdForUpdate(homeGroup.getId()))
+                    .thenReturn(Optional.of(homeGroup));
+
+            // when
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> groupService.joinGroup(userId, inviteCode)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.GROUP_HOME_JOIN_NOT_ALLOWED);
+
+            verify(userRepository, never()).findById(any());
+            verify(groupMemberRepository, never()).findByUser_UserIdAndStatus(any(), any());
+            verify(groupMemberRepository, never()).countByGroupAndStatus(any(), any());
+            verify(groupMemberRepository, never()).findByUser_UserIdAndGroup_Id(any(), anyLong());
+            verify(groupMemberRepository, never()).save(any());
+        }
+    }
+
+    private Group createGroup(Long id, String name, GroupType groupType) throws Exception {
+        Constructor<Group> constructor = Group.class.getDeclaredConstructor(String.class, GroupType.class);
         constructor.setAccessible(true);
-        Group group = constructor.newInstance(name);
+        Group group = constructor.newInstance(name, groupType);
 
         Field idField = Group.class.getDeclaredField("id");
         idField.setAccessible(true);
@@ -276,7 +345,7 @@ class GroupServiceTest {
                 User.class,
                 UUID.class,
                 GroupInvite.InviteStatus.class,
-                java.time.OffsetDateTime.class
+                OffsetDateTime.class
         );
         constructor.setAccessible(true);
 
@@ -285,7 +354,7 @@ class GroupServiceTest {
                 createdBy,
                 inviteCode,
                 status,
-                java.time.OffsetDateTime.now().plusHours(24)
+                OffsetDateTime.now().plusHours(24)
         );
 
         Field idField = GroupInvite.class.getDeclaredField("id");
