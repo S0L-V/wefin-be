@@ -85,6 +85,9 @@ class HantuWebSocketClientTest {
                                 && r.stockCode().equals("005930")
                                 && r.currentPrice().intValue() == 97500
                                 && r.changePrice().intValue() == 1200
+                                && r.openPrice().intValue() == 96800
+                                && r.highPrice().intValue() == 98200
+                                && r.lowPrice().intValue() == 96300
                                 && r.tradeVolume() == 342
                 )
         );
