@@ -40,6 +40,9 @@ public class ChatMessage {
     @JoinColumn(name = "reply_to_message_id")
     private ChatMessage replyToMessage;
 
+    @OneToOne(mappedBy = "chatMessage", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private ChatMessageNewsShare newsShare;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -62,6 +65,21 @@ public class ChatMessage {
                 .replyToMessage(replyToMessage)
                 .createdAt(OffsetDateTime.now())
                 .build();
+    }
+
+    public static ChatMessage createNewsMessage(User user, Group group, ChatMessage replyToMessage) {
+        return ChatMessage.builder()
+                .user(user)
+                .group(group)
+                .messageType(MessageType.NEWS)
+                .content("")
+                .replyToMessage(replyToMessage)
+                .createdAt(OffsetDateTime.now())
+                .build();
+    }
+
+    public void attachNewsShare(ChatMessageNewsShare newsShare) {
+        this.newsShare = newsShare;
     }
 }
 

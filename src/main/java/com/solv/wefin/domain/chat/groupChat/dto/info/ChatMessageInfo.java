@@ -11,6 +11,7 @@ public record ChatMessageInfo(
         String sender,
         String content,
         OffsetDateTime createdAt,
-        ReplyMessageInfo replyTo
+        ReplyMessageInfo replyTo,
+        NewsShareInfo newsShare
 ) {
 }
