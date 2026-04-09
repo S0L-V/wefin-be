@@ -3,17 +3,24 @@ package com.solv.wefin.domain.news.cluster.service;
 import com.solv.wefin.domain.news.article.entity.NewsArticleTag;
 import com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
+import com.solv.wefin.domain.news.article.repository.NewsArticleRepository.ArticleSourceProjection;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository.SourceProjection;
+import com.solv.wefin.domain.news.cluster.entity.ClusterSummarySection;
+import com.solv.wefin.domain.news.cluster.entity.ClusterSummarySectionSource;
 import com.solv.wefin.domain.news.article.repository.NewsArticleTagRepository;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.ClusterStatus;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.SummaryStatus;
 import com.solv.wefin.domain.news.cluster.entity.NewsClusterArticle;
 import com.solv.wefin.domain.news.cluster.entity.UserNewsClusterRead;
+import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionRepository;
+import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionSourceRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.news.cluster.repository.UserNewsClusterReadRepository;
+import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterDetailResult;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterFeedResult;
+import com.solv.wefin.global.error.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,7 +33,10 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -39,6 +49,8 @@ class NewsClusterQueryServiceTest {
     @Mock private NewsArticleRepository newsArticleRepository;
     @Mock private NewsArticleTagRepository articleTagRepository;
     @Mock private UserNewsClusterReadRepository readRepository;
+    @Mock private ClusterSummarySectionRepository sectionRepository;
+    @Mock private ClusterSummarySectionSourceRepository sectionSourceRepository;
 
     private NewsClusterQueryService queryService;
 
@@ -46,7 +58,8 @@ class NewsClusterQueryServiceTest {
     void setUp() {
         queryService = new NewsClusterQueryService(
                 newsClusterRepository, clusterArticleRepository,
-                newsArticleRepository, articleTagRepository, readRepository);
+                newsArticleRepository, articleTagRepository, readRepository,
+                sectionRepository, sectionSourceRepository);
     }
 
     @Test
@@ -140,6 +153,95 @@ class NewsClusterQueryServiceTest {
         assertThat(result.items().get(0).clusterId()).isEqualTo(5L);
     }
 
+    // --- getDetail 테스트 ---
+
+    @Test
+    @DisplayName("상세 조회 — 섹션 + 출처가 있는 클러스터")
+    void getDetail_withSections() {
+        NewsCluster cluster = createCluster(1L, "제목", "요약", OffsetDateTime.now(), 3);
+
+        given(newsClusterRepository.findById(1L)).willReturn(Optional.of(cluster));
+        given(clusterArticleRepository.findByNewsClusterId(1L))
+                .willReturn(List.of(
+                        NewsClusterArticle.create(1L, 100L, 0, false),
+                        NewsClusterArticle.create(1L, 200L, 1, false)));
+        given(newsArticleRepository.findArticleSourceInfoByIdIn(any()))
+                .willReturn(List.of(
+                        createArticleSourceProjection(100L, "기사A", "매일경제", "https://a.com"),
+                        createArticleSourceProjection(200L, "기사B", "한경", "https://b.com")));
+
+        // 섹션 mock
+        ClusterSummarySection section1 = createSection(10L, 1L, 0, "소제목1", "본문1");
+        ClusterSummarySection section2 = createSection(20L, 1L, 1, "소제목2", "본문2");
+        given(sectionRepository.findByNewsClusterIdOrderBySectionOrderAsc(1L))
+                .willReturn(List.of(section1, section2));
+        given(sectionSourceRepository.findByClusterSummarySectionIdIn(List.of(10L, 20L)))
+                .willReturn(List.of(
+                        ClusterSummarySectionSource.create(10L, 100L),
+                        ClusterSummarySectionSource.create(10L, 200L),
+                        ClusterSummarySectionSource.create(20L, 200L)));
+
+        ClusterDetailResult result = queryService.getDetail(1L, null);
+
+        assertThat(result.sections()).hasSize(2);
+        assertThat(result.sections().get(0).heading()).isEqualTo("소제목1");
+        assertThat(result.sections().get(0).sourceCount()).isEqualTo(2);
+        assertThat(result.sections().get(0).sources()).hasSize(2);
+        assertThat(result.sections().get(1).heading()).isEqualTo("소제목2");
+        assertThat(result.sections().get(1).sourceCount()).isEqualTo(1);
+        assertThat(result.sources()).isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("상세 조회 — 섹션이 없는 클러스터")
+    void getDetail_noSections() {
+        NewsCluster cluster = createCluster(1L, "제목", "요약", OffsetDateTime.now(), 2);
+
+        given(newsClusterRepository.findById(1L)).willReturn(Optional.of(cluster));
+        given(clusterArticleRepository.findByNewsClusterId(1L)).willReturn(List.of());
+        given(sectionRepository.findByNewsClusterIdOrderBySectionOrderAsc(1L)).willReturn(List.of());
+
+        ClusterDetailResult result = queryService.getDetail(1L, null);
+
+        assertThat(result.clusterId()).isEqualTo(1L);
+        assertThat(result.title()).isEqualTo("제목");
+        assertThat(result.sections()).isEmpty();
+        assertThat(result.isRead()).isFalse();
+    }
+
+    @Test
+    @DisplayName("상세 조회 — INACTIVE 클러스터는 예외")
+    void getDetail_inactive_throwsException() {
+        NewsCluster cluster = createCluster(1L, "제목", "요약", OffsetDateTime.now(), 1);
+        ReflectionTestUtils.setField(cluster, "status", ClusterStatus.INACTIVE);
+
+        given(newsClusterRepository.findById(1L)).willReturn(Optional.of(cluster));
+
+        assertThatThrownBy(() -> queryService.getDetail(1L, null))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    @DisplayName("상세 조회 — PENDING 상태 클러스터는 예외")
+    void getDetail_pending_throwsException() {
+        NewsCluster cluster = createCluster(1L, "제목", "요약", OffsetDateTime.now(), 1);
+        ReflectionTestUtils.setField(cluster, "summaryStatus", SummaryStatus.PENDING);
+
+        given(newsClusterRepository.findById(1L)).willReturn(Optional.of(cluster));
+
+        assertThatThrownBy(() -> queryService.getDetail(1L, null))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    @DisplayName("상세 조회 — 존재하지 않는 clusterId는 예외")
+    void getDetail_notFound_throwsException() {
+        given(newsClusterRepository.findById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> queryService.getDetail(999L, null))
+                .isInstanceOf(BusinessException.class);
+    }
+
     private NewsCluster createCluster(long id, String title, String summary,
                                        OffsetDateTime publishedAt, int articleCount) {
         NewsCluster cluster = NewsCluster.builder()
@@ -171,5 +273,22 @@ class NewsClusterQueryServiceTest {
                 .tagCode(code)
                 .tagName(name)
                 .build();
+    }
+
+    private ClusterSummarySection createSection(long id, long clusterId, int order,
+                                                 String heading, String body) {
+        ClusterSummarySection section = ClusterSummarySection.create(clusterId, order, heading, body);
+        ReflectionTestUtils.setField(section, "id", id);
+        return section;
+    }
+
+    private ArticleSourceProjection createArticleSourceProjection(long id, String title,
+                                                                    String publisherName, String url) {
+        return new ArticleSourceProjection() {
+            @Override public Long getId() { return id; }
+            @Override public String getTitle() { return title; }
+            @Override public String getPublisherName() { return publisherName; }
+            @Override public String getOriginalUrl() { return url; }
+        };
     }
 }

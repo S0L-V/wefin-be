@@ -9,6 +9,7 @@ import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepositor
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.news.summary.client.OpenAiSummaryClient;
 import com.solv.wefin.domain.news.summary.dto.SummaryResult;
+import com.solv.wefin.domain.news.summary.dto.SummaryResult.SectionItem;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -91,9 +92,7 @@ class SummaryServiceTest {
         given(newsArticleRepository.findAllById(List.of(1L, 2L, 3L)))
                 .willReturn(List.of(article1, article2, article3));
 
-        SummaryResult result = new SummaryResult();
-        ReflectionTestUtils.setField(result, "title", "테스트 제목");
-        ReflectionTestUtils.setField(result, "summary", "테스트 요약");
+        SummaryResult result = createSummaryResult("테스트 제목", "테스트 요약");
         given(openAiSummaryClient.generateSummary(any()))
                 .willReturn(result);
 
@@ -102,7 +101,7 @@ class SummaryServiceTest {
 
         // then
         verify(openAiSummaryClient).generateSummary(any());
-        verify(persistenceService).markGenerated(10L, "테스트 제목", "테스트 요약");
+        verify(persistenceService).markGeneratedWithSections(eq(10L), eq("테스트 제목"), eq("테스트 요약"), any(), any());
         verify(persistenceService, never()).markFailed(any());
     }
 
@@ -117,8 +116,6 @@ class SummaryServiceTest {
                 .willReturn(List.of(cluster));
         given(clusterArticleRepository.findByNewsClusterId(10L))
                 .willReturn(List.of(NewsClusterArticle.create(10L, 1L, 1, false)));
-        given(newsArticleRepository.findAllById(List.of(1L)))
-                .willReturn(List.of(article));
         given(newsArticleRepository.findById(1L))
                 .willReturn(Optional.of(article));
 
@@ -127,7 +124,7 @@ class SummaryServiceTest {
 
         // then
         verify(openAiSummaryClient, never()).generateSummary(any());
-        verify(persistenceService).markGenerated(eq(10L), eq("테스트 기사 1"), any());
+        verify(persistenceService).markGeneratedSingle(eq(10L), eq("테스트 기사 1"), any(), any());
     }
 
     @Test
@@ -154,7 +151,7 @@ class SummaryServiceTest {
 
         // then
         verify(persistenceService).markFailed(10L);
-        verify(persistenceService, never()).markGenerated(any(), any(), any());
+        verify(persistenceService, never()).markGeneratedWithSections(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -169,7 +166,7 @@ class SummaryServiceTest {
 
         // then
         verify(openAiSummaryClient, never()).generateSummary(any());
-        verify(persistenceService, never()).markGenerated(any(), any(), any());
+        verify(persistenceService, never()).markGeneratedWithSections(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -189,9 +186,7 @@ class SummaryServiceTest {
         given(newsArticleRepository.findAllById(any()))
                 .willReturn(List.of(createArticle(1L), createArticle(2L)));
 
-        SummaryResult result = new SummaryResult();
-        ReflectionTestUtils.setField(result, "title", "갱신된 제목");
-        ReflectionTestUtils.setField(result, "summary", "갱신된 요약");
+        SummaryResult result = createSummaryResult("갱신된 제목", "갱신된 요약");
         given(openAiSummaryClient.generateSummary(any()))
                 .willReturn(result);
 
@@ -199,7 +194,7 @@ class SummaryServiceTest {
         summaryService.generatePendingSummaries();
 
         // then
-        verify(persistenceService).markGenerated(10L, "갱신된 제목", "갱신된 요약");
+        verify(persistenceService).markGeneratedWithSections(eq(10L), eq("갱신된 제목"), eq("갱신된 요약"), any(), any());
     }
 
     @Test
@@ -220,9 +215,7 @@ class SummaryServiceTest {
         given(newsArticleRepository.findAllById(any()))
                 .willReturn(List.of(createArticle(1L), createArticle(2L), createArticle(3L)));
 
-        SummaryResult result = new SummaryResult();
-        ReflectionTestUtils.setField(result, "title", "정제된 제목");
-        ReflectionTestUtils.setField(result, "summary", "정제된 요약");
+        SummaryResult result = createSummaryResult("정제된 제목", "정제된 요약");
         given(openAiSummaryClient.generateSummary(any()))
                 .willReturn(result);
 
@@ -231,7 +224,7 @@ class SummaryServiceTest {
 
         // then
         verify(outlierDetectionService).removeOutliers(cluster);
-        verify(persistenceService).markGenerated(10L, "정제된 제목", "정제된 요약");
+        verify(persistenceService).markGeneratedWithSections(eq(10L), eq("정제된 제목"), eq("정제된 요약"), any(), any());
     }
 
     @Test
@@ -245,8 +238,6 @@ class SummaryServiceTest {
         given(outlierDetectionService.removeOutliers(cluster))
                 .willReturn(3);
         given(clusterArticleRepository.findByNewsClusterId(10L))
-                .willReturn(List.of());
-        given(newsArticleRepository.findAllById(List.of()))
                 .willReturn(List.of());
 
         // when
@@ -285,6 +276,124 @@ class SummaryServiceTest {
 
         // then
         verify(persistenceService).markFailed(10L);
-        verify(persistenceService, never()).markGenerated(any(), any(), any());
+        verify(persistenceService, never()).markGeneratedWithSections(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("섹션이 비어있으면 FAILED 마킹")
+    void generatePendingSummaries_emptySections_markFailed() {
+        // given
+        NewsCluster cluster = createCluster(10L, 2, SummaryStatus.PENDING);
+
+        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any(), any()))
+                .willReturn(List.of(cluster));
+        given(outlierDetectionService.removeOutliers(cluster))
+                .willReturn(0);
+        given(clusterArticleRepository.findByNewsClusterId(10L))
+                .willReturn(List.of(
+                        NewsClusterArticle.create(10L, 1L, 1, false),
+                        NewsClusterArticle.create(10L, 2L, 2, false)));
+        given(newsArticleRepository.findAllById(any()))
+                .willReturn(List.of(createArticle(1L), createArticle(2L)));
+
+        SummaryResult result = new SummaryResult();
+        ReflectionTestUtils.setField(result, "title", "제목");
+        ReflectionTestUtils.setField(result, "leadSummary", "요약");
+
+        given(openAiSummaryClient.generateSummary(any()))
+                .willReturn(result);
+
+        // when
+        summaryService.generatePendingSummaries();
+
+        // then
+        verify(persistenceService).markFailed(10L);
+        verify(persistenceService, never()).markGeneratedWithSections(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("섹션에 출처가 없으면 FAILED 마킹")
+    void generatePendingSummaries_sectionsWithoutSources_markFailed() {
+        // given
+        NewsCluster cluster = createCluster(10L, 2, SummaryStatus.PENDING);
+
+        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any(), any()))
+                .willReturn(List.of(cluster));
+        given(outlierDetectionService.removeOutliers(cluster))
+                .willReturn(0);
+        given(clusterArticleRepository.findByNewsClusterId(10L))
+                .willReturn(List.of(
+                        NewsClusterArticle.create(10L, 1L, 1, false),
+                        NewsClusterArticle.create(10L, 2L, 2, false)));
+        given(newsArticleRepository.findAllById(any()))
+                .willReturn(List.of(createArticle(1L), createArticle(2L)));
+
+        // 유효한 heading/body는 있지만 sourceArticleIndices가 없는 섹션
+        SummaryResult result = new SummaryResult();
+        ReflectionTestUtils.setField(result, "title", "제목");
+        ReflectionTestUtils.setField(result, "leadSummary", "요약");
+        SectionItem section = new SectionItem();
+        ReflectionTestUtils.setField(section, "heading", "소제목");
+        ReflectionTestUtils.setField(section, "body", "본문");
+        // sourceArticleIndices가 null → hasSources() == false
+        ReflectionTestUtils.setField(result, "sections", List.of(section));
+
+        given(openAiSummaryClient.generateSummary(any()))
+                .willReturn(result);
+
+        // when
+        summaryService.generatePendingSummaries();
+
+        // then
+        verify(persistenceService).markFailed(10L);
+        verify(persistenceService, never()).markGeneratedWithSections(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("CAS 불일치(StaleClusterException) 시 markFailed를 호출하지 않는다")
+    void generatePendingSummaries_staleCluster_skipWithoutMarkFailed() {
+        // given
+        NewsCluster cluster = createCluster(10L, 3, SummaryStatus.STALE);
+
+        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any(), any()))
+                .willReturn(List.of(cluster));
+        given(outlierDetectionService.removeOutliers(cluster))
+                .willReturn(0);
+        given(clusterArticleRepository.findByNewsClusterId(10L))
+                .willReturn(List.of(
+                        NewsClusterArticle.create(10L, 1L, 1, false),
+                        NewsClusterArticle.create(10L, 2L, 2, false),
+                        NewsClusterArticle.create(10L, 3L, 3, false)));
+        given(newsArticleRepository.findAllById(any()))
+                .willReturn(List.of(createArticle(1L), createArticle(2L), createArticle(3L)));
+
+        SummaryResult result = createSummaryResult("제목", "요약");
+        given(openAiSummaryClient.generateSummary(any()))
+                .willReturn(result);
+        doThrow(new StaleClusterException("기사 집합 변경"))
+                .when(persistenceService).markGeneratedWithSections(any(), any(), any(), any(), any());
+
+        // when
+        summaryService.generatePendingSummaries();
+
+        // then — markFailed가 호출되지 않아야 한다
+        verify(persistenceService, never()).markFailed(any());
+    }
+
+    /**
+     * 유효한 섹션(heading + body + sourceArticleIndices)을 포함한 SummaryResult를 생성한다
+     */
+    private SummaryResult createSummaryResult(String title, String leadSummary) {
+        SummaryResult result = new SummaryResult();
+        ReflectionTestUtils.setField(result, "title", title);
+        ReflectionTestUtils.setField(result, "leadSummary", leadSummary);
+
+        SectionItem section = new SectionItem();
+        ReflectionTestUtils.setField(section, "heading", "테스트 소제목");
+        ReflectionTestUtils.setField(section, "body", "테스트 본문 내용");
+        ReflectionTestUtils.setField(section, "sourceArticleIndices", List.of(1, 2));
+
+        ReflectionTestUtils.setField(result, "sections", List.of(section));
+        return result;
     }
 }
