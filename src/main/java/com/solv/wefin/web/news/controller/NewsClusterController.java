@@ -1,10 +1,12 @@
 package com.solv.wefin.web.news.controller;
 
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService;
+import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterDetailResult;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterFeedResult;
 import com.solv.wefin.global.common.ApiResponse;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
+import com.solv.wefin.web.news.dto.response.ClusterDetailResponse;
 import com.solv.wefin.web.news.dto.response.ClusterFeedResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -64,5 +66,21 @@ public class NewsClusterController {
                 cursorPublishedAt, cursorId, pageSize, userId, tab);
 
         return ApiResponse.success(ClusterFeedResponse.from(result));
+    }
+
+    /**
+     * 뉴스 클러스터 상세 정보를 조회한다.
+     * 섹션(소제목 + 단락)과 섹션별 근거 기사 출처를 포함한다
+     *
+     * @param clusterId 클러스터 ID
+     * @param userId 사용자 ID (인증 시 헤더에서 주입, 없으면 null)
+     */
+    @GetMapping("/{clusterId}")
+    public ApiResponse<ClusterDetailResponse> getDetail(
+            @PathVariable Long clusterId,
+            @RequestHeader(name = "X-User-Id", required = false) UUID userId
+    ) {
+        ClusterDetailResult result = newsClusterQueryService.getDetail(clusterId, userId);
+        return ApiResponse.success(ClusterDetailResponse.from(result));
     }
 }

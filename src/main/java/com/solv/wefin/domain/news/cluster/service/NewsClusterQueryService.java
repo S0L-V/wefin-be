@@ -4,11 +4,15 @@ import com.solv.wefin.domain.news.article.entity.NewsArticleTag;
 import com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
 import com.solv.wefin.domain.news.article.repository.NewsArticleTagRepository;
+import com.solv.wefin.domain.news.cluster.entity.ClusterSummarySection;
+import com.solv.wefin.domain.news.cluster.entity.ClusterSummarySectionSource;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.ClusterStatus;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.SummaryStatus;
 import com.solv.wefin.domain.news.cluster.entity.NewsClusterArticle;
 import com.solv.wefin.domain.news.cluster.entity.UserNewsClusterRead;
+import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionRepository;
+import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionSourceRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.news.cluster.repository.UserNewsClusterReadRepository;
@@ -46,6 +50,8 @@ public class NewsClusterQueryService {
     private final NewsArticleRepository newsArticleRepository;
     private final NewsArticleTagRepository articleTagRepository;
     private final UserNewsClusterReadRepository readRepository;
+    private final ClusterSummarySectionRepository sectionRepository;
+    private final ClusterSummarySectionSourceRepository sectionSourceRepository;
 
     /**
      * 피드 목록을 커서 기반으로 조회한다.
@@ -269,6 +275,154 @@ public class NewsClusterQueryService {
                 .collect(Collectors.toSet());
     }
 
+    /**
+     * 클러스터 상세 정보를 조회한다.
+     * 섹션(heading + body)과 섹션별 근거 기사 출처를 포함한다
+     *
+     * @param clusterId 클러스터 ID
+     * @param userId 사용자 ID (null이면 isRead false)
+     * @return 클러스터 상세 정보
+     */
+    public ClusterDetailResult getDetail(Long clusterId, UUID userId) {
+        NewsCluster cluster = newsClusterRepository.findById(clusterId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CLUSTER_NOT_FOUND));
+
+        if (cluster.getStatus() != ClusterStatus.ACTIVE) {
+            throw new BusinessException(ErrorCode.CLUSTER_NOT_FOUND);
+        }
+        if (!VISIBLE_STATUSES.contains(cluster.getSummaryStatus())) {
+            throw new BusinessException(ErrorCode.CLUSTER_NOT_FOUND);
+        }
+
+        // 클러스터-기사 매핑
+        List<Long> articleIds = clusterArticleRepository.findByNewsClusterId(clusterId).stream()
+                .map(NewsClusterArticle::getNewsArticleId)
+                .toList();
+
+        // 섹션 조회 (출처 우선순위 결정에 필요하므로 먼저 조회)
+        List<SectionDetail> sectionDetails = buildSectionDetails(clusterId);
+
+        // 섹션 출처에 등장하는 기사 ID 수집 (top-level 출처 우선순위용)
+        Set<Long> sectionSourceArticleIds = sectionDetails.stream()
+                .flatMap(s -> s.sources().stream())
+                .map(ArticleSourceInfo::articleId)
+                .collect(Collectors.toSet());
+
+        // 출처 (섹션 출처 기사 우선, 상위 N개, 언론사 중복 제거)
+        List<ArticleSourceInfo> sources = articleIds.isEmpty()
+                ? List.of()
+                : getDetailSources(articleIds, sectionSourceArticleIds);
+
+        // 관련 종목
+        Map<Long, List<Long>> clusterArticleMap = Map.of(clusterId, articleIds);
+        List<StockInfo> stocks = articleIds.isEmpty()
+                ? List.of()
+                : getRelatedStocksMap(clusterArticleMap, articleIds).getOrDefault(clusterId, List.of());
+
+        // 마켓 태그
+        List<String> marketTags = articleIds.isEmpty()
+                ? List.of()
+                : getMarketTagsMap(clusterArticleMap, articleIds).getOrDefault(clusterId, List.of());
+
+        // 읽음 여부
+        boolean isRead = userId != null
+                && readRepository.existsByUserIdAndNewsClusterId(userId, clusterId);
+
+        return new ClusterDetailResult(
+                cluster.getId(), cluster.getTitle(), cluster.getSummary(),
+                cluster.getThumbnailUrl(), cluster.getPublishedAt(),
+                cluster.getArticleCount(), sources, stocks, marketTags, isRead,
+                sectionDetails
+        );
+    }
+
+    /**
+     * 상세 조회용 출처 기사 목록을 반환한다 (title 포함, 상위 N개, 언론사 중복 제거)
+     * 섹션 출처에 등장하는 기사를 우선 배치하여 top-level 출처와 섹션 출처가 일관되도록 한다
+     */
+    private List<ArticleSourceInfo> getDetailSources(List<Long> articleIds,
+                                                      Set<Long> sectionSourceArticleIds) {
+        Map<Long, NewsArticleRepository.ArticleSourceProjection> projectionMap =
+                newsArticleRepository.findArticleSourceInfoByIdIn(articleIds).stream()
+                        .collect(Collectors.toMap(
+                                NewsArticleRepository.ArticleSourceProjection::getId, p -> p));
+
+        // 섹션 출처 기사 우선, 나머지 후순위
+        List<NewsArticleRepository.ArticleSourceProjection> sorted = new ArrayList<>();
+        for (Long id : articleIds) {
+            NewsArticleRepository.ArticleSourceProjection p = projectionMap.get(id);
+            if (p != null && sectionSourceArticleIds.contains(id)) {
+                sorted.add(p);
+            }
+        }
+        for (Long id : articleIds) {
+            NewsArticleRepository.ArticleSourceProjection p = projectionMap.get(id);
+            if (p != null && !sectionSourceArticleIds.contains(id)) {
+                sorted.add(p);
+            }
+        }
+
+        Set<String> seenPublishers = new HashSet<>();
+        List<ArticleSourceInfo> result = new ArrayList<>();
+
+        for (NewsArticleRepository.ArticleSourceProjection p : sorted) {
+            if (p.getPublisherName() != null && seenPublishers.add(p.getPublisherName())) {
+                result.add(new ArticleSourceInfo(p.getId(), p.getTitle(), p.getPublisherName(), p.getOriginalUrl()));
+                if (result.size() >= MAX_SOURCES_PER_CLUSTER) break;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 클러스터의 섹션 + 섹션별 출처 기사를 조회한다
+     */
+    private List<SectionDetail> buildSectionDetails(Long clusterId) {
+        List<ClusterSummarySection> sections = sectionRepository.findByNewsClusterIdOrderBySectionOrderAsc(clusterId);
+        if (sections.isEmpty()) {
+            return List.of();
+        }
+
+        // 섹션 ID 목록
+        List<Long> sectionIds = sections.stream().map(ClusterSummarySection::getId).toList();
+
+        // 섹션-기사 매핑 일괄 조회
+        List<ClusterSummarySectionSource> allSources = sectionSourceRepository.findByClusterSummarySectionIdIn(sectionIds);
+
+        // sectionId → articleIds
+        Map<Long, List<Long>> sectionArticleMap = allSources.stream()
+                .collect(Collectors.groupingBy(
+                        ClusterSummarySectionSource::getClusterSummarySectionId,
+                        Collectors.mapping(ClusterSummarySectionSource::getNewsArticleId, Collectors.toList())));
+
+        // 모든 기사 ID로 기사 정보 일괄 조회
+        List<Long> allArticleIds = allSources.stream()
+                .map(ClusterSummarySectionSource::getNewsArticleId)
+                .distinct()
+                .toList();
+
+        Map<Long, NewsArticleRepository.ArticleSourceProjection> articleMap = allArticleIds.isEmpty()
+                ? Map.of()
+                : newsArticleRepository.findArticleSourceInfoByIdIn(allArticleIds).stream()
+                        .collect(Collectors.toMap(NewsArticleRepository.ArticleSourceProjection::getId, p -> p));
+
+        return sections.stream()
+                .map(section -> {
+                    List<Long> sourceArticleIds = sectionArticleMap.getOrDefault(section.getId(), List.of());
+                    List<ArticleSourceInfo> articleSources = sourceArticleIds.stream()
+                            .map(articleMap::get)
+                            .filter(Objects::nonNull)
+                            .map(p -> new ArticleSourceInfo(p.getId(), p.getTitle(), p.getPublisherName(), p.getOriginalUrl()))
+                            .toList();
+
+                    return new SectionDetail(
+                            section.getSectionOrder(), section.getHeading(), section.getBody(),
+                            articleSources.size(), articleSources
+                    );
+                })
+                .toList();
+    }
+
     // --- Result Records ---
 
     /**
@@ -308,5 +462,46 @@ public class NewsClusterQueryService {
      * 출처 정보 (언론사, 원본 URL)
      */
     public record SourceInfo(String publisherName, String url) {
+    }
+
+    /**
+     * 클러스터 상세 조회 결과
+     */
+    public record ClusterDetailResult(
+            Long clusterId,
+            String title,
+            String summary,
+            String thumbnailUrl,
+            OffsetDateTime publishedAt,
+            int sourceCount,
+            List<ArticleSourceInfo> sources,
+            List<StockInfo> relatedStocks,
+            List<String> marketTags,
+            boolean isRead,
+            List<SectionDetail> sections
+    ) {
+    }
+
+    /**
+     * 섹션 상세 정보 (소제목 + 단락 + 근거 기사)
+     */
+    public record SectionDetail(
+            int sectionOrder,
+            String heading,
+            String body,
+            int sourceCount,
+            List<ArticleSourceInfo> sources
+    ) {
+    }
+
+    /**
+     * 섹션 출처 카드용 기사 정보
+     */
+    public record ArticleSourceInfo(
+            Long articleId,
+            String title,
+            String publisherName,
+            String url
+    ) {
     }
 }
