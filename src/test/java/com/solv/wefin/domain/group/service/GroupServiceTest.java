@@ -515,6 +515,8 @@ class GroupServiceTest {
 
             when(groupRepository.save(any(Group.class)))
                     .thenReturn(createdHomeGroup);
+            when(groupMemberRepository.save(any(GroupMember.class)))
+                    .thenReturn(createdHomeGroupMember);
 
             // when
             LeaveGroupInfo result = groupService.leaveGroup(1L, userId);

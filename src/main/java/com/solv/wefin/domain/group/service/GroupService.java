@@ -195,11 +195,7 @@ public class GroupService {
 
         GroupMember homeGroupMember = groupMemberRepository
                 .findByUser_UserIdAndGroup_GroupType(userId, GroupType.HOME)
-                .orElseGet(() -> {
-                    createDefaultGroup(user);
-                    return groupMemberRepository.findByUser_UserIdAndGroup_GroupType(userId, GroupType.HOME)
-                            .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_HOME_MEMBERSHIP_NOT_FOUND));
-                });
+                .orElseGet(() -> createDefaultGroupAndGetMembership(user));
 
         homeGroupMember.activate();
 
@@ -207,5 +203,13 @@ public class GroupService {
                 group.getId(),
                 homeGroupMember.getGroup().getId()
         );
+    }
+
+    private GroupMember createDefaultGroupAndGetMembership(User user) {
+        Group group = Group.createHomeGroup(user.getNickname() + "의 그룹");
+        Group savedGroup = groupRepository.save(group);
+
+        GroupMember groupMember = GroupMember.createLeader(user, savedGroup);
+        return groupMemberRepository.save(groupMember);
     }
 }
