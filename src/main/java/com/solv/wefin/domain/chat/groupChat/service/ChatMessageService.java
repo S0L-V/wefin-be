@@ -95,6 +95,10 @@ public class ChatMessageService {
 
     @Transactional
     public ChatMessageInfo shareNews(UUID userId, ShareNewsCommand command) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
         validateShareNewsCommand(command);
 
         User user = userRepository.findById(userId)
