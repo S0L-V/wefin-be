@@ -34,6 +34,26 @@ public class OpenAiSummaryClient {
     // 클러스터당 프롬프트에 포함할 최대 기사 수
     private static final int MAX_ARTICLES_PER_CLUSTER = 10;
 
+    private static final String SINGLE_ARTICLE_SUMMARY_PROMPT = """
+            당신은 금융 뉴스 전문 에디터입니다.
+            기사 한 건의 본문을 읽고 핵심 내용을 요약하세요.
+
+            규칙:
+            1. title: 핵심 이슈를 한 줄로 요약 (50자 이내, 한글)
+            2. leadSummary: 기사 핵심 요약 (200~400자, 한글)
+               - 팩트, 원인/배경, 전망/영향을 포함하되 기사에 있는 내용만 작성
+               - 구체적 수치, 기업명, 날짜를 포함할 것
+               - 광고, 기자 서명, 언론사 홍보 문구 등은 제외
+            3. sections: 없음 (빈 배열)
+
+            반드시 아래 JSON 형식으로만 응답하세요:
+            {
+              "title": "요약 제목",
+              "leadSummary": "핵심 내용 요약...",
+              "sections": []
+            }
+            """;
+
     private static final String SINGLE_TITLE_PROMPT = """
             당신은 금융 뉴스 전문 에디터입니다.
             기사 한 건의 제목을 깔끔하게 다듬어주세요.
@@ -270,6 +290,59 @@ public class OpenAiSummaryClient {
             log.warn("단독 title AI 재생성 실패: {}", e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 단독 클러스터용 — 기사 한 건의 본문을 AI로 요약한다.
+     *
+     * 크롤링된 원문에는 광고, 기자 서명 등 노이즈가 포함되어 있으므로
+     * AI가 핵심 내용만 추출하여 title + leadSummary를 생성한다
+     *
+     * @param title 기사 제목
+     * @param content 기사 본문
+     * @return title + leadSummary (sections는 빈 배열)
+     */
+    public SummaryResult generateSingleArticleSummary(String title, String content) {
+        String truncatedContent = content != null && content.length() > MAX_ARTICLE_LENGTH
+                ? content.substring(0, MAX_ARTICLE_LENGTH) : (content != null ? content : "");
+        String userMessage = "제목: " + title + "\n\n본문: " + truncatedContent;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiKey);
+
+        Map<String, Object> body = Map.of(
+                "model", model,
+                "response_format", Map.of("type", "json_object"),
+                "messages", List.of(
+                        Map.of("role", "system", "content", SINGLE_ARTICLE_SUMMARY_PROMPT),
+                        Map.of("role", "user", "content", userMessage)
+                )
+        );
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+
+        OpenAiChatApiResponse response;
+        try {
+            response = restTemplate.postForObject(OPENAI_CHAT_URL, request, OpenAiChatApiResponse.class);
+        } catch (HttpStatusCodeException e) {
+            throw new OpenAiClientException(
+                    "OpenAI Single Summary API HTTP 오류: " + e.getStatusCode(), e.getStatusCode(), e);
+        } catch (RestClientException e) {
+            throw new OpenAiClientException(
+                    "OpenAI Single Summary API 호출 실패: " + e.getMessage(), null, e);
+        }
+
+        if (response == null || response.getChoices() == null || response.getChoices().isEmpty()) {
+            throw new IllegalStateException("OpenAI Single Summary API 응답이 비어있습니다");
+        }
+
+        OpenAiChatApiResponse.Choice firstChoice = response.getChoices().get(0);
+        if (firstChoice == null || firstChoice.getMessage() == null || firstChoice.getMessage().getContent() == null) {
+            throw new IllegalStateException("OpenAI Single Summary API 응답 메시지가 비어있습니다");
+        }
+
+        return parseSummaryResult(firstChoice.getMessage().getContent());
     }
 
     /**
