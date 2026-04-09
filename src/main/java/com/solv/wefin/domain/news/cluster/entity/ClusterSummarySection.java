@@ -72,6 +72,9 @@ public class ClusterSummarySection {
         if (clusterId == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
+        if (order < 0) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
         if (heading == null || heading.isBlank()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
