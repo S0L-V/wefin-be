@@ -1,5 +1,7 @@
 package com.solv.wefin.domain.game.stock.service;
 
+import com.solv.wefin.domain.game.participant.entity.GameParticipant;
+import com.solv.wefin.domain.game.participant.repository.GameParticipantRepository;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
 import com.solv.wefin.domain.game.stock.entity.StockDaily;
@@ -45,6 +47,9 @@ class StockSearchServiceTest {
     private GameTurnRepository gameTurnRepository;
 
     @Mock
+    private GameParticipantRepository gameParticipantRepository;
+
+    @Mock
     private StockDailyRepository stockDailyRepository;
 
     private static final UUID TEST_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000001");
@@ -56,10 +61,11 @@ class StockSearchServiceTest {
     @Test
     @DisplayName("종목 검색 성공 — 키워드에 매칭되는 종목 2개 반환")
     void searchStocks_success() {
-        // Given — 방 존재, ACTIVE 턴 존재, 키워드 "삼성"에 2개 매칭
+        // Given — 방 존재, 참가자 확인, ACTIVE 턴 존재, 키워드 "삼성"에 2개 매칭
         GameRoom gameRoom = createGameRoom();
         UUID roomId = gameRoom.getRoomId();
         GameTurn activeTurn = GameTurn.createFirst(gameRoom);
+        GameParticipant participant = GameParticipant.createLeader(gameRoom, TEST_USER_ID);
 
         StockInfo samsung = StockInfo.create("005930", "삼성전자", "KOSPI", "전기전자");
         StockInfo samsungSDI = StockInfo.create("006400", "삼성SDI", "KOSPI", "전기전자");
@@ -68,13 +74,15 @@ class StockSearchServiceTest {
 
         given(gameRoomRepository.findById(roomId))
                 .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, TEST_USER_ID))
+                .willReturn(Optional.of(participant));
         given(gameTurnRepository.findByGameRoomAndStatus(gameRoom, TurnStatus.ACTIVE))
                 .willReturn(Optional.of(activeTurn));
         given(stockDailyRepository.searchByKeywordAndTradeDate("%삼성%", TURN_DATE))
                 .willReturn(List.of(daily1, daily2));
 
         // When
-        List<StockDaily> result = stockSearchService.searchStocks(roomId, "삼성");
+        List<StockDaily> result = stockSearchService.searchStocks(roomId, TEST_USER_ID, "삼성");
 
         // Then — 2개 반환, 각각 StockInfo 접근 가능
         assertThat(result).hasSize(2);
@@ -88,20 +96,23 @@ class StockSearchServiceTest {
     @Test
     @DisplayName("종목 검색 성공 — 결과 없으면 빈 리스트 반환")
     void searchStocks_emptyResult() {
-        // Given — 방 존재, ACTIVE 턴 존재, 매칭 결과 없음
+        // Given — 방 존재, 참가자 확인, ACTIVE 턴 존재, 매칭 결과 없음
         GameRoom gameRoom = createGameRoom();
         UUID roomId = gameRoom.getRoomId();
         GameTurn activeTurn = GameTurn.createFirst(gameRoom);
+        GameParticipant participant = GameParticipant.createLeader(gameRoom, TEST_USER_ID);
 
         given(gameRoomRepository.findById(roomId))
                 .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, TEST_USER_ID))
+                .willReturn(Optional.of(participant));
         given(gameTurnRepository.findByGameRoomAndStatus(gameRoom, TurnStatus.ACTIVE))
                 .willReturn(Optional.of(activeTurn));
         given(stockDailyRepository.searchByKeywordAndTradeDate("%없는종목%", TURN_DATE))
                 .willReturn(Collections.emptyList());
 
         // When
-        List<StockDaily> result = stockSearchService.searchStocks(roomId, "없는종목");
+        List<StockDaily> result = stockSearchService.searchStocks(roomId, TEST_USER_ID, "없는종목");
 
         // Then — 빈 리스트 (에러 아님)
         assertThat(result).isEmpty();
@@ -116,7 +127,7 @@ class StockSearchServiceTest {
                 .willReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> stockSearchService.searchStocks(fakeRoomId, "삼성"))
+        assertThatThrownBy(() -> stockSearchService.searchStocks(fakeRoomId, TEST_USER_ID, "삼성"))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> {
                     BusinessException be = (BusinessException) ex;
@@ -134,14 +145,17 @@ class StockSearchServiceTest {
         // Given — 방은 존재하지만 ACTIVE 턴이 없음 (게임 미시작)
         GameRoom gameRoom = createGameRoom();
         UUID roomId = gameRoom.getRoomId();
+        GameParticipant participant = GameParticipant.createLeader(gameRoom, TEST_USER_ID);
 
         given(gameRoomRepository.findById(roomId))
                 .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, TEST_USER_ID))
+                .willReturn(Optional.of(participant));
         given(gameTurnRepository.findByGameRoomAndStatus(gameRoom, TurnStatus.ACTIVE))
                 .willReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> stockSearchService.searchStocks(roomId, "삼성"))
+        assertThatThrownBy(() -> stockSearchService.searchStocks(roomId, TEST_USER_ID, "삼성"))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> {
                     BusinessException be = (BusinessException) ex;
@@ -149,6 +163,31 @@ class StockSearchServiceTest {
                 });
 
         // 턴이 없으니 종목 검색은 호출되면 안 된다
+        verify(stockDailyRepository, never()).searchByKeywordAndTradeDate(any(), any());
+    }
+
+    @Test
+    @DisplayName("종목 검색 실패 — 참가자가 아니면 ROOM_NOT_PARTICIPANT")
+    void searchStocks_notParticipant() {
+        // Given — 방은 존재하지만 해당 유저는 참가자가 아님
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        UUID outsiderUserId = UUID.fromString("00000000-0000-4000-a000-000000000099");
+
+        given(gameRoomRepository.findById(roomId))
+                .willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, outsiderUserId))
+                .willReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> stockSearchService.searchStocks(roomId, outsiderUserId, "삼성"))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.ROOM_NOT_PARTICIPANT);
+                });
+
+        verify(gameTurnRepository, never()).findByGameRoomAndStatus(any(), any());
         verify(stockDailyRepository, never()).searchByKeywordAndTradeDate(any(), any());
     }
 
