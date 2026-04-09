@@ -1,6 +1,7 @@
 package com.solv.wefin.domain.trading.snapshot.service;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -52,7 +53,7 @@ public class SnapshotService {
 	@Transactional(readOnly = true)
 	public List<DailySnapshot> getAssetHistory(Long virtualAccountId, LocalDate from, LocalDate to) {
 		if (to == null) {
-			to = LocalDate.now();
+			to = LocalDate.now(ZoneId.of("Asia/Seoul"));
 		}
 		if (from == null) {
 			from = to.minusDays(30);
