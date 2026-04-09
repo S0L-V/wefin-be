@@ -74,10 +74,6 @@ public class OrderConcurrencyTest extends IntegrationTestBase {
 				"VALUES ('" + userId + "', 'test@test.com', 'tester', 'password', NOW(), NOW())"
 		);
 
-		jdbcTemplate.execute(
-			"INSERT INTO stock (stock_code, stock_name, market, sector) " +
-				"VALUES ('005930', '삼성전자', 'KR', '전자')"
-		);
 		stockId = jdbcTemplate.queryForObject(
 			"SELECT stock_id FROM stock WHERE stock_code = '005930'", Long.class
 		);
@@ -92,7 +88,6 @@ public class OrderConcurrencyTest extends IntegrationTestBase {
 		jdbcTemplate.execute("DELETE FROM orders");
 		jdbcTemplate.execute("DELETE FROM portfolio");
 		jdbcTemplate.execute("DELETE FROM virtual_account");
-		jdbcTemplate.execute("DELETE FROM stock WHERE stock_code = '005930'");
 		jdbcTemplate.execute("DELETE FROM users WHERE email = 'test@test.com'");
 	}
 
