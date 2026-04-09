@@ -1,8 +1,9 @@
-package com.solv.wefin.domain.user.service;
+package com.solv.wefin.domain.user;
 
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.user.dto.MyPageInfo;
+import com.solv.wefin.domain.user.service.UserService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.DisplayName;

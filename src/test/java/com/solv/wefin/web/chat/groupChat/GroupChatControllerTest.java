@@ -15,6 +15,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
@@ -28,6 +29,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -58,6 +60,7 @@ class GroupChatControllerTest {
                 "groupUser",
                 "안녕하세요",
                 OffsetDateTime.now(),
+                null,
                 null
         );
 
@@ -133,5 +136,81 @@ class GroupChatControllerTest {
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data.groupId").value(7))
                 .andExpect(jsonPath("$.data.groupName").value("우리 그룹"));
+    }
+
+    @Test
+    @DisplayName("뉴스 공유 요청을 받으면 성공 응답을 반환한다")
+    void shareNews_success() throws Exception {
+        // given
+        UUID userId = UUID.randomUUID();
+
+        ChatMessageInfo info = new ChatMessageInfo(
+                10L,
+                userId,
+                3L,
+                "NEWS",
+                "groupUser",
+                "",
+                OffsetDateTime.now(),
+                null,
+                new com.solv.wefin.domain.chat.groupChat.dto.info.NewsShareInfo(
+                        55L,
+                        "cluster title",
+                        "cluster summary",
+                        "https://image.test/thumb.png"
+                )
+        );
+
+        when(chatMessageService.shareNews(
+                userId,
+                new com.solv.wefin.domain.chat.groupChat.dto.command.ShareNewsCommand(55L)
+        )).thenReturn(info);
+
+        // when // then
+        mockMvc.perform(post("/api/chat/group/news-share")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userId,
+                                null,
+                                AuthorityUtils.NO_AUTHORITIES
+                        )))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "newsClusterId": 55
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 뉴스 클러스터를 공유하면 404를 반환한다")
+    void shareNews_fail_when_news_cluster_not_found() throws Exception {
+        // given
+        UUID userId = UUID.randomUUID();
+
+        when(chatMessageService.shareNews(
+                userId,
+                new com.solv.wefin.domain.chat.groupChat.dto.command.ShareNewsCommand(999L)
+        )).thenThrow(new BusinessException(ErrorCode.NEWS_CLUSTER_NOT_FOUND));
+
+        // when // then
+        mockMvc.perform(post("/api/chat/group/news-share")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userId,
+                                null,
+                                AuthorityUtils.NO_AUTHORITIES
+                        )))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "newsClusterId": 999
+                                }
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.code").value("NEWS_CLUSTER_NOT_FOUND"));
     }
 }

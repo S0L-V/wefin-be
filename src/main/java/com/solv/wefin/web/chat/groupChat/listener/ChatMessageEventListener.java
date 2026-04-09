@@ -17,16 +17,7 @@ public class ChatMessageEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handle(ChatMessageCreatedEvent event) {
 
-        ChatMessageResponse response = ChatMessageResponse.builder()
-                .messageId(event.getMessageId())
-                .userId(event.getUserId())
-                .groupId(event.getGroupId())
-                .messageType(event.getMessageType())
-                .sender(event.getSender())
-                .content(event.getContent())
-                .createdAt(event.getCreatedAt())
-                .replyTo(event.getReplyTo())
-                .build();
+        ChatMessageResponse response = ChatMessageResponse.from(event.getMessage());
 
         messagingTemplate.convertAndSend(
                 String.format("/topic/chat/group/%d", event.getGroupId()),

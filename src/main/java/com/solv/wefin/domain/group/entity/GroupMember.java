@@ -50,6 +50,24 @@ public class GroupMember {
         this.status = status;
     }
 
+    public static GroupMember createLeader(User user, Group group) {
+        return GroupMember.builder()
+                .user(user)
+                .group(group)
+                .role(GroupMemberRole.LEADER)
+                .status(GroupMemberStatus.ACTIVE)
+                .build();
+    }
+
+    public static GroupMember createMember(User user, Group group) {
+        return GroupMember.builder()
+                .user(user)
+                .group(group)
+                .role(GroupMemberRole.MEMBER)
+                .status(GroupMemberStatus.ACTIVE)
+                .build();
+    }
+
     @PrePersist
     protected void onCreate() {
         if (this.joinedAt == null) {
@@ -57,9 +75,26 @@ public class GroupMember {
         }
     }
 
-    public void leave() {
-        this.status = GroupMemberStatus.LEFT;
+    public void activate() {
+        this.status = GroupMemberStatus.ACTIVE;
+        this.leftAt = null;
+    }
+
+    public void deactivate() {
+        this.status = GroupMemberStatus.INACTIVE;
         this.leftAt = OffsetDateTime.now();
+    }
+
+    public boolean isActive() {
+        return this.status == GroupMemberStatus.ACTIVE;
+    }
+
+    public boolean isLeader() {
+        return this.role == GroupMemberRole.LEADER;
+    }
+
+    public boolean isHomeGroupMember() {
+        return this.group.isHomeGroup();
     }
 
     public enum GroupMemberRole {
@@ -69,6 +104,6 @@ public class GroupMember {
 
     public enum GroupMemberStatus {
         ACTIVE,
-        LEFT
+        INACTIVE
     }
 }

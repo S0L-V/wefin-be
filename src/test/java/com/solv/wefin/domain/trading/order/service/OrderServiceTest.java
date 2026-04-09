@@ -174,7 +174,7 @@ class OrderServiceTest {
 	}
 
 	@Nested
-	class 주문취소_검증{
+	class CancelOrderTest{
 
 		@Test
 		void 취소_성공_매수주문() {
@@ -239,7 +239,7 @@ class OrderServiceTest {
 	}
 
 	@Nested
-	class 주문정정_검증{
+	class ModifyOrderTest{
 
 		@Test
 		void 정정_성공_매수_가격변경() {

@@ -19,6 +19,10 @@ public enum ErrorCode {
     GROUP_INVITE_ALREADY_USED(400, "이미 사용된 초대 코드입니다."),
     GROUP_FULL(400, "그룹 인원이 가득 찼습니다."),
     ALREADY_JOINED_GROUP(409, "이미 참여한 그룹입니다."),
+    GROUP_HOME_INVITE_NOT_ALLOWED(400, "홈 그룹에는 초대 코드를 생성할 수 없습니다."),
+    GROUP_HOME_JOIN_NOT_ALLOWED(400, "홈 그룹에는 참여할 수 없습니다."),
+    GROUP_HOME_LEAVE_NOT_ALLOWED(400, "홈 그룹은 탈퇴할 수 없습니다."),
+    GROUP_HOME_GROUP_NOT_FOUND(404, "홈 그룹을 찾을 수 없습니다."),
 
     // Chat
     CHAT_MESSAGE_EMPTY(400, "메시지 내용은 비어 있을 수 없습니다."),
@@ -28,6 +32,8 @@ public enum ErrorCode {
     CHAT_MESSAGE_NOT_FOUND(404, "채팅 메시지를 찾을 수 없습니다."),
     AI_CHAT_REQUEST_FAILED(503, "AI 응답 생성에 실패했습니다."),
     AI_CHAT_TIMEOUT(504, "AI 응답 시간이 초과되었습니다."),
+    NEWS_CLUSTER_NOT_FOUND(404, "뉴스 기사를 찾을 수 없습니다."),
+
 
     // Common
     INVALID_INPUT(400, "잘못된 입력입니다."),
@@ -44,6 +50,12 @@ public enum ErrorCode {
     ACCOUNT_LOCKED(423, "계정이 잠금 상태입니다."),
     AUTH_INVALID_TOKEN(401, "유효하지 않은 인증 토큰입니다."),
     AUTH_UNAUTHORIZED(401, "인증이 필요합니다."),
+
+    // Payment
+    PLAN_NOT_FOUND(404, "구독 상품을 찾을 수 없습니다."),
+    PLAN_INACTIVE(400, "비활성화된 구독 상품입니다."),
+    ACTIVE_SUBSCRIPTION_ALREADY_EXISTS(409, "이미 활성 구독이 존재합니다."),
+    INVALID_PROVIDER(400, "지원하지 않는 결제사입니다."),
 
     // Order - BUY
     ORDER_INSUFFICIENT_BALANCE(400, "예수금이 부족합니다."),

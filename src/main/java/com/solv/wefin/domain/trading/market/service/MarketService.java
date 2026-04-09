@@ -5,10 +5,12 @@ import com.solv.wefin.domain.trading.market.client.HantuMarketClient;
 import com.solv.wefin.domain.trading.market.client.dto.HantuCandleApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuOrderbookApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuPriceApiResponse;
+import com.solv.wefin.domain.trading.market.client.dto.HantuRecentTradeApiResponse;
 import com.solv.wefin.domain.trading.market.dto.CandleResponse;
 import com.solv.wefin.domain.trading.market.dto.OrderbookResponse;
 import com.solv.wefin.domain.trading.market.dto.PriceResponse;
 import com.solv.wefin.domain.trading.common.MarketPriceProvider;
+import com.solv.wefin.domain.trading.market.dto.RecentTradeResponse;
 import com.solv.wefin.domain.trading.stock.service.StockService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
@@ -155,10 +157,8 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
         }
 
         // 한투 API 응답 코드 검증 (rt_cd "0"이면 정상)
-        if (response.output1() != null && response.output1().rt_cd()
-                != null
-                && !"0".equals(response.output1().rt_cd())) {
-            throw new BusinessException(ErrorCode.MARKET_API_FAILED);
+        if (response.output1() != null) {
+            validateRtCode(response.output1().rt_cd());
         }
 
         if (response.output2() == null) {
@@ -171,6 +171,28 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
 
     }
 
+    public List<RecentTradeResponse> getRecentTrades(String stockCode) {
+        validateStockCode(stockCode);
+
+        HantuRecentTradeApiResponse response = hantuMarketClient.fetchRecentTrades(stockCode);
+
+        if (response == null) {
+            return List.of();
+        }
+
+        if (response.output1() != null) {
+            validateRtCode(response.output1().rt_cd());
+        }
+
+        if (response.output() == null) {
+            return List.of();
+        }
+
+        return response.output().stream()
+                .map(RecentTradeResponse::from)
+                .toList();
+    }
+
     private void validateStockCode(String stockCode) {
         if (!stockService.existsByCode(stockCode)) {
             throw new BusinessException(ErrorCode.MARKET_STOCK_NOT_FOUND);
@@ -180,5 +202,11 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
     public void updatePriceCache(String stockCode, PriceResponse response) {
         priceCache.put(stockCode, response);
         priceCacheTimestamp.put(stockCode, System.currentTimeMillis());
+    }
+
+    private void validateRtCode(String rtCd) {
+        if (rtCd != null && !"0".equals(rtCd)) {
+            throw new BusinessException(ErrorCode.MARKET_API_FAILED);
+        }
     }
 }
