@@ -53,10 +53,11 @@ public class OpenAiSummaryClient {
     private static final String SYSTEM_PROMPT = """
             당신은 금융 뉴스 전문 에디터입니다.
             여러 관련 기사를 종합하여 하나의 브리핑을 작성하세요.
-            
+            각 기사에는 [1], [2] 등의 번호가 매겨져 있습니다.
+
             작성 규칙:
             1. title: 핵심 이슈를 한 줄로 요약 (50자 이내, 한글)
-            2. summary: 여러 기사를 종합한 브리핑 (200~400자, 한글)
+            2. leadSummary: 여러 기사를 종합한 리드 요약 (200~400자, 한글)
                - 가능하면 다음 구조를 포함:
                  · 팩트: 무슨 일이 일어났는가
                  · 분석/원인: 왜 일어났는가
@@ -64,11 +65,29 @@ public class OpenAiSummaryClient {
                  · 영향/파급: 투자자에게 어떤 의미인가
                - 모든 항목이 없어도 괜찮음. 기사에 있는 내용만 작성
                - 개별 기사를 나열하지 말고 하나의 스토리로 엮을 것
-            
+            3. sections: 상세 분석 섹션 배열 (2~4개 권장, 기사 수에 따라 유연하게)
+               - 각 섹션은 하나의 논점이나 관점을 다룬다
+               - heading: 소제목 (20자 이내, 한글)
+               - body: 해당 논점에 대한 상세 설명 (100~200자)
+               - sourceArticleIndices: 이 섹션의 근거가 된 기사 번호 배열 (예: [1, 3])
+                 · 반드시 입력 기사의 번호만 사용할 것
+
             반드시 아래 JSON 형식으로만 응답하세요:
             {
               "title": "엔비디아 급락, 반도체주 동반 하락",
-              "summary": "미국 증시에서 엔비디아 주가가 10% 넘게 급락하며..."
+              "leadSummary": "미국 증시에서 엔비디아 주가가 10% 넘게 급락하며...",
+              "sections": [
+                {
+                  "heading": "실적 부진이 촉발한 매도세",
+                  "body": "엔비디아의 2분기 실적이 시장 기대를 하회하면서...",
+                  "sourceArticleIndices": [1, 2]
+                },
+                {
+                  "heading": "반도체 업종 전반으로 확산",
+                  "body": "엔비디아 급락 여파로 삼성전자, SK하이닉스 등...",
+                  "sourceArticleIndices": [2, 3]
+                }
+              ]
             }
             """;
 
@@ -171,7 +190,7 @@ public class OpenAiSummaryClient {
             String article = articles.get(i) != null ? articles.get(i) : "";
             String truncated = article.length() > MAX_ARTICLE_LENGTH
                     ? article.substring(0, MAX_ARTICLE_LENGTH) : article;
-            sb.append("--- 기사 ").append(i + 1).append(" ---\n");
+            sb.append("[").append(i + 1).append("] ");
             sb.append(truncated).append("\n\n");
         }
 
