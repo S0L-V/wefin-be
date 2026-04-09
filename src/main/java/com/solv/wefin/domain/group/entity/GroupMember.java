@@ -72,6 +72,7 @@ public class GroupMember {
 
     public void deactivate() {
         this.status = GroupMemberStatus.INACTIVE;
+        this.leftAt = OffsetDateTime.now();
     }
 
     public boolean isActive() {

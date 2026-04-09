@@ -110,7 +110,7 @@ public class GroupService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
 
         if (targetGroup.isHomeGroup()) {
-            throw new BusinessException(ErrorCode.GROUP_HOME_INVITE_NOT_ALLOWED);
+            throw new BusinessException(ErrorCode.GROUP_HOME_JOIN_NOT_ALLOWED);
         }
 
         User user = userRepository.findById(userId)

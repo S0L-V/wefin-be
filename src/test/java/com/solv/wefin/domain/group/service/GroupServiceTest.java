@@ -240,6 +240,52 @@ class GroupServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("joinGroup")
+    class JoinGroupTest {
+
+        @Test
+        @DisplayName("홈 그룹에는 참여할 수 없다")
+        void joinGroup_fail_when_home_group() throws Exception {
+            // given
+            UUID userId = UUID.randomUUID();
+            UUID inviteCode = UUID.randomUUID();
+
+            Group homeGroup = createGroup(1L, "홈 그룹", GroupType.HOME);
+            User user = createUser(userId, "test@test.com", "유저", "pw");
+
+            GroupInvite invite = createGroupInvite(
+                    10L,
+                    homeGroup,
+                    user,
+                    inviteCode,
+                    GroupInvite.InviteStatus.PENDING
+            );
+
+            when(groupInviteRepository.findByInviteCode(inviteCode))
+                    .thenReturn(Optional.of(invite));
+
+            when(groupRepository.findByIdForUpdate(homeGroup.getId()))
+                    .thenReturn(Optional.of(homeGroup));
+
+            // when
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> groupService.joinGroup(userId, inviteCode)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.GROUP_HOME_JOIN_NOT_ALLOWED);
+
+            verify(userRepository, never()).findById(any());
+            verify(groupMemberRepository, never()).findByUser_UserIdAndStatus(any(), any());
+            verify(groupMemberRepository, never()).countByGroupAndStatus(any(), any());
+            verify(groupMemberRepository, never()).findByUser_UserIdAndGroup_Id(any(), anyLong());
+            verify(groupMemberRepository, never()).save(any());
+        }
+    }
+
     private Group createGroup(Long id, String name, GroupType groupType) throws Exception {
         Constructor<Group> constructor = Group.class.getDeclaredConstructor(String.class, GroupType.class);
         constructor.setAccessible(true);
