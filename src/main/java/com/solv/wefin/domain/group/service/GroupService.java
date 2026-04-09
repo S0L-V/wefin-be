@@ -171,6 +171,10 @@ public class GroupService {
 
         boolean wasLeader = leavingMember.isLeader();
 
+        if (wasLeader) {
+            leavingMember.changeRoleToMember();
+        }
+
         leavingMember.deactivate();
 
         long remainingActiveMemberCount = groupMemberRepository.countByGroupAndStatus(

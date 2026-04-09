@@ -339,6 +339,7 @@ class GroupServiceTest {
                     () -> assertThat(result.leftGroupId()).isEqualTo(1L),
                     () -> assertThat(result.currentGroupId()).isEqualTo(100L),
                     () -> assertThat(leavingMember.isActive()).isFalse(),
+                    () -> assertThat(leavingMember.isLeader()).isFalse(),
                     () -> assertThat(homeGroupMember.isActive()).isTrue()
             );
         }
@@ -406,6 +407,7 @@ class GroupServiceTest {
                     () -> assertThat(result.leftGroupId()).isEqualTo(1L),
                     () -> assertThat(result.currentGroupId()).isEqualTo(100L),
                     () -> assertThat(leavingLeader.isActive()).isFalse(),
+                    () -> assertThat(leavingLeader.isLeader()).isFalse(),
                     () -> assertThat(homeGroupMember.isActive()).isTrue(),
                     () -> assertThat(remainingMember.isLeader()).isTrue()
             );
@@ -526,6 +528,7 @@ class GroupServiceTest {
                     () -> assertThat(result.leftGroupId()).isEqualTo(1L),
                     () -> assertThat(result.currentGroupId()).isEqualTo(100L),
                     () -> assertThat(leavingMember.isActive()).isFalse(),
+                    () -> assertThat(leavingMember.isLeader()).isFalse(),
                     () -> assertThat(createdHomeGroupMember.isActive()).isTrue()
             );
 

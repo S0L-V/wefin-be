@@ -89,6 +89,10 @@ public class GroupMember {
         this.role = GroupMemberRole.LEADER;
     }
 
+    public void changeRoleToMember() {
+        this.role = GroupMemberRole.MEMBER;
+    }
+
     public boolean isActive() {
         return this.status == GroupMemberStatus.ACTIVE;
     }
