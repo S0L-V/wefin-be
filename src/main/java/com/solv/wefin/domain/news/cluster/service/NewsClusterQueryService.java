@@ -15,6 +15,7 @@ import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionReposi
 import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionSourceRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
+import com.solv.wefin.domain.news.cluster.repository.UserNewsClusterFeedbackRepository;
 import com.solv.wefin.domain.news.cluster.repository.UserNewsClusterReadRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
@@ -51,6 +52,7 @@ public class NewsClusterQueryService {
     private final NewsArticleRepository newsArticleRepository;
     private final NewsArticleTagRepository articleTagRepository;
     private final UserNewsClusterReadRepository readRepository;
+    private final UserNewsClusterFeedbackRepository feedbackRepository;
     private final ClusterSummarySectionRepository sectionRepository;
     private final ClusterSummarySectionSourceRepository sectionSourceRepository;
 
@@ -347,6 +349,14 @@ public class NewsClusterQueryService {
         boolean isRead = userId != null
                 && readRepository.existsByUserIdAndNewsClusterId(userId, clusterId);
 
+        // 피드백 여부
+        String feedbackType = null;
+        if (userId != null) {
+            feedbackType = feedbackRepository.findByUserIdAndNewsClusterId(userId, clusterId)
+                    .map(fb -> fb.getFeedbackType().name())
+                    .orElse(null);
+        }
+
         // 단독 클러스터(기사 1건 + 섹션 없음)는 기사 전문을 내려준다
         String articleContent = null;
         if (articleIds.size() == 1 && sectionDetails.isEmpty()) {
@@ -359,7 +369,7 @@ public class NewsClusterQueryService {
                 cluster.getId(), cluster.getTitle(), cluster.getSummary(),
                 cluster.getThumbnailUrl(), cluster.getPublishedAt(),
                 cluster.getArticleCount(), sources, stocks, marketTags, isRead,
-                sectionDetails, articleContent
+                feedbackType, sectionDetails, articleContent
         );
     }
 
@@ -505,6 +515,7 @@ public class NewsClusterQueryService {
             List<StockInfo> relatedStocks,
             List<String> marketTags,
             boolean isRead,
+            String feedbackType,
             List<SectionDetail> sections,
             String articleContent
     ) {

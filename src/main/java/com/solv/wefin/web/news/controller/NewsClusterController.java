@@ -1,13 +1,16 @@
 package com.solv.wefin.web.news.controller;
 
+import com.solv.wefin.domain.news.cluster.service.ClusterInteractionService;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterDetailResult;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterFeedResult;
 import com.solv.wefin.global.common.ApiResponse;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
+import com.solv.wefin.web.news.dto.request.FeedbackRequest;
 import com.solv.wefin.web.news.dto.response.ClusterDetailResponse;
 import com.solv.wefin.web.news.dto.response.ClusterFeedResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -31,6 +34,7 @@ public class NewsClusterController {
     private static final Set<String> VALID_SORT_VALUES = Set.of("publishedAt", "updatedAt");
 
     private final NewsClusterQueryService newsClusterQueryService;
+    private final ClusterInteractionService clusterInteractionService;
 
     /**
      * 뉴스 클러스터 피드 목록을 조회한다.
@@ -92,5 +96,45 @@ public class NewsClusterController {
     ) {
         ClusterDetailResult result = newsClusterQueryService.getDetail(clusterId, userId);
         return ApiResponse.success(ClusterDetailResponse.from(result));
+    }
+
+    /**
+     * 클러스터 읽음을 기록한다.
+     * 비회원(userId=null)은 무시한다
+     *
+     * @param clusterId 클러스터 ID
+     * @param userId 사용자 ID (비인증 시 null)
+     */
+    @PostMapping("/{clusterId}/read")
+    public ApiResponse<Void> markRead(
+            @PathVariable Long clusterId,
+            @AuthenticationPrincipal UUID userId
+    ) {
+        if (userId != null) {
+            clusterInteractionService.markRead(userId, clusterId);
+        }
+        return ApiResponse.success(null);
+    }
+
+    /**
+     * 클러스터에 피드백을 남긴다.
+     * 1회만 가능하며, 이미 피드백한 경우 409를 반환한다.
+     * 인증 필수
+     *
+     * @param clusterId 클러스터 ID
+     * @param request 피드백 유형 (HELPFUL / NOT_HELPFUL)
+     * @param userId 사용자 ID
+     */
+    @PostMapping("/{clusterId}/feedback")
+    public ApiResponse<Void> submitFeedback(
+            @PathVariable Long clusterId,
+            @Valid @RequestBody FeedbackRequest request,
+            @AuthenticationPrincipal UUID userId
+    ) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.AUTH_UNAUTHORIZED);
+        }
+        clusterInteractionService.submitFeedback(userId, clusterId, request.type());
+        return ApiResponse.success(null);
     }
 }
