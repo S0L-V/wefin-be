@@ -1,6 +1,7 @@
 package com.solv.wefin.web.chat.groupChat.dto.response;
 
 import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessageInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.NewsShareInfo;
 import com.solv.wefin.domain.chat.groupChat.dto.info.ReplyMessageInfo;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,6 +24,7 @@ public class ChatMessageResponse {
     private String content;
     private OffsetDateTime createdAt;
     private ReplyMessageInfo replyTo;
+    private NewsShareInfo newsShare;
 
     public static ChatMessageResponse from(ChatMessageInfo info) {
         return ChatMessageResponse.builder()
@@ -34,6 +36,7 @@ public class ChatMessageResponse {
                 .content(info.content())
                 .createdAt(info.createdAt())
                 .replyTo(info.replyTo())
+                .newsShare(info.newsShare())
                 .build();
     }
 }

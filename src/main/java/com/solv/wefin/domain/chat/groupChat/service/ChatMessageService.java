@@ -4,16 +4,21 @@ import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.chat.common.constant.ChatScope;
 import com.solv.wefin.domain.chat.common.service.ChatSpamGuard;
+import com.solv.wefin.domain.chat.groupChat.dto.command.ShareNewsCommand;
 import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessageInfo;
 import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessagesInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.NewsShareInfo;
 import com.solv.wefin.domain.chat.groupChat.dto.info.ReplyMessageInfo;
 import com.solv.wefin.domain.chat.groupChat.entity.ChatMessage;
+import com.solv.wefin.domain.chat.groupChat.entity.ChatMessageNewsShare;
 import com.solv.wefin.domain.chat.groupChat.entity.MessageType;
 import com.solv.wefin.domain.chat.groupChat.event.ChatMessageCreatedEvent;
 import com.solv.wefin.domain.chat.groupChat.repository.ChatMessageRepository;
 import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.entity.GroupMember;
 import com.solv.wefin.domain.group.repository.GroupMemberRepository;
+import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
+import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +52,8 @@ public class ChatMessageService {
     private static final int MAX_PAGE_SIZE = 100;
 
     private final Map<String, Object> chatLocks = new ConcurrentHashMap<>();
+    private final NewsClusterRepository newsClusterRepository;
+    private final ChatMessageNewsShareService chatMessageNewsShareService;
 
     @Transactional
     public void sendMessage(String content, UUID userId, Long replyToMessageId) {
@@ -86,6 +93,33 @@ public class ChatMessageService {
         }
     }
 
+    @Transactional
+    public ChatMessageInfo shareNews(UUID userId, ShareNewsCommand command) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        validateShareNewsCommand(command);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        Group group = findActiveUserGroup(userId);
+        NewsCluster newsCluster = newsClusterRepository.findById(command.newsClusterId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.NEWS_CLUSTER_NOT_FOUND));
+
+        ChatMessage chatMessage = chatMessageRepository.save(
+                ChatMessage.createNewsMessage(user, group, newsCluster.getTitle())
+        );
+
+        chatMessageNewsShareService.save(chatMessage, newsCluster);
+
+        ChatMessageInfo info = toInfo(chatMessage);
+
+        eventPublisher.publishEvent(new ChatMessageCreatedEvent(group.getId(), info));
+
+        return info;
+    }
 
     public ChatMessagesInfo getMessages(UUID userId, Long beforeMessageId, int size) {
 
@@ -117,6 +151,18 @@ public class ChatMessageService {
     }
 
     private ChatMessageInfo toInfo(ChatMessage message) {
+        NewsShareInfo newsShareInfo = null;
+
+        if (message.getNewsShare() != null) {
+            ChatMessageNewsShare newsShare = message.getNewsShare();
+            newsShareInfo = new NewsShareInfo(
+                    newsShare.getNewsCluster().getId(),
+                    newsShare.getSharedTitle(),
+                    newsShare.getSharedSummary(),
+                    newsShare.getSharedThumbnailUrl()
+            );
+        }
+
         return new ChatMessageInfo(
                 message.getId(),
                 extractUserId(message),
@@ -125,7 +171,8 @@ public class ChatMessageService {
                 resolveSender(message),
                 message.getContent(),
                 message.getCreatedAt(),
-                toReplyInfo(message.getReplyToMessage())
+                toReplyInfo(message.getReplyToMessage()),
+                newsShareInfo
         );
     }
 
@@ -143,15 +190,15 @@ public class ChatMessageService {
 
     private ChatMessageCreatedEvent toEvent(ChatMessage message) {
         return new ChatMessageCreatedEvent(
-                message.getId(),
-                extractUserId(message),
                 extractGroupId(message),
-                message.getMessageType().name(),
-                resolveSender(message),
-                message.getContent(),
-                message.getCreatedAt(),
-                toReplyInfo(message.getReplyToMessage())
+                toInfo(message)
         );
+    }
+
+    private void validateShareNewsCommand(ShareNewsCommand command) {
+        if(command == null || command.newsClusterId() == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
     }
 
     private void validateMessage(String content) {

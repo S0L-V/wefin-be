@@ -20,6 +20,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
         left join fetch m.group
         left join fetch m.replyToMessage
         left join fetch m.replyToMessage.user
+        left join fetch m.newsShare
+        left join fetch m.newsShare.newsCluster
         where m.group.id = :groupId
         order by m.id desc
     """)
@@ -32,6 +34,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
         left join fetch m.group
         left join fetch m.replyToMessage
         left join fetch m.replyToMessage.user
+        left join fetch m.newsShare
+        left join fetch m.newsShare.newsCluster
         where m.group.id = :groupId
             and m.id < :beforeMessageId
         order by m.id desc
