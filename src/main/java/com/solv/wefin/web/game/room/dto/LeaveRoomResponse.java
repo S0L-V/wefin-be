@@ -1,6 +1,5 @@
 package com.solv.wefin.web.game.room.dto;
 
-import com.solv.wefin.domain.game.room.entity.GameRoom;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 

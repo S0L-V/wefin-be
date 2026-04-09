@@ -16,18 +16,37 @@ public class NewsBatchScheduler {
     private final NewsBatchService newsBatchService;
 
     /**
-     * 매일 04:00에 150일치 뉴스 크롤링 + AI 브리핑 생성.
-     * 약 20분 소요 (크롤링 10분 + OpenAI 10분).
-     * 9일이면 전체 기간(2020~2024) 완료.
+     * 하루 4회 뉴스 크롤링 + AI 브리핑 생성 (150일치 × 4 = 600일/day).
+     * 약 3일이면 전체 기간(2020~2024, 1,825일) 완료.
+     * 수집 완료 후에는 이미 처리된 날짜를 건너뛰므로 추가 부하 없음.
      */
     @Scheduled(cron = "0 0 4 * * *", zone = "Asia/Seoul")
-    public void collectDaily() {
-        log.info("[뉴스 배치 시작] 스케줄=04:00");
+    public void collectMorning() {
+        runBatch("04:00");
+    }
+
+    @Scheduled(cron = "0 0 12 * * *", zone = "Asia/Seoul")
+    public void collectNoon() {
+        runBatch("12:00");
+    }
+
+    @Scheduled(cron = "0 0 19 * * *", zone = "Asia/Seoul")
+    public void collectEvening() {
+        runBatch("19:00");
+    }
+
+    @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
+    public void collectMidnight() {
+        runBatch("00:00");
+    }
+
+    private void runBatch(String schedule) {
+        log.info("[뉴스 배치 시작] 스케줄={}", schedule);
         try {
             int count = newsBatchService.collectBatch(150);
-            log.info("[뉴스 배치 종료] 스케줄=04:00, 처리={}건", count);
+            log.info("[뉴스 배치 종료] 스케줄={}, 처리={}건", schedule, count);
         } catch (Exception e) {
-            log.error("[뉴스 배치 에러] 스케줄=04:00", e);
+            log.error("[뉴스 배치 에러] 스케줄={}", schedule, e);
         }
     }
 }
