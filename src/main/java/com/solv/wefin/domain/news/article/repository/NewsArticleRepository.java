@@ -14,6 +14,20 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
     boolean existsByDedupKey(String dedupKey);
 
     /**
+     * 출처 표시용 — 엔티티 전체가 아닌 publisherName + originalUrl만 조회한다.
+     * content(TEXT) 등 불필요한 대용량 컬럼 로딩을 방지.
+     */
+    @Query("SELECT a.id AS id, a.publisherName AS publisherName, a.originalUrl AS originalUrl " +
+            "FROM NewsArticle a WHERE a.id IN :ids")
+    List<SourceProjection> findSourceInfoByIdIn(@Param("ids") List<Long> ids);
+
+    interface SourceProjection {
+        Long getId();
+        String getPublisherName();
+        String getOriginalUrl();
+    }
+
+    /**
      * 재판정 가능한 PENDING 기사를 id 오름차순으로 조회한다.
      */
     @Query("SELECT a FROM NewsArticle a " +

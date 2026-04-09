@@ -17,7 +17,16 @@ public interface GlobalChatMessageRepository extends JpaRepository<GlobalChatMes
         left join fetch m.user
         order by m.id desc
     """)
-    List<GlobalChatMessage> findRecentMessages(Pageable pageable);
+    List<GlobalChatMessage> findMessages(Pageable pageable);
+
+    @Query("""
+        select m
+        from GlobalChatMessage m
+        left join fetch m.user
+        where m.id < :beforeMessageId
+        order by m.id desc 
+    """)
+    List<GlobalChatMessage> findMessagesBefore(Long beforeMessageId, Pageable pageable);
 
     long countByUser_UserIdAndCreatedAtAfter(UUID userId, OffsetDateTime time);
 }

@@ -5,12 +5,14 @@ import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.chat.aiChat.client.OpenAiChatClient;
 import com.solv.wefin.domain.chat.aiChat.dto.command.AiChatCommand;
 import com.solv.wefin.domain.chat.aiChat.dto.info.AiChatInfo;
+import com.solv.wefin.domain.chat.aiChat.dto.info.AiChatMessagesInfo;
 import com.solv.wefin.domain.chat.aiChat.entity.AiChatMessage;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,18 +21,34 @@ import java.util.UUID;
 public class AiChatService {
 
     private static final int MAX_MESSAGE_LENGTH = 1000;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final OpenAiChatClient openAiChatClient;
     private final AiChatMessagePersistenceService aiChatMessagePersistenceService;
     private final UserRepository userRepository;
 
-    public List<AiChatInfo> getMessages(UUID userId) {
+    public AiChatMessagesInfo getMessages(UUID userId, Long beforeMessageId, int size) {
         validateUserId(userId);
 
-        return aiChatMessagePersistenceService.getMessages(userId)
-                .stream()
+        int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+
+        List<AiChatMessage> fetched = aiChatMessagePersistenceService.getMessages(userId, beforeMessageId, pageSize);
+
+        boolean hasNext = fetched.size() > pageSize;
+        if (hasNext) {
+            fetched = fetched.subList(0, pageSize);
+        }
+
+        Long nextCursor = hasNext && !fetched.isEmpty()
+                ? fetched.get(fetched.size() - 1).getMessageId()
+                :null;
+
+        List<AiChatInfo> messages = fetched.stream()
+                .sorted(Comparator.comparing(AiChatMessage::getMessageId))
                 .map(this::toInfo)
                 .toList();
+
+        return new AiChatMessagesInfo(messages, nextCursor, hasNext);
     }
 
     public AiChatInfo sendMessage(AiChatCommand command, UUID userId) {

@@ -3,6 +3,7 @@ package com.solv.wefin.web.trading.market;
 import com.solv.wefin.domain.trading.market.dto.CandleResponse;
 import com.solv.wefin.domain.trading.market.dto.OrderbookResponse;
 import com.solv.wefin.domain.trading.market.dto.PriceResponse;
+import com.solv.wefin.domain.trading.market.dto.RecentTradeResponse;
 import com.solv.wefin.domain.trading.market.service.MarketService;
 import com.solv.wefin.domain.trading.stock.dto.StockSearchResponse;
 import com.solv.wefin.domain.trading.stock.service.StockService;
@@ -47,4 +48,10 @@ public class MarketController {
             @RequestParam String periodCode) {
         return ApiResponse.success(marketService.getCandles(code, start, end, periodCode));
     }
+
+    @GetMapping("/{code}/trades/recent")
+    public ApiResponse<List<RecentTradeResponse>> getRecentTrades(@PathVariable String code) {
+        return ApiResponse.success(marketService.getRecentTrades(code));
+    }
+
 }

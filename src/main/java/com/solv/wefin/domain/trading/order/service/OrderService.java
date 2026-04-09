@@ -4,6 +4,7 @@ import static com.solv.wefin.domain.trading.common.TradingConstants.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ import com.solv.wefin.domain.trading.account.service.VirtualAccountService;
 import com.solv.wefin.domain.trading.common.MarketPriceProvider;
 import com.solv.wefin.domain.trading.common.StockInfoProvider;
 import com.solv.wefin.domain.trading.matching.event.OrderMatchedEvent;
+import com.solv.wefin.domain.trading.order.dto.OrderCancelInfo;
 import com.solv.wefin.domain.trading.order.dto.OrderInfo;
 import com.solv.wefin.domain.trading.order.entity.Order;
 import com.solv.wefin.domain.trading.order.entity.OrderSide;
@@ -45,9 +47,7 @@ public class OrderService {
 	@Transactional
 	public OrderInfo buyMarket(Long virtualAccountId, Long stockId, Integer quantity) {
 		// 1. 수량 검증
-		if (quantity == null || quantity <= 0) {
-			throw new BusinessException(ErrorCode.ORDER_INVALID_QUANTITY);
-		}
+		validateQuantity(quantity);
 
 		// 2. 현재가 조회
 		Stock stock = stockInfoProvider.getStock(stockId);
@@ -90,9 +90,7 @@ public class OrderService {
 	@Transactional
 	public OrderInfo sellMarket(Long virtualAccountId, Long stockId, Integer quantity) {
 		// 1. 수량 검증
-		if (quantity == null || quantity <= 0) {
-			throw new BusinessException(ErrorCode.ORDER_INVALID_QUANTITY);
-		}
+		validateQuantity(quantity);
 
 		// 2. 종목 조회
 		Stock stock = stockInfoProvider.getStock(stockId);
@@ -154,5 +152,97 @@ public class OrderService {
 
 		return new OrderInfo(order, stock.getStockCode(), stock.getStockName(), currentPrice,
 			totalAmount, tax, realizedAmount, account.getBalance());
+	}
+
+	/**
+	 * 미체결 주문을 취소한다.
+	 * BUY: 예약금 (requestPrice x quantity + fee) 환불
+	 * SELL: 예약 수량을 포트폴리오에 반환
+	 */
+	@Transactional
+	public OrderCancelInfo cancelOrder(Long virtualAccountId, UUID orderNo) {
+		Order order = orderRepository.findByOrderNoForUpdate(orderNo)
+			.orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+		if (order.getOrderType() == OrderType.MARKET) {
+			throw new BusinessException(ErrorCode.ORDER_NOT_CANCELLABLE);
+		}
+
+		order.validateOwnership(virtualAccountId);
+		VirtualAccount account = virtualAccountService.getAccountWithLock(virtualAccountId);
+
+		BigDecimal refundedAmount = BigDecimal.ZERO;
+		if (order.getSide() == OrderSide.BUY) {
+			refundedAmount = order.getRequestPrice()
+				.multiply(BigDecimal.valueOf(order.getQuantity()))
+				.add(order.getFee());
+			account.deposit(refundedAmount);
+		} else if (order.getSide() == OrderSide.SELL) {
+			// TODO: addHolding은 avgPrice를 재계산함
+			// 취소 시 원래 avgPrice를 유지하는 returnHolding 메서드가 필요
+			// 지정가 매도 구현 후 팀원 협의 필요
+			portfolioService.addHolding(virtualAccountId, order.getStockId(), order.getQuantity(),
+				order.getRequestPrice(), order.getCurrency());
+		}
+
+		order.cancel();
+		return new OrderCancelInfo(order, refundedAmount, account.getBalance());
+	}
+
+	/**
+	 * 미체결 주문의 가격/수량을 정정한다.
+	 * BUY: 예약금 차액을 계좌에서 추가 차감 또는 환불
+	 * SELL: 수량 변경분만큼 포트폴리오 조정
+	 * 시장가 주문은 정정 불가.
+	 */
+	@Transactional
+	public OrderInfo modifyOrder(Long virtualAccountId, UUID orderNo, BigDecimal newPrice, Integer newQuantity) {
+		Order order = orderRepository.findByOrderNoForUpdate(orderNo)
+			.orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+		if (order.getOrderType() == OrderType.MARKET) {
+			throw new BusinessException(ErrorCode.ORDER_NOT_MODIFIABLE);
+		}
+
+		order.validateOwnership(virtualAccountId);
+		VirtualAccount account = virtualAccountService.getAccountWithLock(virtualAccountId);
+		Integer oldQuantity = order.getQuantity();
+
+		BigDecimal oldReserved = order.getRequestPrice()
+			.multiply(BigDecimal.valueOf(order.getQuantity()))
+			.add(order.getFee());
+
+		order.modify(newPrice, newQuantity);
+
+		BigDecimal newReserved = newPrice.multiply(BigDecimal.valueOf(newQuantity)).add(order.getFee());
+
+		if (order.getSide() == OrderSide.BUY) {
+			BigDecimal diff = newReserved.subtract(oldReserved);
+			if (diff.compareTo(BigDecimal.ZERO) > 0) {
+				account.deduct(diff);
+			} else if (diff.compareTo(BigDecimal.ZERO) < 0) {
+				account.deposit(diff.abs());
+			}
+		} else if (order.getSide() == OrderSide.SELL) {
+			// TODO: addHolding은 avgPrice를 재계산함
+			// 취소 시 원래 avgPrice를 유지하는 returnHolding 메서드가 필요
+			// 지정가 매도 구현 후 팀원 협의 필요
+			int diffQuantity = Math.abs(newQuantity - oldQuantity);
+			if (newQuantity > oldQuantity) {
+				portfolioService.deductQuantity(virtualAccountId, order.getStockId(), diffQuantity);
+			} else if (newQuantity < oldQuantity) {
+				portfolioService.addHolding(virtualAccountId, order.getStockId(), diffQuantity,
+					order.getRequestPrice(), order.getCurrency());
+			}
+		}
+		Stock stock = stockInfoProvider.getStock(order.getStockId());
+		BigDecimal totalAmount = newPrice.multiply(BigDecimal.valueOf(newQuantity));
+
+		return new OrderInfo(order, stock.getStockCode(), stock.getStockName(),
+			newPrice, totalAmount, order.getTax(), BigDecimal.ZERO, account.getBalance());
+	}
+
+	private static void validateQuantity(Integer quantity) {
+		if (quantity == null || quantity <= 0) {
+			throw new BusinessException(ErrorCode.ORDER_INVALID_QUANTITY);
+		}
 	}
 }

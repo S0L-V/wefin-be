@@ -5,6 +5,7 @@ import com.solv.wefin.domain.trading.market.dto.OrderbookResponse;
 import com.solv.wefin.domain.trading.market.dto.PriceResponse;
 import com.solv.wefin.domain.trading.market.dto.TradeResponse;
 import com.solv.wefin.domain.trading.market.dto.WebSocketMessageType;
+import com.solv.wefin.domain.trading.market.service.CandleGenerator;
 import com.solv.wefin.domain.trading.market.service.MarketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +49,7 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
     private final SimpMessagingTemplate messagingTemplate;
     private final MarketService marketService;
     private final Set<String> subscribedStocks = ConcurrentHashMap.newKeySet();
+    private final CandleGenerator candleGenerator;
 
     // 한투 WS에 연결
     @EventListener(ApplicationReadyEvent.class)
@@ -127,7 +129,8 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
     }
 
     private void sendMessage(String trId, String stockCode, String trType) {
-        if (session == null || !session.isOpen()) {
+        WebSocketSession s = this.session;
+        if (s == null || !s.isOpen()) {
             log.warn("한투 웹소켓 미연결 상태. 메시지 전송 스킵: {}", stockCode);
             return;
         }
@@ -148,7 +151,7 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
                     )
             );
 
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
+            s.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
         } catch (Exception e) {
             log.error("한투 웹소켓 메시지 전송 실패: {}", stockCode, e);
         }
@@ -179,6 +182,13 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
                         fields[offset + 21]                       // tradeSide
                 );
                 messagingTemplate.convertAndSend("/topic/stocks/" + response.stockCode(), response);
+
+                candleGenerator.onTrade(
+                        response.stockCode(),
+                        response.currentPrice(),
+                        response.tradeVolume(),
+                        response.tradeTime()
+                );
 
                 PriceResponse priceResponse = new PriceResponse(
                         fields[offset],

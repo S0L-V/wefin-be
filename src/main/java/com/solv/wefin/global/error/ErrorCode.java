@@ -31,7 +31,7 @@ public enum ErrorCode {
 
     // Common
     INVALID_INPUT(400, "잘못된 입력입니다."),
-    DUPLICATE_RESOURCE(409,"중복된 리소스입니다."),
+    DUPLICATE_RESOURCE(409, "중복된 리소스입니다."),
     INTERNAL_SERVER_ERROR(500, "서버 내부 오류가 발생했습니다."),
 
     // Auth - SIGNUP
@@ -44,6 +44,12 @@ public enum ErrorCode {
     ACCOUNT_LOCKED(423, "계정이 잠금 상태입니다."),
     AUTH_INVALID_TOKEN(401, "유효하지 않은 인증 토큰입니다."),
     AUTH_UNAUTHORIZED(401, "인증이 필요합니다."),
+
+    // Payment
+    PLAN_NOT_FOUND(404, "구독 상품을 찾을 수 없습니다."),
+    PLAN_INACTIVE(400, "비활성화된 구독 상품입니다."),
+    ACTIVE_SUBSCRIPTION_ALREADY_EXISTS(409, "이미 활성 구독이 존재합니다."),
+    INVALID_PROVIDER(400, "지원하지 않는 결제사입니다."),
 
     // Order - BUY
     ORDER_INSUFFICIENT_BALANCE(400, "예수금이 부족합니다."),
@@ -58,6 +64,11 @@ public enum ErrorCode {
 
     // Order - MODIFY/CANCEL
     ORDER_ALREADY_FILLED(400, "이미 체결된 주문입니다."),
+    ORDER_NOT_FOUND(404, "주문을 찾을 수 없습니다."),
+    ORDER_ALREADY_CANCELLED(400, "이미 취소된 주문입니다."),
+    ORDER_NOT_MODIFIABLE(400, "수정 가능한 상태가 아닙니다."),
+    ORDER_OWNERSHIP_MISMATCH(403, "소유권이 일치하지 않습니다."),
+    ORDER_NOT_CANCELLABLE(400, "주문을 취소할 수 없습니다."),
 
     // Account
     ACCOUNT_NOT_FOUND(404, "계좌를 찾을 수 없습니다."),
@@ -91,7 +102,7 @@ public enum ErrorCode {
     SUMMARY_CLUSTER_NOT_FOUND(500, "요약 대상 클러스터를 찾을 수 없습니다."),
 
     // GameRoom
-    ROOM_NOT_FOUND(404,"게임장을 찾을 수 없습니다."),
+    ROOM_NOT_FOUND(404, "게임장을 찾을 수 없습니다."),
     ROOM_ALREADY_EXISTS(409, "이미 진행 중이거나 대기 중인 게임방이 있습니다."),
     ROOM_HOST_ALREADY_EXISTS(409, "이미 방장으로 참여 중인 게임방이 있습니다."),
     ROOM_HOST_DAILY_LIMIT(409, "하루 방 생성 가능 횟수 초과"),
@@ -99,7 +110,7 @@ public enum ErrorCode {
     ROOM_FULL(400, "인원 초과"),
     ROOM_FINISHED(400, "종료된 방입니다."),
     ROOM_NOT_PARTICIPANT(404, "참가자가 아닙니다."),
-    ROOM_NOT_HOST(403,"방장만 게임을 시작할 수 있습니다."),
+    ROOM_NOT_HOST(403, "방장만 게임을 시작할 수 있습니다."),
     ROOM_MIN_PLAYERS(400, "2명 이상의 참가자가 필요합니다."),
     ROOM_NOT_WAITING(400, "대기 상태가 아닙니다."),
 

@@ -3,6 +3,7 @@ package com.solv.wefin.domain.trading.market.client;
 import com.solv.wefin.domain.trading.market.client.dto.HantuCandleApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuOrderbookApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuPriceApiResponse;
+import com.solv.wefin.domain.trading.market.client.dto.HantuRecentTradeApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -92,5 +93,20 @@ public class HantuMarketClient {
                 .header("tr_id", "FHKST03010100")
                 .header("custtype", "P")
                 .retrieve().body(HantuCandleApiResponse.class);
+    }
+
+    public HantuRecentTradeApiResponse fetchRecentTrades(String stockCode) {
+        return hantuRestClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/uapi/domestic-stock/v1/quotations/inquire-ccnl")
+                        .queryParam("FID_COND_MRKT_DIV_CODE", "J")
+                        .queryParam("FID_INPUT_ISCD", stockCode)
+                        .build())
+                .header("authorization", "Bearer " + hantuTokenManager.getAccessToken())
+                .header("appkey", appKey)
+                .header("appsecret", appSecret)
+                .header("tr_id", "FHKST01010300")
+                .header("custtype", "P")
+                .retrieve().body(HantuRecentTradeApiResponse.class);
     }
 }
