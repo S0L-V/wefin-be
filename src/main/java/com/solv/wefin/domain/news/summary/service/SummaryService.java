@@ -1,5 +1,6 @@
 package com.solv.wefin.domain.news.summary.service;
 
+import com.solv.wefin.domain.news.article.entity.NewsArticle;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.ClusterStatus;
@@ -9,6 +10,8 @@ import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepositor
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.news.summary.client.OpenAiSummaryClient;
 import com.solv.wefin.domain.news.summary.dto.SummaryResult;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -16,6 +19,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * AI 요약 생성 전체 흐름을 관리하는 서비스
@@ -69,19 +75,19 @@ public class SummaryService {
                     outlierCount += removed;
                 }
 
-                // 2) 소속 기사 조회
-                List<String> articleTexts = getArticleTexts(cluster.getId());
+                // 2) 소속 기사 ID 조회 (한 번만 조회하여 순서 일관성 보장)
+                List<Long> articleIds = getArticleIds(cluster.getId());
 
-                if (articleTexts.isEmpty()) {
+                if (articleIds.isEmpty()) {
                     log.warn("요약 생성 실패 — 소속 기사 없음, clusterId: {}", cluster.getId());
                     persistenceService.markFailed(cluster.getId());
                     failCount++;
                     continue;
                 }
 
-                // 3) 단독 클러스터 최적화 — AI 호출 없이 기사 제목/요약을 그대로 사용.
-                if (articleTexts.size() == 1) {
-                    if (handleSingleArticleCluster(cluster)) {
+                // 3) 단독 클러스터 최적화 — AI 호출 없이 기사 제목/요약을 그대로 사용
+                if (articleIds.size() == 1) {
+                    if (handleSingleArticleCluster(cluster, articleIds)) {
                         successCount++;
                     } else {
                         log.warn("단독 클러스터 요약 실패 — 기사 조회 불가, clusterId: {}", cluster.getId());
@@ -91,17 +97,38 @@ public class SummaryService {
                     continue;
                 }
 
-                // 4) AI 요약 생성 (다건 종합)
+                // 4) articleIds 순서 기준으로 텍스트 생성 (프롬프트 인덱스와 ID 매핑 일치 보장)
+                List<String> articleTexts = buildArticleTexts(articleIds, cluster.getId());
+
+                // 5) AI 요약 생성 (다건 종합)
                 SummaryResult result = openAiSummaryClient.generateSummary(articleTexts);
 
                 if (result.isEmpty()) {
-                    throw new IllegalStateException("AI 요약 결과가 비어있습니다");
+                    throw new BusinessException(ErrorCode.SUMMARY_EMPTY_RESULT);
                 }
 
-                // 5) 저장 — GENERATED 상태로 마킹하며 title/summary를 커밋
-                persistenceService.markGenerated(cluster.getId(), result.getTitle(), result.getSummary());
+                // 6) 섹션 검증 — 실제 articleIds 기준으로 유효한 출처가 있는 섹션이 1개 이상 필요
+                if (!result.hasSections()) {
+                    log.warn("섹션 배열이 비어있음 — clusterId: {}", cluster.getId());
+                    throw new BusinessException(ErrorCode.SUMMARY_NO_SECTIONS);
+                }
+
+                int articleCount = articleIds.size();
+                boolean hasValidSection = result.getSections().stream()
+                        .anyMatch(s -> s.isValid() && hasValidSourceIndex(s, articleCount));
+                if (!hasValidSection) {
+                    log.warn("유효한 출처를 가진 섹션 없음 — clusterId: {}", cluster.getId());
+                    throw new BusinessException(ErrorCode.SUMMARY_NO_VALID_SECTIONS);
+                }
+
+                // 7) 저장 — 기사 집합 변경 감지 후 섹션/출처 저장, 마지막에 GENERATED 마킹
+                persistenceService.markGeneratedWithSections(cluster.getId(), result.getTitle(),
+                        result.getLeadSummary(), result.getSections(), articleIds);
                 successCount++;
 
+            } catch (StaleClusterException e) {
+                // 기사 집합 불일치: 클러스터가 변경되어 저장을 건너뜀. FAILED로 마킹하지 않는다
+                log.info("요약 저장 스킵 — clusterId: {}, reason: {}", cluster.getId(), e.getMessage());
             } catch (Exception e) {
                 log.warn("요약 생성 실패 — clusterId: {}, error: {}", cluster.getId(), e.getMessage());
                 try {
@@ -117,21 +144,16 @@ public class SummaryService {
     }
 
     /**
-     * 단독 클러스터(기사 1건)는 AI 호출 없이 기사 제목/요약을 그대로 사용한다.
+     * 단독 클러스터(기사 1건)는 AI 호출 없이 기사 제목/요약을 그대로 사용한다
      *
+     * @param cluster 요약 대상 클러스터
+     * @param expectedArticleIds 조회 시점의 기사 ID 목록 (기사 집합 변경 감지용)
      * @return true면 성공, false면 기사를 찾지 못해 실패
+     * @throws StaleClusterException 저장 직전 기사 집합이 변경된 경우
      */
-    private boolean handleSingleArticleCluster(NewsCluster cluster) {
-        // 매핑 재조회 (이상치 제거 후의 실제 상태를 반영)
-        List<NewsClusterArticle> mappings = clusterArticleRepository.findByNewsClusterId(cluster.getId());
-        // 단독 클러스터인데 매핑이 사라진 경우 (동시성/데이터 이상)
-        if (mappings.isEmpty()) {
-            return false;
-        }
-
-        Long articleId = mappings.get(0).getNewsArticleId();
+    private boolean handleSingleArticleCluster(NewsCluster cluster, List<Long> expectedArticleIds) {
+        Long articleId = expectedArticleIds.get(0);
         var articleOpt = newsArticleRepository.findById(articleId);
-        // 매핑은 있는데 기사가 없는 경우 (기사 삭제 후 매핑 미정리)
         if (articleOpt.isEmpty()) {
             return false;
         }
@@ -139,7 +161,7 @@ public class SummaryService {
         var article = articleOpt.get();
         String title = resolveTitle(article);
         String summary = article.getSummary() != null ? article.getSummary() : title;
-        persistenceService.markGenerated(cluster.getId(), title, summary);
+        persistenceService.markGeneratedSingle(cluster.getId(), title, summary, expectedArticleIds);
         return true;
     }
 
@@ -178,21 +200,45 @@ public class SummaryService {
     }
 
     /**
-     * 클러스터에 속한 기사들을 "제목 + 본문" 문자열 형태로 변환한다.
+     * 클러스터에 속한 기사 ID 목록을 조회한다
      */
-    private List<String> getArticleTexts(Long clusterId) {
-        // 1. 클러스터-기사 매핑 조회 (현재 소속된 기사만)
-        List<NewsClusterArticle> mappings = clusterArticleRepository.findByNewsClusterId(clusterId);
-
-        // 2. 기사 ID 추출
-        List<Long> articleIds = mappings.stream()
+    private List<Long> getArticleIds(Long clusterId) {
+        return clusterArticleRepository.findByNewsClusterId(clusterId).stream()
                 .map(NewsClusterArticle::getNewsArticleId)
                 .toList();
+    }
 
-        // 3. 기사 일괄 조회 + "제목 + 본문" 형태로 변환
-        return newsArticleRepository.findAllById(articleIds).stream()
-                .map(article -> "제목: " + article.getTitle() + "\n본문: " +
-                        (article.getContent() != null ? article.getContent() : ""))
+    /**
+     * 섹션의 sourceArticleIndices 중 실제 articleIds 범위 내 유효한 인덱스가 있는지 확인한다
+     */
+    private boolean hasValidSourceIndex(SummaryResult.SectionItem section, int articleCount) {
+        if (!section.hasSources()) {
+            return false;
+        }
+        return section.getSourceArticleIndices().stream()
+                .anyMatch(idx -> idx >= 1 && idx <= articleCount);
+    }
+
+    /**
+     * articleIds 순서를 유지하면서 "제목 + 본문" 텍스트 목록을 생성한다.
+     * 누락된 기사가 있으면 인덱스 매핑이 어긋나므로 즉시 예외를 던진다
+     */
+    private List<String> buildArticleTexts(List<Long> articleIds, Long clusterId) {
+        Map<Long, NewsArticle> articleMap = newsArticleRepository.findAllById(articleIds).stream()
+                .collect(Collectors.toMap(NewsArticle::getId, a -> a));
+
+        if (articleMap.size() != articleIds.size()) {
+            log.error("기사 조회 불일치 — clusterId: {}, expected: {}, actual: {}",
+                    clusterId, articleIds.size(), articleMap.size());
+            throw new BusinessException(ErrorCode.SUMMARY_ARTICLE_MISMATCH);
+        }
+
+        return articleIds.stream()
+                .map(id -> {
+                    NewsArticle a = articleMap.get(id);
+                    return "제목: " + a.getTitle() + "\n본문: " +
+                            (a.getContent() != null ? a.getContent() : "");
+                })
                 .toList();
     }
 }

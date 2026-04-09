@@ -28,6 +28,20 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
     }
 
     /**
+     * 섹션 출처 카드용 — id, title, publisherName, originalUrl을 조회한다
+     */
+    @Query("SELECT a.id AS id, a.title AS title, a.publisherName AS publisherName, a.originalUrl AS originalUrl " +
+            "FROM NewsArticle a WHERE a.id IN :ids")
+    List<ArticleSourceProjection> findArticleSourceInfoByIdIn(@Param("ids") List<Long> ids);
+
+    interface ArticleSourceProjection {
+        Long getId();
+        String getTitle();
+        String getPublisherName();
+        String getOriginalUrl();
+    }
+
+    /**
      * 재판정 가능한 PENDING 기사를 id 오름차순으로 조회한다.
      */
     @Query("SELECT a FROM NewsArticle a " +

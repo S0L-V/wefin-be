@@ -106,6 +106,11 @@ public enum ErrorCode {
     // Summary
     SUMMARY_ALREADY_RUNNING(409, "요약 생성이 이미 실행 중입니다."),
     SUMMARY_CLUSTER_NOT_FOUND(500, "요약 대상 클러스터를 찾을 수 없습니다."),
+    SUMMARY_EMPTY_RESULT(500, "AI 요약 결과가 비어있습니다."),
+    SUMMARY_NO_SECTIONS(500, "AI 요약에 섹션이 포함되지 않았습니다."),
+    SUMMARY_NO_VALID_SECTIONS(500, "AI 요약에 유효한 출처를 가진 섹션이 없습니다."),
+    SUMMARY_ARTICLE_MISMATCH(500, "프롬프트 기사 수와 실제 조회 기사 수가 불일치합니다."),
+    CLUSTER_NOT_FOUND(404, "클러스터를 찾을 수 없습니다."),
 
     // GameRoom
     ROOM_NOT_FOUND(404, "게임장을 찾을 수 없습니다."),

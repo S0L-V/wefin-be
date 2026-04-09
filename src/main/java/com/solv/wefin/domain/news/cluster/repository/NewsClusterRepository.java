@@ -30,19 +30,19 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
                                                      List<NewsCluster.SummaryStatus> statuses,
                                                      Pageable pageable);
 
-    // --- 피드 목록: 전체 탭 (태그 필터 없음) ---
+    // --- 피드 목록: publishedAt 정렬 (기본) ---
 
     @Query("SELECT c FROM NewsCluster c " +
             "WHERE c.status = :status " +
             "AND c.summaryStatus IN :summaryStatuses " +
             "AND c.title IS NOT NULL " +
-            "AND (c.publishedAt < :cursorPublishedAt " +
-            "     OR (c.publishedAt = :cursorPublishedAt AND c.id < :cursorId)) " +
+            "AND (c.publishedAt < :cursorTime " +
+            "     OR (c.publishedAt = :cursorTime AND c.id < :cursorId)) " +
             "ORDER BY c.publishedAt DESC, c.id DESC")
-    List<NewsCluster> findForFeedAfterCursor(
+    List<NewsCluster> findForFeedAfterCursorByPublishedAt(
             @Param("status") ClusterStatus status,
             @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
-            @Param("cursorPublishedAt") OffsetDateTime cursorPublishedAt,
+            @Param("cursorTime") OffsetDateTime cursorTime,
             @Param("cursorId") Long cursorId,
             Pageable pageable);
 
@@ -51,12 +51,38 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
             "AND c.summaryStatus IN :summaryStatuses " +
             "AND c.title IS NOT NULL " +
             "ORDER BY c.publishedAt DESC, c.id DESC")
-    List<NewsCluster> findForFeedFirstPage(
+    List<NewsCluster> findForFeedFirstPageByPublishedAt(
             @Param("status") ClusterStatus status,
             @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
             Pageable pageable);
 
-    // --- 피드 목록: 카테고리 필터 (대분류 SECTOR 태그코드로 필터) ---
+    // --- 피드 목록: updatedAt 정렬 ---
+
+    @Query("SELECT c FROM NewsCluster c " +
+            "WHERE c.status = :status " +
+            "AND c.summaryStatus IN :summaryStatuses " +
+            "AND c.title IS NOT NULL " +
+            "AND (c.updatedAt < :cursorTime " +
+            "     OR (c.updatedAt = :cursorTime AND c.id < :cursorId)) " +
+            "ORDER BY c.updatedAt DESC, c.id DESC")
+    List<NewsCluster> findForFeedAfterCursorByUpdatedAt(
+            @Param("status") ClusterStatus status,
+            @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
+            @Param("cursorTime") OffsetDateTime cursorTime,
+            @Param("cursorId") Long cursorId,
+            Pageable pageable);
+
+    @Query("SELECT c FROM NewsCluster c " +
+            "WHERE c.status = :status " +
+            "AND c.summaryStatus IN :summaryStatuses " +
+            "AND c.title IS NOT NULL " +
+            "ORDER BY c.updatedAt DESC, c.id DESC")
+    List<NewsCluster> findForFeedFirstPageByUpdatedAt(
+            @Param("status") ClusterStatus status,
+            @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
+            Pageable pageable);
+
+    // --- 피드 목록: 카테고리 필터 + publishedAt 정렬 ---
 
     @Query("SELECT DISTINCT c FROM NewsCluster c " +
             "WHERE c.status = :status " +
@@ -67,15 +93,15 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
             "            WHERE nca.newsClusterId = c.id " +
             "            AND t.tagType = :sectorType " +
             "            AND t.tagCode = :categoryCode) " +
-            "AND (c.publishedAt < :cursorPublishedAt " +
-            "     OR (c.publishedAt = :cursorPublishedAt AND c.id < :cursorId)) " +
+            "AND (c.publishedAt < :cursorTime " +
+            "     OR (c.publishedAt = :cursorTime AND c.id < :cursorId)) " +
             "ORDER BY c.publishedAt DESC, c.id DESC")
-    List<NewsCluster> findForFeedByCategoryAfterCursor(
+    List<NewsCluster> findForFeedByCategoryAfterCursorByPublishedAt(
             @Param("status") ClusterStatus status,
             @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
             @Param("sectorType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType sectorType,
             @Param("categoryCode") String categoryCode,
-            @Param("cursorPublishedAt") OffsetDateTime cursorPublishedAt,
+            @Param("cursorTime") OffsetDateTime cursorTime,
             @Param("cursorId") Long cursorId,
             Pageable pageable);
 
@@ -89,7 +115,47 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
             "            AND t.tagType = :sectorType " +
             "            AND t.tagCode = :categoryCode) " +
             "ORDER BY c.publishedAt DESC, c.id DESC")
-    List<NewsCluster> findForFeedByCategoryFirstPage(
+    List<NewsCluster> findForFeedByCategoryFirstPageByPublishedAt(
+            @Param("status") ClusterStatus status,
+            @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
+            @Param("sectorType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType sectorType,
+            @Param("categoryCode") String categoryCode,
+            Pageable pageable);
+
+    // --- 피드 목록: 카테고리 필터 + updatedAt 정렬 ---
+
+    @Query("SELECT DISTINCT c FROM NewsCluster c " +
+            "WHERE c.status = :status " +
+            "AND c.summaryStatus IN :summaryStatuses " +
+            "AND c.title IS NOT NULL " +
+            "AND EXISTS (SELECT 1 FROM NewsClusterArticle nca " +
+            "            JOIN NewsArticleTag t ON t.newsArticleId = nca.newsArticleId " +
+            "            WHERE nca.newsClusterId = c.id " +
+            "            AND t.tagType = :sectorType " +
+            "            AND t.tagCode = :categoryCode) " +
+            "AND (c.updatedAt < :cursorTime " +
+            "     OR (c.updatedAt = :cursorTime AND c.id < :cursorId)) " +
+            "ORDER BY c.updatedAt DESC, c.id DESC")
+    List<NewsCluster> findForFeedByCategoryAfterCursorByUpdatedAt(
+            @Param("status") ClusterStatus status,
+            @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
+            @Param("sectorType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType sectorType,
+            @Param("categoryCode") String categoryCode,
+            @Param("cursorTime") OffsetDateTime cursorTime,
+            @Param("cursorId") Long cursorId,
+            Pageable pageable);
+
+    @Query("SELECT DISTINCT c FROM NewsCluster c " +
+            "WHERE c.status = :status " +
+            "AND c.summaryStatus IN :summaryStatuses " +
+            "AND c.title IS NOT NULL " +
+            "AND EXISTS (SELECT 1 FROM NewsClusterArticle nca " +
+            "            JOIN NewsArticleTag t ON t.newsArticleId = nca.newsArticleId " +
+            "            WHERE nca.newsClusterId = c.id " +
+            "            AND t.tagType = :sectorType " +
+            "            AND t.tagCode = :categoryCode) " +
+            "ORDER BY c.updatedAt DESC, c.id DESC")
+    List<NewsCluster> findForFeedByCategoryFirstPageByUpdatedAt(
             @Param("status") ClusterStatus status,
             @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
             @Param("sectorType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType sectorType,
