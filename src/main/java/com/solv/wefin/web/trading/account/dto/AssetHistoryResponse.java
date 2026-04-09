@@ -11,7 +11,8 @@ public record AssetHistoryResponse(List<AssetHistoryItem> history) {
 		LocalDate date,
 		BigDecimal totalAsset,
 		BigDecimal balance,
-		BigDecimal evaluationAmount
+		BigDecimal evaluationAmount,
+		BigDecimal realizedProfit
 	) {}
 
 	public static AssetHistoryResponse from(List<DailySnapshot> snapshots) {
@@ -20,7 +21,8 @@ public record AssetHistoryResponse(List<AssetHistoryItem> history) {
 				s.getSnapshotDate(),
 				s.getTotalAsset(),
 				s.getBalance(),
-				s.getEvaluationAmount()
+				s.getEvaluationAmount(),
+				s.getRealizedProfit()
 			)).toList());
 	}
 }
