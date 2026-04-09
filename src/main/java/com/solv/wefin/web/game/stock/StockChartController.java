@@ -25,7 +25,7 @@ public class StockChartController {
             @PathVariable String symbol,
             @RequestParam UUID roomId) {
 
-        List<StockDaily> dailyData = stockChartService.getChart(symbol, roomId);
+        List<StockDaily> dailyData = stockChartService.getChart(symbol, roomId, userId);
 
         List<ChartResponse> response = dailyData.stream()
                 .map(ChartResponse::from)

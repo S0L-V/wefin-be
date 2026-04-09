@@ -25,7 +25,7 @@ public class StockSearchController {
             @PathVariable UUID roomId,
             @RequestParam String keyword) {
 
-        List<StockDaily> stocks = stockSearchService.searchStocks(roomId, keyword);
+        List<StockDaily> stocks = stockSearchService.searchStocks(roomId, userId, keyword);
 
         List<StockSearchResponse> response = stocks.stream()
                 .map(StockSearchResponse::from)
