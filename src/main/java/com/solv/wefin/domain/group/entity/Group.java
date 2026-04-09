@@ -1,8 +1,8 @@
 package com.solv.wefin.domain.group.entity;
 
-import com.solv.wefin.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "groups")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Group extends BaseEntity {
+public class Group {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,9 +24,10 @@ public class Group extends BaseEntity {
     @Column(name = "group_type", nullable = false, length = 20)
     private GroupType groupType;
 
+    @Builder
     private Group(String name, GroupType groupType) {
         this.name = name;
-        this.groupType = groupType;
+        this.groupType = groupType != null ? groupType : GroupType.SHARED;
     }
 
     public static Group createHomeGroup(String name) {

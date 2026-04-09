@@ -3,6 +3,7 @@ package com.solv.wefin.domain.group.entity;
 import com.solv.wefin.domain.auth.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -41,6 +42,7 @@ public class GroupMember {
     @Column(name = "left_at")
     private OffsetDateTime leftAt;
 
+    @Builder
     private GroupMember(User user, Group group, GroupMemberRole role, GroupMemberStatus status) {
         this.user = user;
         this.group = group;
