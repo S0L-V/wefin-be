@@ -42,6 +42,9 @@ public class ClusterInterestWeightService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void updateWeights(UUID userId, Long clusterId, FeedbackType feedbackType) {
+        if (feedbackType == null) {
+            throw new IllegalArgumentException("feedbackType은 null일 수 없습니다");
+        }
         BigDecimal delta = feedbackType == FeedbackType.HELPFUL ? HELPFUL_WEIGHT : NOT_HELPFUL_WEIGHT;
 
         List<Long> articleIds = clusterArticleRepository.findByNewsClusterId(clusterId).stream()
@@ -62,7 +65,8 @@ public class ClusterInterestWeightService {
             userInterestRepository.upsertWeight(userId, key.type(), key.code(), delta);
         }
 
-        log.info("피드백 가중치 업데이트 — userId: {}, clusterId: {}, type: {}, 태그 수: {}",
-                userId, clusterId, feedbackType, tagKeys.size());
+        log.info("피드백 가중치 업데이트 — clusterId: {}, type: {}, 태그 수: {}",
+                clusterId, feedbackType, tagKeys.size());
+        log.debug("피드백 가중치 상세 — userId: {}, clusterId: {}", userId, clusterId);
     }
 }
