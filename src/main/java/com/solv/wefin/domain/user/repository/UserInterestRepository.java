@@ -21,7 +21,7 @@ public interface UserInterestRepository extends JpaRepository<UserInterest, Long
      * @return 업데이트된 행 수 (0이면 해당 관심사가 없음)
      */
     @Modifying
-    @Query("UPDATE UserInterest u SET u.weight = u.weight + :delta " +
+    @Query("UPDATE UserInterest u SET u.weight = COALESCE(u.weight, 0) + :delta " +
             "WHERE u.userId = :userId AND u.interestType = :type AND u.interestValue = :value")
     int addWeightAtomically(@Param("userId") UUID userId,
                             @Param("type") String type,

@@ -178,22 +178,30 @@ public class SummaryService {
                 title = result.getTitle() != null && !result.getTitle().isBlank()
                         ? result.getTitle() : resolveTitle(article);
                 summary = result.getLeadSummary() != null && !result.getLeadSummary().isBlank()
-                        ? result.getLeadSummary() : (article.getSummary() != null ? article.getSummary() : title);
+                        ? result.getLeadSummary() : resolveSummaryFallback(article, title);
                 log.info("단독 클러스터 AI 요약 성공 — clusterId: {}, articleId: {}",
                         cluster.getId(), articleId);
             } catch (Exception e) {
                 log.warn("단독 클러스터 AI 요약 실패, fallback 사용 — clusterId: {}, error: {}",
                         cluster.getId(), e.getMessage());
                 title = resolveTitle(article);
-                summary = article.getSummary() != null ? article.getSummary() : title;
+                summary = resolveSummaryFallback(article, title);
             }
         } else {
             title = resolveTitle(article);
-            summary = article.getSummary() != null ? article.getSummary() : title;
+            summary = resolveSummaryFallback(article, title);
         }
 
         persistenceService.markGeneratedSingle(cluster.getId(), title, summary, expectedArticleIds);
         return true;
+    }
+
+    /**
+     * 기사의 summary를 반환한다. null이거나 blank이면 title을 fallback으로 사용한다
+     */
+    private String resolveSummaryFallback(com.solv.wefin.domain.news.article.entity.NewsArticle article, String title) {
+        String summary = article.getSummary();
+        return summary != null && !summary.isBlank() ? summary : title;
     }
 
     /**

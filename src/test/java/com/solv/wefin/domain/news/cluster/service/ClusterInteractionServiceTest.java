@@ -1,16 +1,11 @@
 package com.solv.wefin.domain.news.cluster.service;
 
-import com.solv.wefin.domain.news.article.entity.NewsArticleTag;
-import com.solv.wefin.domain.news.article.repository.NewsArticleTagRepository;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.ClusterStatus;
-import com.solv.wefin.domain.news.cluster.entity.NewsClusterArticle;
 import com.solv.wefin.domain.news.cluster.entity.UserNewsClusterFeedback.FeedbackType;
-import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.news.cluster.repository.UserNewsClusterFeedbackRepository;
 import com.solv.wefin.domain.news.cluster.repository.UserNewsClusterReadRepository;
-import com.solv.wefin.domain.user.repository.UserInterestRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -21,9 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -38,9 +31,7 @@ class ClusterInteractionServiceTest {
     @Mock private NewsClusterRepository newsClusterRepository;
     @Mock private UserNewsClusterReadRepository readRepository;
     @Mock private UserNewsClusterFeedbackRepository feedbackRepository;
-    @Mock private NewsClusterArticleRepository clusterArticleRepository;
-    @Mock private NewsArticleTagRepository articleTagRepository;
-    @Mock private UserInterestRepository userInterestRepository;
+    @Mock private ClusterInterestWeightService interestWeightService;
 
     @InjectMocks
     private ClusterInteractionService service;
@@ -91,21 +82,15 @@ class ClusterInteractionServiceTest {
     }
 
     @Test
-    @DisplayName("submitFeedback — 정상 저장 + 가중치 업데이트")
+    @DisplayName("submitFeedback — 정상 저장 + 가중치 업데이트 호출")
     void submitFeedback_success() {
         given(newsClusterRepository.findById(CLUSTER_ID)).willReturn(Optional.of(activeCluster()));
         given(feedbackRepository.existsByUserIdAndNewsClusterId(USER_ID, CLUSTER_ID)).willReturn(false);
-        given(clusterArticleRepository.findByNewsClusterId(CLUSTER_ID))
-                .willReturn(List.of(NewsClusterArticle.create(CLUSTER_ID, 100L, 0, false)));
-        given(articleTagRepository.findByNewsArticleIdIn(List.of(100L)))
-                .willReturn(List.of(stockTag(100L, "005930")));
-        given(userInterestRepository.addWeightAtomically(eq(USER_ID), eq("STOCK"), eq("005930"), any()))
-                .willReturn(1);
 
         service.submitFeedback(USER_ID, CLUSTER_ID, FeedbackType.HELPFUL);
 
         verify(feedbackRepository).save(any());
-        verify(userInterestRepository).addWeightAtomically(USER_ID, "STOCK", "005930", BigDecimal.ONE);
+        verify(interestWeightService).updateWeights(USER_ID, CLUSTER_ID, FeedbackType.HELPFUL);
     }
 
     @Test
@@ -124,8 +109,8 @@ class ClusterInteractionServiceTest {
     void submitFeedback_weightFailure_feedbackSaved() {
         given(newsClusterRepository.findById(CLUSTER_ID)).willReturn(Optional.of(activeCluster()));
         given(feedbackRepository.existsByUserIdAndNewsClusterId(USER_ID, CLUSTER_ID)).willReturn(false);
-        given(clusterArticleRepository.findByNewsClusterId(CLUSTER_ID))
-                .willThrow(new RuntimeException("DB 오류"));
+        doThrow(new RuntimeException("가중치 오류"))
+                .when(interestWeightService).updateWeights(any(), any(), any());
 
         service.submitFeedback(USER_ID, CLUSTER_ID, FeedbackType.HELPFUL);
 
@@ -144,14 +129,5 @@ class ClusterInteractionServiceTest {
         NewsCluster cluster = activeCluster();
         cluster.deactivate();
         return cluster;
-    }
-
-    private NewsArticleTag stockTag(Long articleId, String code) {
-        return NewsArticleTag.builder()
-                .newsArticleId(articleId)
-                .tagType(NewsArticleTag.TagType.STOCK)
-                .tagCode(code)
-                .tagName("삼성전자")
-                .build();
     }
 }
