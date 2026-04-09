@@ -167,7 +167,8 @@ class GroupServiceTest {
                     group,
                     GroupMember.GroupMemberStatus.ACTIVE
             )).thenReturn(true);
-            when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+            when(userRepository.findById(userId))
+                    .thenReturn(Optional.of(user));
             when(groupInviteRepository.save(any(GroupInvite.class))).thenReturn(invite);
 
             // when
@@ -326,7 +327,7 @@ class GroupServiceTest {
                     sharedGroup,
                     GroupMember.GroupMemberStatus.ACTIVE
             )).thenReturn(0L);
-            when(userRepository.findById(userId))
+            when(userRepository.findByIdForUpdate(userId))
                     .thenReturn(Optional.of(user));
             when(groupMemberRepository.findByUser_UserIdAndGroup_GroupType(userId, GroupType.HOME))
                     .thenReturn(Optional.of(homeGroupMember));
@@ -389,7 +390,7 @@ class GroupServiceTest {
                     sharedGroup,
                     GroupMember.GroupMemberStatus.ACTIVE
             )).thenReturn(1L);
-            when(userRepository.findById(userId))
+            when(userRepository.findByIdForUpdate(userId))
                     .thenReturn(Optional.of(leaderUser));
             when(groupMemberRepository.findFirstByGroupAndStatusAndUser_UserIdNotOrderByIdAsc(
                     sharedGroup,
@@ -508,13 +509,11 @@ class GroupServiceTest {
                     sharedGroup,
                     GroupMember.GroupMemberStatus.ACTIVE
             )).thenReturn(0L);
-            when(userRepository.findById(userId))
+            when(userRepository.findByIdForUpdate(userId))
                     .thenReturn(Optional.of(user));
-
             when(groupMemberRepository.findByUser_UserIdAndGroup_GroupType(userId, GroupType.HOME))
                     .thenReturn(Optional.empty())
                     .thenReturn(Optional.of(createdHomeGroupMember));
-
             when(groupRepository.save(any(Group.class)))
                     .thenReturn(createdHomeGroup);
             when(groupMemberRepository.save(any(GroupMember.class)))

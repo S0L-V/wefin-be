@@ -194,12 +194,17 @@ public class GroupService {
             nextLeader.changeRoleToLeader();
         }
 
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         GroupMember homeGroupMember = groupMemberRepository
                 .findByUser_UserIdAndGroup_GroupType(userId, GroupType.HOME)
-                .orElseGet(() -> createDefaultGroupAndGetMembership(user));
+                .orElseGet(() -> {
+                    GroupMember created = createDefaultGroupAndGetMembership(user);
+                    return groupMemberRepository
+                            .findByUser_UserIdAndGroup_GroupType(userId, GroupType.HOME)
+                            .orElse(created);
+                });
 
         homeGroupMember.activate();
 
