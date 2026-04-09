@@ -17,7 +17,6 @@ import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -30,9 +29,8 @@ public class PaymentService {
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final UserRepository userRepository;
-    private final OrderIdGenerator orderIdGenerator;
+    private final PaymentWriter paymentWriter;
 
-    @Transactional
     public PaymentReadyInfo createPayment(UUID userId, CreatePaymentCommand command) {
 
         PaymentProvider provider = PaymentProvider.from(command.provider());
@@ -80,18 +78,8 @@ public class PaymentService {
             PaymentProvider provider
     ) {
         for (int i = 0; i < 3; i++) {
-            String orderId = orderIdGenerator.generate();
-
-            Payment payment = Payment.createReady(
-                    plan,
-                    user,
-                    orderId,
-                    provider,
-                    plan.getPrice()
-            );
-
             try {
-                return paymentRepository.save(payment);
+                return paymentWriter.saveReadyPayment(plan, user, provider);
             } catch (DataIntegrityViolationException e) {
                 Optional<Payment> concurrentReady =
                         paymentRepository.findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(

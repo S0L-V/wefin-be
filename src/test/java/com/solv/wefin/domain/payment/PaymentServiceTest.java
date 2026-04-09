@@ -13,15 +13,14 @@ import com.solv.wefin.domain.payment.entity.SubscriptionStatus;
 import com.solv.wefin.domain.payment.repository.PaymentRepository;
 import com.solv.wefin.domain.payment.repository.SubscriptionPlanRepository;
 import com.solv.wefin.domain.payment.repository.SubscriptionRepository;
-import com.solv.wefin.domain.payment.service.OrderIdGenerator;
 import com.solv.wefin.domain.payment.service.PaymentService;
+import com.solv.wefin.domain.payment.service.PaymentWriter;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -53,7 +52,7 @@ class PaymentServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private OrderIdGenerator orderIdGenerator;
+    private PaymentWriter paymentWriter;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -84,7 +83,7 @@ class PaymentServiceTest {
                 .isEqualTo(ErrorCode.PLAN_NOT_FOUND);
 
         verify(subscriptionPlanRepository).findById(command.planId());
-        verifyNoInteractions(subscriptionRepository, userRepository, orderIdGenerator, paymentRepository);
+        verifyNoInteractions(subscriptionRepository, userRepository, paymentWriter, paymentRepository);
     }
 
     @Test
@@ -101,7 +100,7 @@ class PaymentServiceTest {
 
         verify(subscriptionPlanRepository).findById(command.planId());
         verify(plan).isAvailable();
-        verifyNoInteractions(subscriptionRepository, userRepository, orderIdGenerator, paymentRepository);
+        verifyNoInteractions(subscriptionRepository, userRepository, paymentWriter, paymentRepository);
     }
 
     @Test
@@ -119,10 +118,9 @@ class PaymentServiceTest {
                 .isEqualTo(ErrorCode.ACTIVE_SUBSCRIPTION_ALREADY_EXISTS);
 
         verify(subscriptionRepository).existsByUserUserIdAndStatus(userId, SubscriptionStatus.ACTIVE);
-        verifyNoInteractions(userRepository, orderIdGenerator);
+        verifyNoInteractions(userRepository, paymentWriter);
         verify(paymentRepository, never())
                 .findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(any(), any(), any(), any());
-        verify(paymentRepository, never()).save(any(Payment.class));
     }
 
     @Test
@@ -164,14 +162,16 @@ class PaymentServiceTest {
         assertThat(result.status()).isEqualTo("READY");
         assertThat(result.requestedAt()).isEqualTo(requestedAt);
 
-        verify(orderIdGenerator, never()).generate();
         verify(userRepository, never()).findById(any());
-        verify(paymentRepository, never()).save(any(Payment.class));
+        verifyNoInteractions(paymentWriter);
     }
 
     @Test
     @DisplayName("정상 요청이면 READY 결제를 생성하고 반환한다")
     void createPayment_success() {
+        Payment savedPayment = mock(Payment.class);
+        OffsetDateTime requestedAt = OffsetDateTime.now();
+
         given(subscriptionPlanRepository.findById(command.planId()))
                 .willReturn(Optional.of(plan));
         given(plan.isAvailable()).willReturn(true);
@@ -185,24 +185,22 @@ class PaymentServiceTest {
         given(paymentRepository.findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(
                 userId, 1L, PaymentProvider.TOSS, PaymentStatus.READY))
                 .willReturn(Optional.empty());
-        given(orderIdGenerator.generate()).willReturn("ORDER-20260408-NEW12345");
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
 
-        ArgumentCaptor<Payment> paymentCaptor = ArgumentCaptor.forClass(Payment.class);
-        given(paymentRepository.save(paymentCaptor.capture()))
-                .willAnswer(invocation -> invocation.getArgument(0));
+        given(paymentWriter.saveReadyPayment(plan, user, PaymentProvider.TOSS))
+                .willReturn(savedPayment);
+
+        given(savedPayment.getPaymentId()).willReturn(11L);
+        given(savedPayment.getOrderId()).willReturn("ORDER-20260408-NEW12345");
+        given(savedPayment.getPlan()).willReturn(plan);
+        given(savedPayment.getAmount()).willReturn(new BigDecimal("9900"));
+        given(savedPayment.getProvider()).willReturn(PaymentProvider.TOSS);
+        given(savedPayment.getStatus()).willReturn(PaymentStatus.READY);
+        given(savedPayment.getRequestedAt()).willReturn(requestedAt);
 
         PaymentReadyInfo result = paymentService.createPayment(userId, command);
 
-        Payment savedPayment = paymentCaptor.getValue();
-
-        assertThat(savedPayment.getOrderId()).isEqualTo("ORDER-20260408-NEW12345");
-        assertThat(savedPayment.getProvider()).isEqualTo(PaymentProvider.TOSS);
-        assertThat(savedPayment.getAmount()).isEqualByComparingTo("9900");
-        assertThat(savedPayment.getStatus()).isEqualTo(PaymentStatus.READY);
-        assertThat(savedPayment.getPlan()).isEqualTo(plan);
-        assertThat(savedPayment.getUser()).isEqualTo(user);
-
+        assertThat(result.paymentId()).isEqualTo(11L);
         assertThat(result.orderId()).isEqualTo("ORDER-20260408-NEW12345");
         assertThat(result.planId()).isEqualTo(1L);
         assertThat(result.planName()).isEqualTo("월간 이용권");
@@ -210,42 +208,86 @@ class PaymentServiceTest {
         assertThat(result.amount()).isEqualByComparingTo("9900");
         assertThat(result.provider()).isEqualTo("TOSS");
         assertThat(result.status()).isEqualTo("READY");
+        assertThat(result.requestedAt()).isEqualTo(requestedAt);
 
-        verify(paymentRepository).save(any(Payment.class));
+        verify(paymentWriter).saveReadyPayment(plan, user, PaymentProvider.TOSS);
     }
 
     @Test
-    @DisplayName("결제 저장 시 orderId unique 충돌이 발생하면 재시도 후 저장한다")
-    void createPayment_retries_whenOrderIdConflictOccurs() {
+    @DisplayName("결제 저장 시 unique 충돌이 발생하면 재조회 후 기존 READY 결제를 반환한다")
+    void createPayment_returnsConcurrentReady_whenDataIntegrityViolationOccurs() {
+        Payment concurrentReady = mock(Payment.class);
+        OffsetDateTime requestedAt = OffsetDateTime.now();
+
         given(subscriptionPlanRepository.findById(command.planId()))
                 .willReturn(Optional.of(plan));
         given(plan.isAvailable()).willReturn(true);
         given(plan.getPlanId()).willReturn(1L);
         given(plan.getPlanName()).willReturn("월간 이용권");
         given(plan.getBillingCycle()).willReturn(BillingCycle.MONTHLY);
+
+        given(subscriptionRepository.existsByUserUserIdAndStatus(userId, SubscriptionStatus.ACTIVE))
+                .willReturn(false);
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(user.getUserId()).willReturn(userId);
+
+        given(paymentRepository.findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(
+                userId, 1L, PaymentProvider.TOSS, PaymentStatus.READY))
+                .willReturn(Optional.empty())
+                .willReturn(Optional.of(concurrentReady));
+
+        given(paymentWriter.saveReadyPayment(plan, user, PaymentProvider.TOSS))
+                .willThrow(new DataIntegrityViolationException("unique constraint violation"));
+
+        given(concurrentReady.getPaymentId()).willReturn(12L);
+        given(concurrentReady.getOrderId()).willReturn("ORDER-20260408-CONCURRENT");
+        given(concurrentReady.getPlan()).willReturn(plan);
+        given(concurrentReady.getAmount()).willReturn(new BigDecimal("9900"));
+        given(concurrentReady.getProvider()).willReturn(PaymentProvider.TOSS);
+        given(concurrentReady.getStatus()).willReturn(PaymentStatus.READY);
+        given(concurrentReady.getRequestedAt()).willReturn(requestedAt);
+
+        PaymentReadyInfo result = paymentService.createPayment(userId, command);
+
+        assertThat(result.paymentId()).isEqualTo(12L);
+        assertThat(result.orderId()).isEqualTo("ORDER-20260408-CONCURRENT");
+        assertThat(result.status()).isEqualTo("READY");
+
+        verify(paymentWriter, times(1)).saveReadyPayment(plan, user, PaymentProvider.TOSS);
+        verify(paymentRepository, times(2))
+                .findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(
+                        userId, 1L, PaymentProvider.TOSS, PaymentStatus.READY);
+    }
+
+    @Test
+    @DisplayName("결제 저장 충돌이 반복되고 기존 READY도 없으면 최대 3번 재시도 후 INTERNAL_SERVER_ERROR 예외가 발생한다")
+    void createPayment_fail_whenSaveConflictRepeatsWithoutConcurrentReady() {
+        given(subscriptionPlanRepository.findById(command.planId()))
+                .willReturn(Optional.of(plan));
+        given(plan.isAvailable()).willReturn(true);
+        given(plan.getPlanId()).willReturn(1L);
         given(plan.getPrice()).willReturn(new BigDecimal("9900"));
 
         given(subscriptionRepository.existsByUserUserIdAndStatus(userId, SubscriptionStatus.ACTIVE))
                 .willReturn(false);
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(user.getUserId()).willReturn(userId);
+
         given(paymentRepository.findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(
                 userId, 1L, PaymentProvider.TOSS, PaymentStatus.READY))
                 .willReturn(Optional.empty());
-        given(userRepository.findById(userId)).willReturn(Optional.of(user));
 
-        given(orderIdGenerator.generate())
-                .willReturn("ORDER-20260408-CONFLICT1")
-                .willReturn("ORDER-20260408-SUCCESS2");
+        given(paymentWriter.saveReadyPayment(plan, user, PaymentProvider.TOSS))
+                .willThrow(new DataIntegrityViolationException("unique constraint violation"));
 
-        given(paymentRepository.save(any(Payment.class)))
-                .willThrow(new DataIntegrityViolationException("unique constraint violation"))
-                .willAnswer(invocation -> invocation.getArgument(0));
+        assertThatThrownBy(() -> paymentService.createPayment(userId, command))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INTERNAL_SERVER_ERROR);
 
-        PaymentReadyInfo result = paymentService.createPayment(userId, command);
-
-        assertThat(result.orderId()).isEqualTo("ORDER-20260408-SUCCESS2");
-        assertThat(result.status()).isEqualTo("READY");
-
-        verify(orderIdGenerator, times(2)).generate();
-        verify(paymentRepository, times(2)).save(any(Payment.class));
+        verify(paymentWriter, times(3)).saveReadyPayment(plan, user, PaymentProvider.TOSS);
+        verify(paymentRepository, times(4))
+                .findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(
+                        userId, 1L, PaymentProvider.TOSS, PaymentStatus.READY);
     }
 }
