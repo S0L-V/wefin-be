@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -27,6 +28,7 @@ public class NewsClusterController {
 
     private static final int DEFAULT_PAGE_SIZE = 10;
     private static final int MAX_PAGE_SIZE = 50;
+    private static final Set<String> VALID_SORT_VALUES = Set.of("publishedAt", "updatedAt");
 
     private final NewsClusterQueryService newsClusterQueryService;
 
@@ -47,6 +49,10 @@ public class NewsClusterController {
             @RequestParam(name = "sort", defaultValue = "publishedAt") String sort,
             @AuthenticationPrincipal UUID userId
     ) {
+        if (!VALID_SORT_VALUES.contains(sort)) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "지원하지 않는 sort 값입니다: " + sort);
+        }
+
         pageSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
 
         OffsetDateTime cursorTime = null;
