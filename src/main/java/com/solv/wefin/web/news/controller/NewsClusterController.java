@@ -34,6 +34,8 @@ public class NewsClusterController {
      *
      * @param cursor "timestamp_id" 형식의 커서 (첫 페이지면 null)
      * @param pageSize 페이지 크기 (기본 10, 최대 50)
+     * @param tab 카테고리 탭 (ALL/FINANCE/TECH/INDUSTRY/ENERGY/BIO/CRYPTO)
+     * @param sort 정렬 기준 (publishedAt 또는 updatedAt, 기본 publishedAt)
      * @param userId 사용자 ID (인증 시 헤더에서 주입, 없으면 null)
      */
     @GetMapping
@@ -41,11 +43,12 @@ public class NewsClusterController {
             @RequestParam(name = "cursor", required = false) String cursor,
             @RequestParam(name = "size", defaultValue = "" + DEFAULT_PAGE_SIZE) int pageSize,
             @RequestParam(name = "tab", defaultValue = "ALL") String tab,
+            @RequestParam(name = "sort", defaultValue = "publishedAt") String sort,
             @RequestHeader(name = "X-User-Id", required = false) UUID userId
     ) {
         pageSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
 
-        OffsetDateTime cursorPublishedAt = null;
+        OffsetDateTime cursorTime = null;
         Long cursorId = null;
 
         if (cursor != null) {
@@ -54,7 +57,7 @@ public class NewsClusterController {
                 if (parts.length != 2) {
                     throw new NumberFormatException("underscore missing");
                 }
-                cursorPublishedAt = OffsetDateTime.ofInstant(
+                cursorTime = OffsetDateTime.ofInstant(
                         Instant.ofEpochMilli(Long.parseLong(parts[0])), ZoneOffset.UTC);
                 cursorId = Long.parseLong(parts[1]);
             } catch (NumberFormatException | java.time.DateTimeException e) {
@@ -63,7 +66,7 @@ public class NewsClusterController {
         }
 
         ClusterFeedResult result = newsClusterQueryService.getFeed(
-                cursorPublishedAt, cursorId, pageSize, userId, tab);
+                cursorTime, cursorId, pageSize, userId, tab, sort);
 
         return ApiResponse.success(ClusterFeedResponse.from(result));
     }
