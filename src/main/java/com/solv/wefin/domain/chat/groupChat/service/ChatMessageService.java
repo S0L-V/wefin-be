@@ -183,10 +183,16 @@ public class ChatMessageService {
             return null;
         }
 
+        String previewContent = replyMessage.getContent();
+
+        if (replyMessage.getMessageType() == MessageType.NEWS && replyMessage.getNewsShare() != null) {
+            previewContent = "[뉴스] " + replyMessage.getNewsShare().getSharedTitle();
+        }
+
         return new ReplyMessageInfo(
                 replyMessage.getId(),
                 resolveSender(replyMessage),
-                replyMessage.getContent()
+                previewContent
         );
     }
 
