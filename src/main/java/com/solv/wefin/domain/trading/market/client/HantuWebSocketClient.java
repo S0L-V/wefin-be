@@ -176,6 +176,9 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
                         new BigDecimal(fields[offset + 2]),       // currentPrice
                         new BigDecimal(fields[offset + 4]),       // changePrice
                         new BigDecimal(fields[offset + 5]),       // changeRate
+                        new BigDecimal(fields[offset + 7]),       // openPrice
+                        new BigDecimal(fields[offset + 8]),       // highPrice
+                        new BigDecimal(fields[offset + 9]),       // lowPrice
                         Long.parseLong(fields[offset + 12]),      // tradeVolume
                         Long.parseLong(fields[offset + 13]),      // totalVolume
                         fields[offset + 1],                       // tradeTime
