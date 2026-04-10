@@ -15,11 +15,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -70,5 +73,39 @@ class UserServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.USER_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("여러 userId로 사용자 목록을 조회한다")
+    void findAllByIdIn_success() {
+        // given
+        UUID userId1 = UUID.randomUUID();
+        UUID userId2 = UUID.randomUUID();
+
+        User user1 = User.builder()
+                .email("user1@example.com")
+                .nickname("유저1")
+                .password("pw1")
+                .build();
+
+        User user2 = User.builder()
+                .email("user2@example.com")
+                .nickname("유저2")
+                .password("pw2")
+                .build();
+
+        ReflectionTestUtils.setField(user1, "userId", userId1);
+        ReflectionTestUtils.setField(user2, "userId", userId2);
+
+        List<UUID> userIds = List.of(userId1, userId2);
+
+        given(userRepository.findAllById(userIds)).willReturn(List.of(user1, user2));
+
+        // when
+        List<User> result = userService.findAllByIdIn(userIds);
+
+        // then
+        assertThat(result).containsExactly(user1, user2);
+        then(userRepository).should(times(1)).findAllById(userIds);
     }
 }
