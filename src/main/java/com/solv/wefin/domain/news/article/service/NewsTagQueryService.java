@@ -6,6 +6,7 @@ import com.solv.wefin.domain.news.article.repository.NewsArticleTagRepository.Po
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.ClusterStatus;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.SummaryStatus;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -31,12 +32,14 @@ public class NewsTagQueryService {
     private final NewsArticleTagRepository tagRepository;
 
     /**
-     * 특정 타입의 태그를 조회한다
+     * 특정 타입의 태그를 조회한다.
+     * Caffeine 캐시 적용 (TTL 5분). 3-way JOIN + GROUP BY 쿼리 비용을 줄인다
      *
      * @param tagType 태그 유형 (SECTOR, STOCK)
      * @param limit 최대 조회 수 (0이면 전체, 음수는 0으로 정규화)
      * @return 태그 목록 (클러스터 수 내림차순)
      */
+    @Cacheable(value = "popularTags", key = "#tagType.name() + ':' + #limit")
     public List<PopularTag> getPopularTags(TagType tagType, int limit) {
         int safeLimit = Math.max(limit, 0);
         Pageable pageable = safeLimit == 0
