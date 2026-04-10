@@ -172,7 +172,10 @@ class GroupLeaveServiceTest {
         void leaveGroup_fail_when_home_group() throws Exception {
             UUID userId = UUID.randomUUID();
             Group homeGroup = createGroup(1L, "홈 그룹", GroupType.HOME);
+            var user = createUser(userId, "test@test.com", "유저", "pw");
 
+            when(userRepository.findByIdForUpdate(userId))
+                    .thenReturn(Optional.of(user));
             when(groupRepository.findByIdForUpdate(1L))
                     .thenReturn(Optional.of(homeGroup));
 
@@ -205,6 +208,8 @@ class GroupLeaveServiceTest {
                     .thenReturn(Optional.of(sharedGroup));
             when(groupMemberRepository.findByUser_UserIdAndGroup_Id(userId, 1L))
                     .thenReturn(Optional.of(inactiveMember));
+            when(userRepository.findByIdForUpdate(userId))
+                    .thenReturn(Optional.of(user));
 
             BusinessException exception = assertThrows(
                     BusinessException.class,

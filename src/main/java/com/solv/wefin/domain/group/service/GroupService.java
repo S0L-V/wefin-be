@@ -48,8 +48,7 @@ public class GroupService {
 
     @Transactional
     public GroupMemberInfo createSharedGroup(UUID userId, String groupName) {
-        User user = userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        User user = getUserForMembershipTransition(userId);
 
         GroupMember currentActiveMember = groupMemberRepository
                 .findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE)
@@ -131,15 +130,14 @@ public class GroupService {
             throw new BusinessException(ErrorCode.GROUP_INVITE_ALREADY_USED);
         }
 
+        User user = getUserForMembershipTransition(userId);
+
         Group targetGroup = groupRepository.findByIdForUpdate(invite.getGroup().getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
 
         if (targetGroup.isHomeGroup()) {
             throw new BusinessException(ErrorCode.GROUP_HOME_JOIN_NOT_ALLOWED);
         }
-
-        User user = userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         GroupMember currentActiveMember = groupMemberRepository
                 .findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE)
@@ -182,6 +180,8 @@ public class GroupService {
 
     @Transactional
     public LeaveGroupInfo leaveGroup(Long groupId, UUID userId) {
+        User user = getUserForMembershipTransition(userId);
+
         Group group = groupRepository.findByIdForUpdate(groupId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
 
@@ -221,9 +221,6 @@ public class GroupService {
             nextLeader.changeRoleToLeader();
         }
 
-        User user = userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
         GroupMember homeGroupMember = restoreOrCreateHomeMembership(user);
         homeGroupMember.activate();
 
@@ -231,6 +228,11 @@ public class GroupService {
                 group.getId(),
                 homeGroupMember.getGroup().getId()
         );
+    }
+
+    private User getUserForMembershipTransition(UUID userId) {
+        return userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 
     private GroupMember restoreOrCreateHomeMembership(User user) {

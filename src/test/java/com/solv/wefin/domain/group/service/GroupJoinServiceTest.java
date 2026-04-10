@@ -217,6 +217,8 @@ class GroupJoinServiceTest {
 
             when(groupInviteRepository.findByInviteCode(inviteCode))
                     .thenReturn(Optional.of(invite));
+            when(userRepository.findByIdForUpdate(userId))
+                    .thenReturn(Optional.of(user));
             when(groupRepository.findByIdForUpdate(homeGroup.getId()))
                     .thenReturn(Optional.of(homeGroup));
 
@@ -229,7 +231,6 @@ class GroupJoinServiceTest {
             // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_HOME_JOIN_NOT_ALLOWED);
 
-            verify(userRepository, never()).findByIdForUpdate(any());
             verify(groupMemberRepository, never()).findByUser_UserIdAndStatus(any(), any());
             verify(groupMemberRepository, never()).countByGroupAndStatus(any(), any());
             verify(groupMemberRepository, never()).findByUser_UserIdAndGroup_Id(any(), anyLong());
