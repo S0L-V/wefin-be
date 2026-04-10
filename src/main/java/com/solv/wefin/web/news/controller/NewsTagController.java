@@ -37,7 +37,7 @@ public class NewsTagController {
             @RequestParam(name = "type") String type,
             @RequestParam(name = "limit", defaultValue = "20") int limit
     ) {
-        TagType tagType = TagType.fromStringOrNull(type);
+        TagType tagType = TagType.fromStringOrNull(type.trim());
         if (tagType == null || !tagType.isFilterable()) {
             throw new BusinessException(ErrorCode.TAG_TYPE_UNSUPPORTED);
         }

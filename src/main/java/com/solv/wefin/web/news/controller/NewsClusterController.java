@@ -30,6 +30,7 @@ public class NewsClusterController {
 
     private static final int DEFAULT_PAGE_SIZE = 10;
     private static final int MAX_PAGE_SIZE = 50;
+    private static final int MAX_TAG_CODES = 20;
     private static final Set<String> VALID_SORT_VALUES = Set.of("publishedAt", "updatedAt");
 
     private final NewsClusterQueryService newsClusterQueryService;
@@ -87,6 +88,7 @@ public class NewsClusterController {
                     .filter(s -> !s.isEmpty())
                     .map(s -> shouldUpperCase ? s.toUpperCase(java.util.Locale.ROOT) : s)
                     .distinct()
+                    .limit(MAX_TAG_CODES)
                     .toList();
             if (resolvedTagCodes.isEmpty()) {
                 throw new BusinessException(ErrorCode.FEED_TAG_CODES_EMPTY);
