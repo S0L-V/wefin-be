@@ -109,6 +109,6 @@ class SnapshotServiceTest {
 
 		// then
 		verify(dailySnapshotRepository).findByVirtualAccountIdAndSnapshotDateBetweenOrderBySnapshotDateAsc(
-			eq(1L), eq(TEST_DATE.minusDays(30)), eq(TEST_DATE));
+			eq(1L), eq(TEST_DATE.minusDays(29)), eq(TEST_DATE));
 	}
 }
