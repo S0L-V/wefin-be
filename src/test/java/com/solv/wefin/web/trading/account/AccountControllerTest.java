@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+import com.solv.wefin.domain.trading.snapshot.service.SnapshotService;
 import com.solv.wefin.global.config.security.JwtProvider;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -30,9 +31,10 @@ class AccountControllerTest {
 
 	@MockitoBean
 	private VirtualAccountService accountService;
-
 	@MockitoBean
 	private JwtProvider jwtProvider;
+	@MockitoBean
+	private SnapshotService snapshotService;
 
 	private UUID testUserId;
 	@BeforeEach
