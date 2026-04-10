@@ -2,6 +2,7 @@ package com.solv.wefin.web.group;
 
 import com.solv.wefin.domain.group.dto.GroupInviteInfo;
 import com.solv.wefin.domain.group.dto.GroupMemberInfo;
+import com.solv.wefin.domain.group.dto.LeaveGroupInfo;
 import com.solv.wefin.domain.group.entity.GroupInvite;
 import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.global.config.security.JwtProvider;
@@ -24,6 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 
 @WebMvcTest(GroupController.class)
 class GroupControllerTest {
@@ -106,5 +108,27 @@ class GroupControllerTest {
                 .andExpect(jsonPath("$.data.inviteCode").value("550e8400-e29b-41d4-a716-446655440000"))
                 .andExpect(jsonPath("$.data.status").value("PENDING"))
                 .andExpect(jsonPath("$.data.expiredAt").exists());
+    }
+
+    @Test
+    @DisplayName("그룹 탈퇴에 성공한다")
+    void leaveGroup_success() throws Exception {
+        // given
+        UUID userId = UUID.randomUUID();
+
+        given(groupService.leaveGroup(1L, userId))
+                .willReturn(new LeaveGroupInfo(1L, 100L));
+
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(userId, null, List.of());
+
+        // when & then
+        mockMvc.perform(delete("/api/groups/{groupId}/members/me", 1L)
+                        .with(authentication(authentication))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.leftGroupId").value(1))
+                .andExpect(jsonPath("$.data.currentGroupId").value(100));
     }
 }

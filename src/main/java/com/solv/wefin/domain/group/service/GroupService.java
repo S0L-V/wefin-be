@@ -4,9 +4,11 @@ import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.group.dto.GroupInviteInfo;
 import com.solv.wefin.domain.group.dto.GroupMemberInfo;
+import com.solv.wefin.domain.group.dto.LeaveGroupInfo;
 import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.entity.GroupInvite;
 import com.solv.wefin.domain.group.entity.GroupMember;
+import com.solv.wefin.domain.group.entity.GroupType;
 import com.solv.wefin.domain.group.repository.GroupInviteRepository;
 import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.domain.group.repository.GroupRepository;
@@ -37,12 +39,9 @@ public class GroupService {
         Group group = Group.createHomeGroup(user.getNickname() + "의 그룹");
         Group savedGroup = groupRepository.save(group);
 
-        GroupMember groupMember = GroupMember.createLeader(
-                user,
-                savedGroup
-        );
-
+        GroupMember groupMember = GroupMember.createLeader(user, savedGroup);
         groupMemberRepository.save(groupMember);
+
         return savedGroup;
     }
 
@@ -121,7 +120,7 @@ public class GroupService {
 
         if (currentActiveMember != null
                 && currentActiveMember.getGroup().getId().equals(targetGroup.getId())) {
-            throw new BusinessException(ErrorCode.ALREADY_JOINED_GROUP);
+            throw new BusinessException(ErrorCode.GROUP_ALREADY_JOINED);
         }
 
         long activeMemberCount = groupMemberRepository.countByGroupAndStatus(
@@ -147,14 +146,79 @@ public class GroupService {
             return GroupMemberInfo.from(targetMembership);
         }
 
-        GroupMember newMember = GroupMember.createMember(
-                user,
-                targetGroup
+        GroupMember newMember = GroupMember.createMember(user, targetGroup);
+        groupMemberRepository.save(newMember);
+
+        invite.markAccepted();
+        return GroupMemberInfo.from(newMember);
+    }
+
+    @Transactional
+    public LeaveGroupInfo leaveGroup(Long groupId, UUID userId) {
+        Group group = groupRepository.findByIdForUpdate(groupId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
+
+        if (group.isHomeGroup()) {
+            throw new BusinessException(ErrorCode.GROUP_HOME_LEAVE_NOT_ALLOWED);
+        }
+
+        GroupMember leavingMember = groupMemberRepository.findByUser_UserIdAndGroup_Id(userId, groupId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
+
+        if (!leavingMember.isActive()) {
+            throw new BusinessException(ErrorCode.GROUP_MEMBER_ALREADY_INACTIVE);
+        }
+
+        boolean wasLeader = leavingMember.isLeader();
+
+        if (wasLeader) {
+            leavingMember.changeRoleToMember();
+        }
+
+        leavingMember.deactivate();
+
+        long remainingActiveMemberCount = groupMemberRepository.countByGroupAndStatus(
+                group,
+                GroupMember.GroupMemberStatus.ACTIVE
         );
 
-        groupMemberRepository.save(newMember);
-        invite.markAccepted();
+        if (wasLeader && remainingActiveMemberCount > 0) {
+            GroupMember nextLeader = groupMemberRepository
+                    .findFirstByGroupAndStatusAndUser_UserIdNotOrderByIdAsc(
+                            group,
+                            GroupMember.GroupMemberStatus.ACTIVE,
+                            userId
+                    )
+                    .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_LEADER_TRANSFER_FAILED));
 
-        return GroupMemberInfo.from(newMember);
+            nextLeader.changeRoleToLeader();
+        }
+
+        User user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        GroupMember homeGroupMember = groupMemberRepository
+                .findByUser_UserIdAndGroup_GroupType(userId, GroupType.HOME)
+                .orElseGet(() -> {
+                    GroupMember created = createDefaultGroupAndGetMembership(user);
+                    return groupMemberRepository
+                            .findByUser_UserIdAndGroup_GroupType(userId, GroupType.HOME)
+                            .orElse(created);
+                });
+
+        homeGroupMember.activate();
+
+        return new LeaveGroupInfo(
+                group.getId(),
+                homeGroupMember.getGroup().getId()
+        );
+    }
+
+    private GroupMember createDefaultGroupAndGetMembership(User user) {
+        Group group = Group.createHomeGroup(user.getNickname() + "의 그룹");
+        Group savedGroup = groupRepository.save(group);
+
+        GroupMember groupMember = GroupMember.createLeader(user, savedGroup);
+        return groupMemberRepository.save(groupMember);
     }
 }
