@@ -98,7 +98,7 @@ class GroupJoinServiceTest {
                     .thenReturn(Optional.of(invite));
             when(groupRepository.findByIdForUpdate(targetGroup.getId()))
                     .thenReturn(Optional.of(targetGroup));
-            when(userRepository.findById(userId))
+            when(userRepository.findByIdForUpdate(userId))
                     .thenReturn(Optional.of(user));
             when(groupMemberRepository.findByUser_UserIdAndStatus(
                     userId,
@@ -168,7 +168,7 @@ class GroupJoinServiceTest {
                     .thenReturn(Optional.of(invite));
             when(groupRepository.findByIdForUpdate(targetGroup.getId()))
                     .thenReturn(Optional.of(targetGroup));
-            when(userRepository.findById(userId))
+            when(userRepository.findByIdForUpdate(userId))
                     .thenReturn(Optional.of(user));
             when(groupMemberRepository.findByUser_UserIdAndStatus(
                     userId,
@@ -229,7 +229,7 @@ class GroupJoinServiceTest {
             // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_HOME_JOIN_NOT_ALLOWED);
 
-            verify(userRepository, never()).findById(any());
+            verify(userRepository, never()).findByIdForUpdate(any());
             verify(groupMemberRepository, never()).findByUser_UserIdAndStatus(any(), any());
             verify(groupMemberRepository, never()).countByGroupAndStatus(any(), any());
             verify(groupMemberRepository, never()).findByUser_UserIdAndGroup_Id(any(), anyLong());
@@ -266,7 +266,7 @@ class GroupJoinServiceTest {
                     .thenReturn(Optional.of(invite));
             when(groupRepository.findByIdForUpdate(targetGroup.getId()))
                     .thenReturn(Optional.of(targetGroup));
-            when(userRepository.findById(userId))
+            when(userRepository.findByIdForUpdate(userId))
                     .thenReturn(Optional.of(user));
             when(groupMemberRepository.findByUser_UserIdAndStatus(
                     userId,
@@ -319,7 +319,7 @@ class GroupJoinServiceTest {
                     .thenReturn(Optional.of(invite));
             when(groupRepository.findByIdForUpdate(targetGroup.getId()))
                     .thenReturn(Optional.of(targetGroup));
-            when(userRepository.findById(userId))
+            when(userRepository.findByIdForUpdate(userId))
                     .thenReturn(Optional.of(user));
             when(groupMemberRepository.findByUser_UserIdAndStatus(
                     userId,

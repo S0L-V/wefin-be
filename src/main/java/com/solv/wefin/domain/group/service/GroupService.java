@@ -138,7 +138,7 @@ public class GroupService {
             throw new BusinessException(ErrorCode.GROUP_HOME_JOIN_NOT_ALLOWED);
         }
 
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         GroupMember currentActiveMember = groupMemberRepository
