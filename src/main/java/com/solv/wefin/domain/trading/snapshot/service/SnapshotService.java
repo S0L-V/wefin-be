@@ -56,7 +56,7 @@ public class SnapshotService {
 			to = LocalDate.now(ZoneId.of("Asia/Seoul"));
 		}
 		if (from == null) {
-			from = to.minusDays(30);
+			from = to.minusDays(29);
 		}
 		if (from.isAfter(to)) {
 			throw new BusinessException(ErrorCode.MARKET_INVALID_DATE);
