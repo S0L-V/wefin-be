@@ -73,7 +73,7 @@ class GroupCreateServiceTest {
                     GroupMember.GroupMemberStatus.ACTIVE
             );
 
-            when(userRepository.findById(userId))
+            when(userRepository.findByIdForUpdate(userId))
                     .thenReturn(Optional.of(user));
             when(groupMemberRepository.findByUser_UserIdAndStatus(
                     userId,
@@ -97,6 +97,42 @@ class GroupCreateServiceTest {
 
             verify(groupRepository).save(any(Group.class));
             verify(groupMemberRepository).save(any(GroupMember.class));
+        }
+
+        @Test
+        @DisplayName("기존 ACTIVE 그룹이 SHARED면 새 SHARED 그룹을 생성할 수 없다")
+        void createSharedGroup_fail_when_current_active_group_is_shared() throws Exception {
+            // given
+            UUID userId = UUID.randomUUID();
+
+            var user = createUser(userId, "test@test.com", "유저", "pw");
+            Group sharedGroup = createGroup(1L, "기존 공유 그룹", GroupType.SHARED);
+
+            GroupMember currentActive = createGroupMember(
+                    10L,
+                    user,
+                    sharedGroup,
+                    GroupMember.GroupMemberRole.LEADER,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            );
+
+            when(userRepository.findByIdForUpdate(userId))
+                    .thenReturn(Optional.of(user));
+            when(groupMemberRepository.findByUser_UserIdAndStatus(
+                    userId,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            )).thenReturn(Optional.of(currentActive));
+
+            // when & then
+            var exception = org.junit.jupiter.api.Assertions.assertThrows(
+                    com.solv.wefin.global.error.BusinessException.class,
+                    () -> groupService.createSharedGroup(userId, "새 그룹")
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(com.solv.wefin.global.error.ErrorCode.GROUP_CREATE_REQUIRES_HOME);
+
+            verify(groupRepository, never()).save(any(Group.class));
+            verify(groupMemberRepository, never()).save(any(GroupMember.class));
         }
     }
 }

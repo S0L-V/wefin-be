@@ -48,12 +48,16 @@ public class GroupService {
 
     @Transactional
     public GroupMemberInfo createSharedGroup(UUID userId, String groupName) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         GroupMember currentActiveMember = groupMemberRepository
                 .findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE)
                 .orElse(null);
+
+        if (currentActiveMember != null && currentActiveMember.getGroup().isSharedGroup()) {
+            throw new BusinessException(ErrorCode.GROUP_CREATE_REQUIRES_HOME);
+        }
 
         if (currentActiveMember != null) {
             currentActiveMember.deactivate();
