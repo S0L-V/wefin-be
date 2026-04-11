@@ -3,7 +3,10 @@ package com.solv.wefin.domain.game.participant.repository;
 import com.solv.wefin.domain.game.participant.entity.GameParticipant;
 import com.solv.wefin.domain.game.participant.entity.ParticipantStatus;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,4 +28,8 @@ public interface GameParticipantRepository extends JpaRepository<GameParticipant
     //방장 위임 - 참가자 중 랜덤 선택
     List<GameParticipant> findByGameRoomAndStatus(GameRoom gameRoom, ParticipantStatus status);
 
+    // 매수/매도 시 참가자 잔액 비관적 락 (SELECT FOR UPDATE)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM GameParticipant p WHERE p.gameRoom = :gameRoom AND p.userId = :userId")
+    Optional<GameParticipant> findByGameRoomAndUserIdForUpdate(GameRoom gameRoom, UUID userId);
 }

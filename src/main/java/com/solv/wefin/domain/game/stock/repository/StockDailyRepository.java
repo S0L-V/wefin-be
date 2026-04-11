@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -25,10 +26,13 @@ public interface StockDailyRepository extends JpaRepository<StockDaily, UUID> {
     Set<LocalDate> findExistingDates(@Param("stockInfo") StockInfo stockInfo,
                                      @Param("dates") List<LocalDate> dates);
 
-    /**
-     * 키워드 검색. 짧은 키워드에서 대량 조회가 발생하지 않도록
-     * 호출측에서 Pageable로 결과 개수를 반드시 제한한다.
-     */
+    @Query("SELECT MAX(sd.tradeDate) FROM StockDaily sd WHERE sd.tradeDate <= :date")
+    Optional<LocalDate> findLatestTradeDateOnOrBefore(@Param("date") LocalDate date);
+
+    /** 특정 종목의 특정 날짜 주가 데이터 조회 (매수/매도 시 시가 조회용) */
+    Optional<StockDaily> findByStockInfoAndTradeDate(StockInfo stockInfo, LocalDate tradeDate);
+
+   //키워드 검색. 짧은 키워드 대량 조회 제한
     @Query("SELECT sd FROM StockDaily sd " +
             "JOIN FETCH sd.stockInfo si " +
             "WHERE sd.tradeDate = :tradeDate " +

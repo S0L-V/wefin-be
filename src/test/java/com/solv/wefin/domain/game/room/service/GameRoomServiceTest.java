@@ -10,6 +10,7 @@ import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.room.entity.RoomStatus;
 import com.solv.wefin.domain.game.room.event.GameRoomEvent;
 import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
+import com.solv.wefin.domain.game.stock.repository.StockDailyRepository;
 import com.solv.wefin.domain.game.turn.entity.GameTurn;
 import com.solv.wefin.domain.game.turn.repository.GameTurnRepository;
 import com.solv.wefin.global.error.BusinessException;
@@ -23,6 +24,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Collections;
@@ -55,6 +57,9 @@ class GameRoomServiceTest {
     private GameTurnRepository gameTurnRepository;
 
     @Mock
+    private StockDailyRepository stockDailyRepository;
+
+    @Mock
     private ApplicationEventPublisher eventPublisher;
 
     private static final UUID TEST_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000001");
@@ -73,6 +78,9 @@ class GameRoomServiceTest {
         given(gameRoomRepository.existsByUserIdAndStartedAtBetween(
                 any(UUID.class), any(OffsetDateTime.class), any(OffsetDateTime.class)))
                 .willReturn(false);
+        // 랜덤으로 뽑힌 날짜는 이하에서 가장 가까운 거래일로 보정
+        given(stockDailyRepository.findLatestTradeDateOnOrBefore(any(LocalDate.class)))
+                .willReturn(Optional.of(LocalDate.of(2022, 1, 3)));
 
         CreateRoomCommand request = createCommand();
 
@@ -181,7 +189,7 @@ class GameRoomServiceTest {
         // Then — 방 정보 검증
         assertThat(result.room().getRoomId()).isEqualTo(roomId);
         assertThat(result.room().getStatus()).isEqualTo(RoomStatus.WAITING);
-        assertThat(result.room().getSeed()).isEqualTo(10000000L);
+        assertThat(result.room().getSeed()).isEqualByComparingTo(new BigDecimal("10000000"));
 
         // Then — 참가자 목록 검증
         assertThat(result.participants()).hasSize(1);
@@ -577,8 +585,8 @@ class GameRoomServiceTest {
         verify(gameTurnRepository).save(any(GameTurn.class));
 
         // Then — 시드머니 지급
-        assertThat(leader.getSeed()).isEqualTo(10000000L);
-        assertThat(member.getSeed()).isEqualTo(10000000L);
+        assertThat(leader.getSeed()).isEqualByComparingTo(new BigDecimal("10000000"));
+        assertThat(member.getSeed()).isEqualByComparingTo(new BigDecimal("10000000"));
         verify(eventPublisher).publishEvent(new GameRoomEvent(roomId, GameRoomEvent.EventType.GAME_STARTED));
     }
 
@@ -692,12 +700,12 @@ class GameRoomServiceTest {
     // === 헬퍼 메서드 ===
 
     private CreateRoomCommand createCommand() {
-        return new CreateRoomCommand(10000000L, 6, 7);
+        return new CreateRoomCommand(new BigDecimal("10000000"), 6, 7);
     }
 
 
     private GameRoom createGameRoom() {
-        return GameRoom.create(TEST_GROUP_ID, TEST_USER_ID, 10000000L,
+        return GameRoom.create(TEST_GROUP_ID, TEST_USER_ID, new BigDecimal("10000000"),
                 6, 7, LocalDate.of(2020, 1, 2), LocalDate.of(2020, 7, 2));
     }
 }

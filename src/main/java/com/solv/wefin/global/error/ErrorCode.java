@@ -129,7 +129,8 @@ public enum ErrorCode {
     GAME_NOT_STARTED(400, "게임이 시작되지 않았습니다."),
 
     // GameStock
-    GAME_STOCK_NOT_FOUND(404, "해당 종목을 찾을 수 없습니다.");
+    GAME_STOCK_NOT_FOUND(404, "해당 종목을 찾을 수 없습니다."),
+    GAME_STOCK_PRICE_NOT_FOUND(404, "해당 날짜의 주가 데이터가 없습니다.");
 
     private final int status;
     private final String message;
