@@ -29,6 +29,10 @@ public interface StockDailyRepository extends JpaRepository<StockDaily, UUID> {
     @Query("SELECT MAX(sd.tradeDate) FROM StockDaily sd WHERE sd.tradeDate <= :date")
     Optional<LocalDate> findLatestTradeDateOnOrBefore(@Param("date") LocalDate date);
 
+    /** 수집된 주가 데이터의 최초 거래일 (방 생성 시 시작일 범위 하한용) */
+    @Query("SELECT MIN(sd.tradeDate) FROM StockDaily sd")
+    Optional<LocalDate> findEarliestTradeDate();
+
     /** 특정 종목의 특정 날짜 주가 데이터 조회 (매수/매도 시 시가 조회용) */
     Optional<StockDaily> findByStockInfoAndTradeDate(StockInfo stockInfo, LocalDate tradeDate);
 

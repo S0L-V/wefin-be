@@ -81,7 +81,9 @@ public class GameParticipant {
     }
 
     public void assignSeed(BigDecimal seed) {
-
+        if (seed == null || seed.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("시드머니는 null이거나 음수일 수 없습니다.");
+        }
         this.seed = seed;
     }
 
