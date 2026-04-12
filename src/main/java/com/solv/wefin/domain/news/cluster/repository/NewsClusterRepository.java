@@ -82,7 +82,7 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
             @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
             Pageable pageable);
 
-    // --- 피드 목록: 카테고리 필터 + publishedAt 정렬 ---
+    // --- 피드 목록: 태그 필터 (다중 tagCode IN) + publishedAt 정렬 ---
 
     @Query("SELECT DISTINCT c FROM NewsCluster c " +
             "WHERE c.status = :status " +
@@ -91,16 +91,16 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
             "AND EXISTS (SELECT 1 FROM NewsClusterArticle nca " +
             "            JOIN NewsArticleTag t ON t.newsArticleId = nca.newsArticleId " +
             "            WHERE nca.newsClusterId = c.id " +
-            "            AND t.tagType = :sectorType " +
-            "            AND t.tagCode = :categoryCode) " +
+            "            AND t.tagType = :tagType " +
+            "            AND t.tagCode IN :tagCodes) " +
             "AND (c.publishedAt < :cursorTime " +
             "     OR (c.publishedAt = :cursorTime AND c.id < :cursorId)) " +
             "ORDER BY c.publishedAt DESC, c.id DESC")
-    List<NewsCluster> findForFeedByCategoryAfterCursorByPublishedAt(
+    List<NewsCluster> findForFeedByTagsAfterCursorByPublishedAt(
             @Param("status") ClusterStatus status,
             @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
-            @Param("sectorType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType sectorType,
-            @Param("categoryCode") String categoryCode,
+            @Param("tagType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType tagType,
+            @Param("tagCodes") List<String> tagCodes,
             @Param("cursorTime") OffsetDateTime cursorTime,
             @Param("cursorId") Long cursorId,
             Pageable pageable);
@@ -112,17 +112,17 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
             "AND EXISTS (SELECT 1 FROM NewsClusterArticle nca " +
             "            JOIN NewsArticleTag t ON t.newsArticleId = nca.newsArticleId " +
             "            WHERE nca.newsClusterId = c.id " +
-            "            AND t.tagType = :sectorType " +
-            "            AND t.tagCode = :categoryCode) " +
+            "            AND t.tagType = :tagType " +
+            "            AND t.tagCode IN :tagCodes) " +
             "ORDER BY c.publishedAt DESC, c.id DESC")
-    List<NewsCluster> findForFeedByCategoryFirstPageByPublishedAt(
+    List<NewsCluster> findForFeedByTagsFirstPageByPublishedAt(
             @Param("status") ClusterStatus status,
             @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
-            @Param("sectorType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType sectorType,
-            @Param("categoryCode") String categoryCode,
+            @Param("tagType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType tagType,
+            @Param("tagCodes") List<String> tagCodes,
             Pageable pageable);
 
-    // --- 피드 목록: 카테고리 필터 + updatedAt 정렬 ---
+    // --- 피드 목록: 태그 필터 (다중 tagCode IN) + updatedAt 정렬 ---
 
     @Query("SELECT DISTINCT c FROM NewsCluster c " +
             "WHERE c.status = :status " +
@@ -131,16 +131,16 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
             "AND EXISTS (SELECT 1 FROM NewsClusterArticle nca " +
             "            JOIN NewsArticleTag t ON t.newsArticleId = nca.newsArticleId " +
             "            WHERE nca.newsClusterId = c.id " +
-            "            AND t.tagType = :sectorType " +
-            "            AND t.tagCode = :categoryCode) " +
+            "            AND t.tagType = :tagType " +
+            "            AND t.tagCode IN :tagCodes) " +
             "AND (c.updatedAt < :cursorTime " +
             "     OR (c.updatedAt = :cursorTime AND c.id < :cursorId)) " +
             "ORDER BY c.updatedAt DESC, c.id DESC")
-    List<NewsCluster> findForFeedByCategoryAfterCursorByUpdatedAt(
+    List<NewsCluster> findForFeedByTagsAfterCursorByUpdatedAt(
             @Param("status") ClusterStatus status,
             @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
-            @Param("sectorType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType sectorType,
-            @Param("categoryCode") String categoryCode,
+            @Param("tagType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType tagType,
+            @Param("tagCodes") List<String> tagCodes,
             @Param("cursorTime") OffsetDateTime cursorTime,
             @Param("cursorId") Long cursorId,
             Pageable pageable);
@@ -152,13 +152,13 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
             "AND EXISTS (SELECT 1 FROM NewsClusterArticle nca " +
             "            JOIN NewsArticleTag t ON t.newsArticleId = nca.newsArticleId " +
             "            WHERE nca.newsClusterId = c.id " +
-            "            AND t.tagType = :sectorType " +
-            "            AND t.tagCode = :categoryCode) " +
+            "            AND t.tagType = :tagType " +
+            "            AND t.tagCode IN :tagCodes) " +
             "ORDER BY c.updatedAt DESC, c.id DESC")
-    List<NewsCluster> findForFeedByCategoryFirstPageByUpdatedAt(
+    List<NewsCluster> findForFeedByTagsFirstPageByUpdatedAt(
             @Param("status") ClusterStatus status,
             @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
-            @Param("sectorType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType sectorType,
-            @Param("categoryCode") String categoryCode,
+            @Param("tagType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType tagType,
+            @Param("tagCodes") List<String> tagCodes,
             Pageable pageable);
 }

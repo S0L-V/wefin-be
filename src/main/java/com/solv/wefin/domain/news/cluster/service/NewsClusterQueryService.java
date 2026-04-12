@@ -67,11 +67,36 @@ public class NewsClusterQueryService {
      */
     public ClusterFeedResult getFeed(OffsetDateTime cursorTime, Long cursorId,
                                      int pageSize, UUID userId, String tab, String sortBy) {
+        return getFeed(cursorTime, cursorId, pageSize, userId, tab, sortBy, null, null);
+    }
+
+    /**
+     * 피드 목록을 커서 기반으로 조회한다.
+     *
+     * tagType + tagCodes가 주어지면 해당 태그들로 필터링하고, 아니면 tab 기반 카테고리 필터를 사용한다
+     *
+     * @param tagType 태그 유형 (null이면 무시)
+     * @param tagCodes 태그 코드 목록 (null이면 무시)
+     */
+    public ClusterFeedResult getFeed(OffsetDateTime cursorTime, Long cursorId,
+                                     int pageSize, UUID userId, String tab, String sortBy,
+                                     TagType tagType, List<String> tagCodes) {
         int fetchSize = pageSize + 1;
-        String categoryCode = resolveCategoryCode(tab);
         boolean sortByUpdatedAt = "updatedAt".equalsIgnoreCase(sortBy);
 
-        List<NewsCluster> clusters = fetchClusters(cursorTime, cursorId, fetchSize, categoryCode, sortByUpdatedAt);
+        List<String> filterTagCodes;
+        TagType filterTagType;
+        if (tagType != null && tagCodes != null && !tagCodes.isEmpty()) {
+            filterTagType = tagType;
+            filterTagCodes = tagCodes;
+        } else {
+            String categoryCode = resolveCategoryCode(tab);
+            filterTagType = categoryCode != null ? TagType.SECTOR : null;
+            filterTagCodes = categoryCode != null ? List.of(categoryCode) : null;
+        }
+
+        List<NewsCluster> clusters = fetchClusters(cursorTime, cursorId, fetchSize,
+                filterTagType, filterTagCodes, sortByUpdatedAt);
 
         // 다음 페이지 존재 여부
         boolean hasNext = clusters.size() > pageSize;
@@ -156,14 +181,18 @@ public class NewsClusterQueryService {
     }
 
     /**
-     * 카테고리 필터 + 커서 조건 + 정렬 기준에 따라 클러스터를 조회한다.
+     * 태그 필터 + 커서 조건 + 정렬 기준에 따라 클러스터를 조회한다.
+     *
+     * @param filterTagType 태그 유형 (null이면 필터 없음)
+     * @param filterTagCodes 태그 코드 목록 (null 또는 빈 리스트면 필터 없음)
      */
     private List<NewsCluster> fetchClusters(OffsetDateTime cursorTime, Long cursorId,
-                                             int fetchSize, String categoryCode, boolean sortByUpdatedAt) {
+                                             int fetchSize, TagType filterTagType,
+                                             List<String> filterTagCodes, boolean sortByUpdatedAt) {
         boolean hasCursor = cursorTime != null && cursorId != null;
         Pageable pageable = PageRequest.of(0, fetchSize);
 
-        if (categoryCode == null) {
+        if (filterTagCodes == null || filterTagCodes.isEmpty() || filterTagType == null) {
             if (sortByUpdatedAt) {
                 return hasCursor
                         ? newsClusterRepository.findForFeedAfterCursorByUpdatedAt(
@@ -180,16 +209,16 @@ public class NewsClusterQueryService {
         } else {
             if (sortByUpdatedAt) {
                 return hasCursor
-                        ? newsClusterRepository.findForFeedByCategoryAfterCursorByUpdatedAt(
-                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, TagType.SECTOR, categoryCode, cursorTime, cursorId, pageable)
-                        : newsClusterRepository.findForFeedByCategoryFirstPageByUpdatedAt(
-                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, TagType.SECTOR, categoryCode, pageable);
+                        ? newsClusterRepository.findForFeedByTagsAfterCursorByUpdatedAt(
+                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, filterTagType, filterTagCodes, cursorTime, cursorId, pageable)
+                        : newsClusterRepository.findForFeedByTagsFirstPageByUpdatedAt(
+                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, filterTagType, filterTagCodes, pageable);
             } else {
                 return hasCursor
-                        ? newsClusterRepository.findForFeedByCategoryAfterCursorByPublishedAt(
-                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, TagType.SECTOR, categoryCode, cursorTime, cursorId, pageable)
-                        : newsClusterRepository.findForFeedByCategoryFirstPageByPublishedAt(
-                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, TagType.SECTOR, categoryCode, pageable);
+                        ? newsClusterRepository.findForFeedByTagsAfterCursorByPublishedAt(
+                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, filterTagType, filterTagCodes, cursorTime, cursorId, pageable)
+                        : newsClusterRepository.findForFeedByTagsFirstPageByPublishedAt(
+                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, filterTagType, filterTagCodes, pageable);
             }
         }
     }
