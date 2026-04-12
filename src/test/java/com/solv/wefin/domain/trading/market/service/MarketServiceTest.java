@@ -57,7 +57,7 @@ class MarketServiceTest {
         PriceResponse result = marketService.getPrice("005930");
 
         // then
-        assertThat(result.currentPrice()).isEqualTo(97500);
+        assertThat(result.currentPrice()).isEqualTo(new BigDecimal("97500"));
         assertThat(result.stockCode()).isEqualTo("005930");
     }
 
