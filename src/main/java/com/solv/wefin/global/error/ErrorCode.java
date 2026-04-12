@@ -13,16 +13,19 @@ public enum ErrorCode {
     // Group
     GROUP_NOT_FOUND(404, "그룹을 찾을 수 없습니다."),
     GROUP_MEMBER_FORBIDDEN(403, "해당 그룹의 멤버만 조회할 수 있습니다."),
+    GROUP_MEMBER_NOT_FOUND(404, "그룹 멤버를 찾을 수 없습니다."),
+    GROUP_MEMBER_ALREADY_INACTIVE(400, "이미 비활성화된 그룹 멤버입니다."),
     GROUP_INVITE_FORBIDDEN(403, "해당 그룹의 초대 코드를 생성할 권한이 없습니다."),
     GROUP_INVITE_NOT_FOUND(404, "초대 코드를 찾을 수 없습니다."),
     GROUP_INVITE_EXPIRED(400, "만료된 초대 코드입니다."),
     GROUP_INVITE_ALREADY_USED(400, "이미 사용된 초대 코드입니다."),
     GROUP_FULL(400, "그룹 인원이 가득 찼습니다."),
-    ALREADY_JOINED_GROUP(409, "이미 참여한 그룹입니다."),
+    GROUP_ALREADY_JOINED(409, "이미 참여한 그룹입니다."),
     GROUP_HOME_INVITE_NOT_ALLOWED(400, "홈 그룹에는 초대 코드를 생성할 수 없습니다."),
     GROUP_HOME_JOIN_NOT_ALLOWED(400, "홈 그룹에는 참여할 수 없습니다."),
     GROUP_HOME_LEAVE_NOT_ALLOWED(400, "홈 그룹은 탈퇴할 수 없습니다."),
-    GROUP_HOME_GROUP_NOT_FOUND(404, "홈 그룹을 찾을 수 없습니다."),
+    GROUP_HOME_MEMBERSHIP_NOT_FOUND(404, "홈 그룹 멤버십을 찾을 수 없습니다."),
+    GROUP_LEADER_TRANSFER_FAILED(500, "리더 권한 위임에 실패했습니다."),
 
     // Chat
     CHAT_MESSAGE_EMPTY(400, "메시지 내용은 비어 있을 수 없습니다."),
@@ -112,6 +115,15 @@ public enum ErrorCode {
     SUMMARY_ARTICLE_MISMATCH(500, "프롬프트 기사 수와 실제 조회 기사 수가 불일치합니다."),
     CLUSTER_NOT_FOUND(404, "클러스터를 찾을 수 없습니다."),
 
+    // Feed Filter
+    FEED_TAG_PARAMS_INCOMPLETE(400, "tagType과 tagCodes는 반드시 함께 제공해야 합니다."),
+    FEED_TAG_TYPE_UNSUPPORTED(400, "지원하지 않는 tagType입니다."),
+    FEED_TAG_AND_TAB_CONFLICT(400, "tab과 tagType/tagCodes는 동시에 사용할 수 없습니다."),
+    FEED_TAG_CODES_EMPTY(400, "유효한 tagCodes가 없습니다."),
+    FEED_SORT_UNSUPPORTED(400, "지원하지 않는 정렬 기준입니다."),
+    TAG_TYPE_UNSUPPORTED(400, "지원하지 않는 태그 유형입니다."),
+    TAG_LIMIT_INVALID(400, "limit은 0 이상이어야 합니다."),
+
     // GameRoom
     ROOM_NOT_FOUND(404, "게임장을 찾을 수 없습니다."),
     ROOM_ALREADY_EXISTS(409, "이미 진행 중이거나 대기 중인 게임방이 있습니다."),
@@ -129,7 +141,8 @@ public enum ErrorCode {
     GAME_NOT_STARTED(400, "게임이 시작되지 않았습니다."),
 
     // GameStock
-    GAME_STOCK_NOT_FOUND(404, "해당 종목을 찾을 수 없습니다.");
+    GAME_STOCK_NOT_FOUND(404, "해당 종목을 찾을 수 없습니다."),
+    GAME_STOCK_PRICE_NOT_FOUND(404, "해당 날짜의 주가 데이터가 없습니다.");
 
     private final int status;
     private final String message;

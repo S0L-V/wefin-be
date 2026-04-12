@@ -4,6 +4,7 @@ import static com.solv.wefin.domain.trading.common.TradingConstants.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -91,6 +92,13 @@ public class VirtualAccountService {
 
 		account.addProfit(realizedProfit);
 		return account;
+	}
+
+	/**
+	 * 전체 유저의 계좌 조회
+	 */
+	public List<VirtualAccount> getAllAccounts() {
+		return accountRepository.findAll();
 	}
 
 	/**

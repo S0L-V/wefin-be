@@ -49,6 +49,27 @@ public class NewsArticleTag {
     }
 
     public enum TagType {
-        STOCK, SECTOR, TOPIC
+        STOCK, SECTOR, TOPIC;
+
+        private static final java.util.Set<TagType> FILTERABLE = java.util.Set.of(STOCK, SECTOR);
+
+        /**
+         * 피드 필터링에 사용 가능한 태그 유형인지 확인한다
+         */
+        public boolean isFilterable() {
+            return FILTERABLE.contains(this);
+        }
+
+        /**
+         * 문자열을 TagType으로 변환한다. 유효하지 않으면 null을 반환한다
+         */
+        public static TagType fromStringOrNull(String value) {
+            if (value == null) return null;
+            try {
+                return valueOf(value.toUpperCase(java.util.Locale.ROOT));
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
     }
 }

@@ -4,10 +4,7 @@ import com.solv.wefin.domain.group.dto.GroupInviteInfo;
 import com.solv.wefin.domain.group.dto.GroupMemberInfo;
 import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.global.common.ApiResponse;
-import com.solv.wefin.web.group.dto.CreateGroupInviteResponse;
-import com.solv.wefin.web.group.dto.GroupMemberResponse;
-import com.solv.wefin.web.group.dto.JoinGroupRequest;
-import com.solv.wefin.web.group.dto.JoinGroupResponse;
+import com.solv.wefin.web.group.dto.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -50,5 +47,17 @@ public class GroupController {
         return ApiResponse.success(
                 JoinGroupResponse.from(info)
         );
+    }
+
+    @DeleteMapping("/{groupId}/members/me")
+    public ApiResponse<LeaveGroupResponse> leaveGroup(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal UUID userId
+    ) {
+        LeaveGroupResponse response = LeaveGroupResponse.from(
+                groupService.leaveGroup(groupId, userId)
+        );
+
+        return ApiResponse.success(response);
     }
 }
