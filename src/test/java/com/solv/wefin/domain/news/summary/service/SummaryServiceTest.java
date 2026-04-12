@@ -106,8 +106,8 @@ class SummaryServiceTest {
     }
 
     @Test
-    @DisplayName("단독 클러스터 — AI 호출 없이 기사 제목/요약 사용")
-    void generatePendingSummaries_singleArticle_noApiCall() {
+    @DisplayName("단독 클러스터 — AI 본문 요약 성공 시 AI 결과 사용")
+    void generatePendingSummaries_singleArticle_aiSuccess() {
         // given
         NewsCluster cluster = createCluster(10L, 1, SummaryStatus.PENDING);
         NewsArticle article = createArticle(1L);
@@ -119,11 +119,41 @@ class SummaryServiceTest {
         given(newsArticleRepository.findById(1L))
                 .willReturn(Optional.of(article));
 
+        SummaryResult aiResult = mock(SummaryResult.class);
+        given(aiResult.getTitle()).willReturn("AI 생성 제목");
+        given(aiResult.getLeadSummary()).willReturn("AI 생성 요약");
+        given(openAiSummaryClient.generateSingleArticleSummary(any(), any()))
+                .willReturn(aiResult);
+
         // when
         summaryService.generatePendingSummaries();
 
         // then
+        verify(openAiSummaryClient).generateSingleArticleSummary(any(), any());
         verify(openAiSummaryClient, never()).generateSummary(any());
+        verify(persistenceService).markGeneratedSingle(eq(10L), eq("AI 생성 제목"), eq("AI 생성 요약"), any());
+    }
+
+    @Test
+    @DisplayName("단독 클러스터 — AI 실패 시 기사 제목/요약 fallback")
+    void generatePendingSummaries_singleArticle_aiFail_fallback() {
+        // given
+        NewsCluster cluster = createCluster(10L, 1, SummaryStatus.PENDING);
+        NewsArticle article = createArticle(1L);
+
+        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any(), any()))
+                .willReturn(List.of(cluster));
+        given(clusterArticleRepository.findByNewsClusterId(10L))
+                .willReturn(List.of(NewsClusterArticle.create(10L, 1L, 1, false)));
+        given(newsArticleRepository.findById(1L))
+                .willReturn(Optional.of(article));
+        given(openAiSummaryClient.generateSingleArticleSummary(any(), any()))
+                .willThrow(new RuntimeException("AI 호출 실패"));
+
+        // when
+        summaryService.generatePendingSummaries();
+
+        // then
         verify(persistenceService).markGeneratedSingle(eq(10L), eq("테스트 기사 1"), any(), any());
     }
 

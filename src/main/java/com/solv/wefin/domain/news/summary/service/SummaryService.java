@@ -49,6 +49,10 @@ public class SummaryService {
 
     /**
      * 요약 생성이 필요한 클러스터를 조회하여 AI 요약을 생성한다.
+     *
+     * 주의: 이 메서드에 @Transactional을 붙이면 안 된다.
+     * AI 외부 API 호출이 트랜잭션 안에서 실행되어 DB 커넥션이 장시간 점유된다.
+     * 저장은 persistenceService의 개별 @Transactional 메서드가 처리한다
      */
     public void generatePendingSummaries() {
         // 대상 조회: ACTIVE 상태 + 요약이 필요한 상태(PENDING/STALE/FAILED).
@@ -85,7 +89,7 @@ public class SummaryService {
                     continue;
                 }
 
-                // 3) 단독 클러스터 최적화 — AI 호출 없이 기사 제목/요약을 그대로 사용
+                // 3) 단독 클러스터 — AI로 본문 요약 (실패 시 fallback)
                 if (articleIds.size() == 1) {
                     if (handleSingleArticleCluster(cluster, articleIds)) {
                         successCount++;
@@ -144,7 +148,11 @@ public class SummaryService {
     }
 
     /**
-     * 단독 클러스터(기사 1건)는 AI 호출 없이 기사 제목/요약을 그대로 사용한다
+     * 단독 클러스터(기사 1건)는 AI로 본문을 요약한다.
+     *
+     * 크롤링된 원문에는 광고, 기자 서명 등 노이즈가 포함되어 있으므로
+     * AI가 핵심 내용만 추출하여 title + summary를 생성한다.
+     * AI 호출 실패 시 기존 fallback(제목 클렌징 + 기사 요약 그대로 사용)으로 처리한다
      *
      * @param cluster 요약 대상 클러스터
      * @param expectedArticleIds 조회 시점의 기사 ID 목록 (기사 집합 변경 감지용)
@@ -159,10 +167,41 @@ public class SummaryService {
         }
 
         var article = articleOpt.get();
-        String title = resolveTitle(article);
-        String summary = article.getSummary() != null ? article.getSummary() : title;
+        String title;
+        String summary;
+
+        // 본문이 있으면 AI 요약, 없으면 기존 fallback
+        if (article.getContent() != null && !article.getContent().isBlank()) {
+            try {
+                SummaryResult result = openAiSummaryClient.generateSingleArticleSummary(
+                        article.getTitle(), article.getContent());
+                title = result.getTitle() != null && !result.getTitle().isBlank()
+                        ? result.getTitle() : resolveTitle(article);
+                summary = result.getLeadSummary() != null && !result.getLeadSummary().isBlank()
+                        ? result.getLeadSummary() : resolveSummaryFallback(article, title);
+                log.info("단독 클러스터 AI 요약 성공 — clusterId: {}, articleId: {}",
+                        cluster.getId(), articleId);
+            } catch (Exception e) {
+                log.warn("단독 클러스터 AI 요약 실패, fallback 사용 — clusterId: {}",
+                        cluster.getId(), e);
+                title = resolveTitle(article);
+                summary = resolveSummaryFallback(article, title);
+            }
+        } else {
+            title = resolveTitle(article);
+            summary = resolveSummaryFallback(article, title);
+        }
+
         persistenceService.markGeneratedSingle(cluster.getId(), title, summary, expectedArticleIds);
         return true;
+    }
+
+    /**
+     * 기사의 summary를 반환한다. null이거나 blank이면 title을 fallback으로 사용한다
+     */
+    private String resolveSummaryFallback(com.solv.wefin.domain.news.article.entity.NewsArticle article, String title) {
+        String summary = article.getSummary();
+        return summary != null && !summary.isBlank() ? summary : title;
     }
 
     /**

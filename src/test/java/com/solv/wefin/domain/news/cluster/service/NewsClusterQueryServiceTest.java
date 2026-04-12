@@ -17,6 +17,7 @@ import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionReposi
 import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionSourceRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
+import com.solv.wefin.domain.news.cluster.repository.UserNewsClusterFeedbackRepository;
 import com.solv.wefin.domain.news.cluster.repository.UserNewsClusterReadRepository;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterDetailResult;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterFeedResult;
@@ -49,6 +50,7 @@ class NewsClusterQueryServiceTest {
     @Mock private NewsArticleRepository newsArticleRepository;
     @Mock private NewsArticleTagRepository articleTagRepository;
     @Mock private UserNewsClusterReadRepository readRepository;
+    @Mock private UserNewsClusterFeedbackRepository feedbackRepository;
     @Mock private ClusterSummarySectionRepository sectionRepository;
     @Mock private ClusterSummarySectionSourceRepository sectionSourceRepository;
 
@@ -59,7 +61,7 @@ class NewsClusterQueryServiceTest {
         queryService = new NewsClusterQueryService(
                 newsClusterRepository, clusterArticleRepository,
                 newsArticleRepository, articleTagRepository, readRepository,
-                sectionRepository, sectionSourceRepository);
+                feedbackRepository, sectionRepository, sectionSourceRepository);
     }
 
     @Test
