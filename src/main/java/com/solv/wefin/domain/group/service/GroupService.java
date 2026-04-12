@@ -5,6 +5,7 @@ import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.group.dto.GroupInviteInfo;
 import com.solv.wefin.domain.group.dto.GroupMemberInfo;
 import com.solv.wefin.domain.group.dto.LeaveGroupInfo;
+import com.solv.wefin.domain.group.dto.MyActiveGroupInfo;
 import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.entity.GroupInvite;
 import com.solv.wefin.domain.group.entity.GroupMember;
@@ -81,6 +82,20 @@ public class GroupService {
                 ).stream()
                 .map(GroupMemberInfo::from)
                 .toList();
+    }
+
+    public MyActiveGroupInfo getMyActiveGroup(UUID userId) {
+        GroupMember activeMember = groupMemberRepository
+                .findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
+
+        Group group = activeMember.getGroup();
+
+        return new MyActiveGroupInfo(
+                group.getId(),
+                group.getName(),
+                group.isHomeGroup()
+        );
     }
 
     @Transactional
