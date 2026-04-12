@@ -242,7 +242,7 @@ class StockChartServiceTest {
     // === 헬퍼 메서드 ===
 
     private GameRoom createGameRoom() {
-        return GameRoom.create(TEST_GROUP_ID, TEST_USER_ID, 10000000L,
+        return GameRoom.create(TEST_GROUP_ID, TEST_USER_ID, new BigDecimal("10000000"),
                 6, 7, LocalDate.of(2022, 1, 3), LocalDate.of(2022, 7, 3));
     }
 

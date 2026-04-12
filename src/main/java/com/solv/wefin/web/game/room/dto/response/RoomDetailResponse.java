@@ -5,6 +5,7 @@ import com.solv.wefin.domain.game.room.entity.RoomStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -16,7 +17,7 @@ public class RoomDetailResponse {
 
     private UUID roomId;
     private UUID hostId;
-    private Long seed;
+    private BigDecimal seed;
     private Integer periodMonths;
     private Integer moveDays;
     private LocalDate startDate;

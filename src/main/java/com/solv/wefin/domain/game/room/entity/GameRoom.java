@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -28,8 +29,8 @@ public class GameRoom {
     @Column(name = "user_id", nullable = false)
     private UUID  userId;
 
-    @Column(name = "seed", nullable = false)
-    private Long  seed;
+    @Column(name = "seed", nullable = false, precision = 18, scale = 2)
+    private BigDecimal seed;
 
     @Column(name ="period_month", nullable = false)
     private Integer  periodMonth;
@@ -62,7 +63,7 @@ public class GameRoom {
     }
 
     @Builder
-    public GameRoom (Long groupId, UUID userId, Long seed, Integer periodMonth, Integer moveDays, LocalDate startDate, LocalDate endDate) {
+    public GameRoom (Long groupId, UUID userId, BigDecimal seed, Integer periodMonth, Integer moveDays, LocalDate startDate, LocalDate endDate) {
       this.groupId = groupId;
       this.userId = userId;
       this.seed = seed;
@@ -73,7 +74,7 @@ public class GameRoom {
       this.status = WAITING;
     }
 
-    public static GameRoom create(Long groupId, UUID userId, Long seed, Integer periodMonth, Integer moveDays, LocalDate startDate, LocalDate endDate) {
+    public static GameRoom create(Long groupId, UUID userId, BigDecimal seed, Integer periodMonth, Integer moveDays, LocalDate startDate, LocalDate endDate) {
         return GameRoom.builder()
                 .groupId(groupId)
                 .userId(userId)

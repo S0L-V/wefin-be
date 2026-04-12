@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -23,62 +24,68 @@ public class BriefingService {
     private final OpenAiBriefingClient openAiBriefingClient;
     private final BriefingCacheRepository briefingCacheRepository;
 
-    /**
-     * 특정 날짜의 AI 브리핑을 조회하거나 생성한다.
-     * 1. briefing_cache에서 캐시 조회
-     * 2. 캐시 미스 → 뉴스 크롤링 + OpenAI 브리핑 생성 → 캐시 저장
-     *
-     * @return 브리핑 텍스트
-     */
+    /** 날짜별 in-process 락 — 같은 날짜 동시 요청의 크롤링/OpenAI 중복 호출을 직렬화한다. */
+    private final ConcurrentHashMap<LocalDate, Object> dateLocks = new ConcurrentHashMap<>();
+
+    /** 특정 날짜의 AI 브리핑을 briefing_cache에서 조회하거나, 없으면 크롤링 + OpenAI로 생성해 저장한다. */
     public String getBriefingForDate(LocalDate date) {
-        // 1. 캐시 조회
         Optional<BriefingCache> cached = briefingCacheRepository.findByTargetDate(date);
         if (cached.isPresent()) {
-            log.debug("[브리핑] 캐시 히트: date={}", date);
             return cached.get().getBriefingText();
         }
 
-        log.info("[브리핑] 생성 시작: date={}", date);
+        Object lock = dateLocks.computeIfAbsent(date, k -> new Object());
+        synchronized (lock) {
+            try {
+                Optional<BriefingCache> rechecked = briefingCacheRepository.findByTargetDate(date);
+                if (rechecked.isPresent()) {
+                    return rechecked.get().getBriefingText();
+                }
 
-        // 2. 뉴스 크롤링 + DB 저장
-        List<GameNewsArchive> news = newsCrawlService.crawlAndSave(date);
-        log.info("[브리핑] 수집된 뉴스: {}건 (date={})", news.size(), date);
+                log.info("[브리핑] 생성 시작: date={}", date);
 
-        // 3. OpenAI 브리핑 생성
-        String briefingText = generateBriefing(date, news);
+                List<GameNewsArchive> news = newsCrawlService.crawlAndSave(date);
+                log.info("[브리핑] 수집된 뉴스: {}건 (date={})", news.size(), date);
 
-        // 4. 캐시 저장 (동시 요청 시 UNIQUE 위반 → 이미 저장된 데이터 반환)
-        try {
-            BriefingCache cache = BriefingCache.create(date, briefingText);
-            briefingCacheRepository.save(cache);
-        } catch (DataIntegrityViolationException e) {
-            log.info("[브리핑] 동시 생성 감지, 기존 캐시 사용: date={}", date);
-            return briefingCacheRepository.findByTargetDate(date)
-                    .map(BriefingCache::getBriefingText)
-                    .orElse(briefingText);
+                if (news.isEmpty()) {
+                    log.warn("[브리핑] 뉴스 없음 → 폴백 반환, briefing_cache 미저장: date={}", date);
+                    return buildDefaultBriefing(date);
+                }
+
+                String briefingText;
+                try {
+                    briefingText = generateBriefingViaOpenAi(date, news);
+                } catch (Exception e) {
+                    log.error("[브리핑] OpenAI 호출 실패 → 폴백 반환, briefing_cache 미저장: date={}, error={}",
+                            date, e.getMessage());
+                    return buildDefaultBriefing(date, news);
+                }
+
+                try {
+                    BriefingCache cache = BriefingCache.create(date, briefingText);
+                    briefingCacheRepository.save(cache);
+                } catch (DataIntegrityViolationException e) {
+                    log.info("[브리핑] 동시 생성 감지, 기존 캐시 사용: date={}", date);
+                    return briefingCacheRepository.findByTargetDate(date)
+                            .map(BriefingCache::getBriefingText)
+                            .orElse(briefingText);
+                }
+
+                return briefingText;
+            } finally {
+                dateLocks.remove(date);
+            }
         }
-
-        return briefingText;
     }
 
-    private String generateBriefing(LocalDate date, List<GameNewsArchive> news) {
-        if (news.isEmpty()) {
-            return buildDefaultBriefing(date);
-        }
+    private String generateBriefingViaOpenAi(LocalDate date, List<GameNewsArchive> news) {
+        List<ArticleSummary> summaries = news.stream()
+                .map(n -> new ArticleSummary(
+                        n.getTitle(), n.getSummary(),
+                        n.getOriginalUrl(), n.getCategory()))
+                .toList();
 
-        try {
-            // Entity → ArticleSummary 변환 (openai 패키지가 news Entity에 의존하지 않도록)
-            List<ArticleSummary> summaries = news.stream()
-                    .map(n -> new ArticleSummary(
-                            n.getTitle(), n.getSummary(),
-                            n.getOriginalUrl(), n.getCategory()))
-                    .toList();
-
-            return openAiBriefingClient.generateBriefing(date, summaries);
-        } catch (Exception e) {
-            log.error("[브리핑] OpenAI 호출 실패: date={}, error={}", date, e.getMessage());
-            return buildDefaultBriefing(date, news);
-        }
+        return openAiBriefingClient.generateBriefing(date, summaries);
     }
 
     private String buildDefaultBriefing(LocalDate date) {

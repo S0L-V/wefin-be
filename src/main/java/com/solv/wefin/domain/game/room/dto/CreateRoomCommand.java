@@ -1,4 +1,6 @@
 package com.solv.wefin.domain.game.room.dto;
 
-public record CreateRoomCommand(Long seedMoney, Integer periodMonths, Integer moveDays) {
+import java.math.BigDecimal;
+
+public record CreateRoomCommand(BigDecimal seedMoney, Integer periodMonths, Integer moveDays) {
 }

@@ -1,5 +1,6 @@
 package com.solv.wefin.domain.game.room.service;
 
+import java.math.BigDecimal;
 import com.solv.wefin.domain.game.participant.entity.GameParticipant;
 import com.solv.wefin.domain.game.participant.entity.ParticipantStatus;
 import com.solv.wefin.domain.game.room.dto.CreateRoomCommand;
@@ -11,6 +12,7 @@ import com.solv.wefin.domain.game.participant.repository.GameParticipantReposito
 import com.solv.wefin.domain.game.room.entity.RoomStatus;
 import com.solv.wefin.domain.game.room.event.GameRoomEvent;
 import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
+import com.solv.wefin.domain.game.stock.repository.StockDailyRepository;
 import com.solv.wefin.domain.game.turn.entity.GameTurn;
 import com.solv.wefin.domain.game.turn.repository.GameTurnRepository;
 import com.solv.wefin.global.error.BusinessException;
@@ -39,6 +41,7 @@ public class GameRoomService {
     private final GameRoomRepository gameRoomRepository;
     private final GameParticipantRepository gameParticipantRepository;
     private final GameTurnRepository gameTurnRepository;
+    private final StockDailyRepository stockDailyRepository;
     private final ApplicationEventPublisher eventPublisher;
 
 
@@ -63,12 +66,17 @@ public class GameRoomService {
             throw new BusinessException(ErrorCode.ROOM_HOST_DAILY_LIMIT);
         }
 
-        //endDate 계산
-        LocalDate rangeStart = LocalDate.of(2021, 1, 1);
+        // start_date 랜덤 추출 + 거래일 보정
+        LocalDate rangeStart = stockDailyRepository.findEarliestTradeDate()
+                .orElseThrow(() -> new IllegalStateException("주가 데이터가 없습니다. 데이터 수집이 필요합니다."));
         LocalDate rangeEnd = LocalDate.of(2024, 12, 31).minusMonths(command.periodMonths());
         long daysBetween = ChronoUnit.DAYS.between(rangeStart, rangeEnd);
         long randomDays = ThreadLocalRandom.current().nextLong(daysBetween + 1);
-        LocalDate startDate = rangeStart.plusDays(randomDays);
+        LocalDate rawStartDate = rangeStart.plusDays(randomDays);
+
+        LocalDate startDate = stockDailyRepository.findLatestTradeDateOnOrBefore(rawStartDate)
+                .orElseThrow(() -> new IllegalStateException(
+                        "거래일 데이터가 없습니다. rawStartDate=" + rawStartDate));
         LocalDate endDate = startDate.plusMonths(command.periodMonths());
 
         //게임룸 저장
@@ -250,7 +258,7 @@ public class GameRoomService {
         }
 
         // 5. 참가자 전원에게 시드머니 지급
-        Long seedMoney = gameRoom.getSeed();
+        BigDecimal seedMoney = gameRoom.getSeed();
         for (GameParticipant participant : activeParticipants) {
             participant.assignSeed(seedMoney);
         }
