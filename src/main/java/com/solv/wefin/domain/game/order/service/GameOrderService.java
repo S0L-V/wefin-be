@@ -74,11 +74,11 @@ public class GameOrderService {
         StockInfo stockInfo = stockInfoRepository.findById(symbol)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GAME_STOCK_NOT_FOUND));
 
-        // 5. 턴 날짜의 시가 조회
+        // 5. 턴 날짜의 종가 조회
         StockDaily stockDaily = stockDailyRepository.findByStockInfoAndTradeDate(stockInfo, currentTurn.getTurnDate())
                 .orElseThrow(() -> new BusinessException(ErrorCode.GAME_STOCK_PRICE_NOT_FOUND));
 
-        BigDecimal price = stockDaily.getOpenPrice();
+        BigDecimal price = stockDaily.getClosePrice();
 
         // 6. 매수/매도 분기
         if (orderType == OrderType.BUY) {
