@@ -21,6 +21,9 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
@@ -150,7 +153,7 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
 
         // 분봉 조회
         if (MINUTE_PERIOD_CODES.contains(periodCode)) {
-            return getMinuteCandles(stockCode);
+            return getMinuteCandles(stockCode, Integer.parseInt(periodCode));
         }
 
         // 일봉/주봉/월봉 조회
@@ -178,7 +181,7 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
                     .toList();
     }
 
-    private List<CandleResponse> getMinuteCandles(String stockCode) {
+    private List<CandleResponse> getMinuteCandles(String stockCode, int periodMinutes) {
         // 장 마감 시간(153000)부터 역순으로 조회하면 당일 전체 분봉을 가져옴
         HantuMinuteCandleApiResponse response = hantuMarketClient.fetchMinutePrice(stockCode, "153000");
         log.info("분봉 API 응답: {}", response);
@@ -195,9 +198,54 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
             return List.of();
         }
 
-        return response.output2().stream()
-                    .map(CandleResponse::fromMinute)
-                    .toList();
+        List<CandleResponse> oneMinuteCandles = response.output2().stream()
+                .map(CandleResponse::fromMinute)
+                .toList();
+
+        // 1분봉이면 그대로 반환
+        if (periodMinutes == 1) {
+            return oneMinuteCandles;
+        }
+
+        // N분봉 집계
+        return aggregateCandles(oneMinuteCandles, periodMinutes);
+    }
+
+    // date의 분을 period 단위로 내림한 값을 키로 그룹핑
+    // 예: 09:33 → 09:30 (5분봉), 09:47 → 09:45 (15분봉)
+    private List<CandleResponse> aggregateCandles(List<CandleResponse> candles, int periodMinutes) {
+        LinkedHashMap<LocalDateTime, List<CandleResponse>> groups = new LinkedHashMap<>();
+
+        for (CandleResponse candle : candles) {
+            int minute = candle.date().getMinute();
+            int floored = (minute / periodMinutes) * periodMinutes;
+            LocalDateTime groupKey = candle.date().withMinute(floored).withSecond(0);
+
+            groups.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(candle);
+        }
+
+        // 각 그룹을 하나의 캔들로 합침
+        return groups.entrySet().stream()
+                .map(entry -> {
+                    LocalDateTime time = entry.getKey();
+                    List<CandleResponse> group = entry.getValue();
+
+                    BigDecimal open = group.get(0).openPrice();
+                    BigDecimal close = group.get(group.size()-1).closePrice();
+
+                    BigDecimal high = group.get(0).highPrice();
+                    BigDecimal low = group.get(0).lowPrice();
+                    long volume = 0L;
+
+                    for (CandleResponse candle : group) {
+                        if (candle.highPrice().compareTo(high) > 0) high = candle.highPrice();
+                        if (candle.lowPrice().compareTo(low) < 0) low = candle.lowPrice();
+                        volume += candle.volume();
+                    }
+
+                    return new CandleResponse(time, open, high, low, close, volume);
+                })
+                .toList();
     }
 
     public List<RecentTradeResponse> getRecentTrades(String stockCode) {
