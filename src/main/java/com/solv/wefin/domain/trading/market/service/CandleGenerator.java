@@ -41,7 +41,7 @@ public class CandleGenerator {
         for (int period : PERIODS) {
             int floored = (minute / period) * period;
             String timeKey = String.format("%02d%02d", hour, floored);
-            String mapKey = stockCode + ":" + period + ":" + timeKey;
+            String mapKey = stockCode + ":" + period;
 
             final AtomicReference<CandleData> toPush = new AtomicReference<>();
 
