@@ -8,6 +8,7 @@ import com.solv.wefin.domain.quest.repository.UserQuestRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,8 +30,10 @@ public class UserQuestService {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
+        LocalDate today = LocalDate.now();
+
         List<UserQuest> todayUserQuests =
-                userQuestRepository.findTodayUserQuests(userId, LocalDate.now());
+                userQuestRepository.findTodayUserQuests(userId, today);
 
         if (!todayUserQuests.isEmpty()) {
             return todayUserQuests;
@@ -45,7 +48,11 @@ public class UserQuestService {
                 .map(dailyQuest -> UserQuest.assign(user, dailyQuest))
                 .toList();
 
-        return userQuestRepository.saveAll(userQuests);
+        try {
+            return userQuestRepository.saveAll(userQuests);
+        } catch (DataIntegrityViolationException e) {
+            return userQuestRepository.findTodayUserQuests(userId, today);
+        }
     }
 
     @Transactional(readOnly = true)

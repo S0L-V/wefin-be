@@ -7,6 +7,7 @@ import com.solv.wefin.domain.quest.repository.QuestTemplateRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,7 +53,11 @@ public class DailyQuestService {
                 ))
                 .toList();
 
-        return dailyQuestRepository.saveAll(dailyQuests);
+        try {
+            return dailyQuestRepository.saveAll(dailyQuests);
+        } catch (DataIntegrityViolationException e) {
+            return dailyQuestRepository.findAllByQuestDate(today);
+        }
     }
 
     @Transactional(readOnly = true)

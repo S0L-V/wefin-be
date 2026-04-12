@@ -1,6 +1,8 @@
 package com.solv.wefin.domain.quest.entity;
 
 import com.solv.wefin.domain.auth.entity.User;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -103,6 +105,15 @@ public class UserQuest {
     }
 
     public void updateProgress(int progress) {
+
+        if (progress < 0) {
+            throw new BusinessException(ErrorCode.QUEST_PROGRESS_INVALID);
+        }
+
+        if (this.status == QuestStatus.COMPLETED || this.status == QuestStatus.REWARDED) {
+            return;
+        }
+
         this.progress = progress;
 
         if (progress > 0 && this.status == QuestStatus.NOT_STARTED) {
@@ -117,6 +128,10 @@ public class UserQuest {
     }
 
     public void complete() {
+
+        if (this.status == QuestStatus.COMPLETED || this.status == QuestStatus.REWARDED) {
+            return;
+        }
         this.status = QuestStatus.COMPLETED;
         this.completedAt = OffsetDateTime.now();
 
@@ -126,6 +141,11 @@ public class UserQuest {
     }
 
     public void markRewarded() {
+
+        if (this.status != QuestStatus.COMPLETED) {
+            throw new BusinessException(ErrorCode.QUEST_REWARD_NOT_ALLOWED);
+        }
+
         this.status = QuestStatus.REWARDED;
     }
 }
