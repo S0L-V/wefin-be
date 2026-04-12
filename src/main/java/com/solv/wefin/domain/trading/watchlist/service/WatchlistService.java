@@ -29,10 +29,9 @@ public class WatchlistService {
         List<UserInterest> interests = userInterestRepository
                 .findByUserIdAndInterestType(userId, InterestType.STOCK);
 
-
         return interests.stream()
                 .map(interest -> {
-                    Stock stock = stockRepository.findByStockName(interest.getInterestValue())
+                    Stock stock = stockRepository.findByStockCode(interest.getInterestValue())
                             .orElseThrow(() -> new BusinessException(ErrorCode.MARKET_STOCK_NOT_FOUND));
                     PriceResponse price = marketService.getPrice(stock.getStockCode());
                     return new WatchlistInfo(stock, price);
@@ -42,10 +41,11 @@ public class WatchlistService {
 
     @Transactional
     public void addUserInterest(UUID userId, String stockCode) {
-        Stock stock = stockRepository.findByStockCode(stockCode)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MARKET_STOCK_NOT_FOUND));
+        if (!stockRepository.existsByStockCode(stockCode)) {
+            throw new BusinessException(ErrorCode.MARKET_STOCK_NOT_FOUND);
+        }
 
-        if (userInterestRepository.existsByUserIdAndInterestTypeAndInterestValue(userId, InterestType.STOCK, stock.getStockName())) {
+        if (userInterestRepository.existsByUserIdAndInterestTypeAndInterestValue(userId, InterestType.STOCK, stockCode)) {
             throw new BusinessException(ErrorCode.INTEREST_ALREADY_EXISTS);
         }
 
@@ -53,20 +53,11 @@ public class WatchlistService {
             throw new BusinessException(ErrorCode.INTEREST_LIMIT_EXCEEDED);
         }
 
-        List<UserInterest> interests = List.of(
-                new UserInterest(userId, InterestType.STOCK, stock.getStockName()),
-                new UserInterest(userId, InterestType.SECTOR, stock.getSector())
-        );
-
-        userInterestRepository.saveAll(interests);
+        userInterestRepository.save(new UserInterest(userId, InterestType.STOCK, stockCode));
     }
 
     @Transactional
     public void deleteUserInterest(UUID userId, String stockCode) {
-        Stock stock = stockRepository.findByStockCode(stockCode)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MARKET_STOCK_NOT_FOUND));
-
-        userInterestRepository.deleteByUserIdAndInterestValue(userId, stock.getStockName());
-
+        userInterestRepository.deleteByUserIdAndInterestTypeAndInterestValue(userId, InterestType.STOCK, stockCode);
     }
 }

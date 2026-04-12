@@ -15,5 +15,5 @@ public interface UserInterestRepository extends JpaRepository<UserInterest, Long
 
     long countByUserIdAndInterestType(UUID userId, InterestType interestType);
 
-    void deleteByUserIdAndInterestValue(UUID userId, String interestValue);
+    void deleteByUserIdAndInterestTypeAndInterestValue(UUID userId, InterestType interestType, String interestValue);
 }

@@ -63,16 +63,13 @@ class WatchlistServiceTest {
     @DisplayName("관심종목 추가")
     class AddUserInterest {
 
-        @SuppressWarnings("unchecked")
         @Test
-        @DisplayName("정상 추가 — STOCK + SECTOR 2건 INSERT")
+        @DisplayName("정상 추가 — STOCK 1건 INSERT")
         void success() {
             // given
-            Stock stock = mockStock();
-            when(stockRepository.findByStockCode("005930"))
-                    .thenReturn(Optional.of(stock));
+            when(stockRepository.existsByStockCode("005930")).thenReturn(true);
             when(userInterestRepository.existsByUserIdAndInterestTypeAndInterestValue(
-                    userId, InterestType.STOCK, "삼성전자"))
+                    userId, InterestType.STOCK, "005930"))
                     .thenReturn(false);
             when(userInterestRepository.countByUserIdAndInterestType(
                     userId, InterestType.STOCK))
@@ -82,26 +79,21 @@ class WatchlistServiceTest {
             watchlistService.addUserInterest(userId, "005930");
 
             // then
-            ArgumentCaptor<List<UserInterest>> captor = ArgumentCaptor.forClass(List.class);
-            verify(userInterestRepository).saveAll(captor.capture());
+            ArgumentCaptor<UserInterest> captor = ArgumentCaptor.forClass(UserInterest.class);
+            verify(userInterestRepository).save(captor.capture());
 
-            List<UserInterest> saved = captor.getValue();
-            assertThat(saved).hasSize(2);
-            assertThat(saved.get(0).getInterestType()).isEqualTo(InterestType.STOCK);
-            assertThat(saved.get(0).getInterestValue()).isEqualTo("삼성전자");
-            assertThat(saved.get(1).getInterestType()).isEqualTo(InterestType.SECTOR);
-            assertThat(saved.get(1).getInterestValue()).isEqualTo("반도체");
+            UserInterest saved = captor.getValue();
+            assertThat(saved.getInterestType()).isEqualTo(InterestType.STOCK);
+            assertThat(saved.getInterestValue()).isEqualTo("005930");
         }
 
         @Test
         @DisplayName("이미 등록된 종목 — INTEREST_ALREADY_EXISTS")
         void alreadyExists() {
             // given
-            Stock stock = mockStock();
-            when(stockRepository.findByStockCode("005930"))
-                    .thenReturn(Optional.of(stock));
+            when(stockRepository.existsByStockCode("005930")).thenReturn(true);
             when(userInterestRepository.existsByUserIdAndInterestTypeAndInterestValue(
-                    userId, InterestType.STOCK, "삼성전자"))
+                    userId, InterestType.STOCK, "005930"))
                     .thenReturn(true);
 
             // when & then
@@ -115,11 +107,9 @@ class WatchlistServiceTest {
         @DisplayName("최대 10개 초과 — INTEREST_LIMIT_EXCEEDED")
         void limitExceeded() {
             // given
-            Stock stock = mockStock();
-            when(stockRepository.findByStockCode("005930"))
-                    .thenReturn(Optional.of(stock));
+            when(stockRepository.existsByStockCode("005930")).thenReturn(true);
             when(userInterestRepository.existsByUserIdAndInterestTypeAndInterestValue(
-                    userId, InterestType.STOCK, "삼성전자"))
+                    userId, InterestType.STOCK, "005930"))
                     .thenReturn(false);
             when(userInterestRepository.countByUserIdAndInterestType(
                     userId, InterestType.STOCK))
@@ -140,16 +130,12 @@ class WatchlistServiceTest {
         @Test
         @DisplayName("정상 삭제")
         void success() {
-            // given
-            Stock stock = mockStock();
-            when(stockRepository.findByStockCode("005930"))
-                    .thenReturn(Optional.of(stock));
-
             // when
             watchlistService.deleteUserInterest(userId, "005930");
 
             // then
-            verify(userInterestRepository).deleteByUserIdAndInterestValue(userId, "삼성전자");
+            verify(userInterestRepository).deleteByUserIdAndInterestTypeAndInterestValue(
+                    userId, InterestType.STOCK, "005930");
         }
     }
 
@@ -162,13 +148,13 @@ class WatchlistServiceTest {
         void successWithPrice() {
             // given
             UserInterest interest = mock(UserInterest.class);
-            when(interest.getInterestValue()).thenReturn("삼성전자");
+            when(interest.getInterestValue()).thenReturn("005930");
 
             when(userInterestRepository.findByUserIdAndInterestType(userId, InterestType.STOCK))
                     .thenReturn(List.of(interest));
 
             Stock stock = mockStock();
-            when(stockRepository.findByStockName("삼성전자"))
+            when(stockRepository.findByStockCode("005930"))
                     .thenReturn(Optional.of(stock));
 
             PriceResponse price = mockPriceResponse();
