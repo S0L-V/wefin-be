@@ -195,13 +195,13 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
 
                 PriceResponse priceResponse = new PriceResponse(
                         fields[offset],
-                        Integer.parseInt(fields[offset + 2]),
-                        Integer.parseInt(fields[offset + 4]),
+                        new BigDecimal(fields[offset + 2]),
+                        new BigDecimal(fields[offset + 4]),
                         Float.parseFloat(fields[offset + 5]),
                         Long.parseLong(fields[offset + 13]),
-                        Integer.parseInt(fields[offset + 7]),
-                        Integer.parseInt(fields[offset + 8]),
-                        Integer.parseInt(fields[offset + 9])
+                        new BigDecimal(fields[offset + 7]),
+                        new BigDecimal(fields[offset + 8]),
+                        new BigDecimal(fields[offset + 9])
                 );
                 marketService.updatePriceCache(fields[offset], priceResponse);
             } catch (Exception e) {

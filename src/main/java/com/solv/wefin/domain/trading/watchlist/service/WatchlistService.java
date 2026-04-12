@@ -1,7 +1,10 @@
 package com.solv.wefin.domain.trading.watchlist.service;
 
+import com.solv.wefin.domain.trading.market.dto.PriceResponse;
+import com.solv.wefin.domain.trading.market.service.MarketService;
 import com.solv.wefin.domain.trading.stock.entity.Stock;
 import com.solv.wefin.domain.trading.stock.repository.StockRepository;
+import com.solv.wefin.domain.trading.watchlist.dto.WatchlistInfo;
 import com.solv.wefin.domain.trading.watchlist.entity.InterestType;
 import com.solv.wefin.domain.trading.watchlist.entity.UserInterest;
 import com.solv.wefin.domain.trading.watchlist.repository.UserInterestRepository;
@@ -18,11 +21,23 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class WatchlistService {
 
+    private final MarketService marketService;
     private final UserInterestRepository userInterestRepository;
     private final StockRepository stockRepository;
 
-    public List<UserInterest> getStockList(UUID userId) {
-        return userInterestRepository.findByUserIdAndInterestType(userId, InterestType.STOCK);
+    public List<WatchlistInfo> getStockList(UUID userId) {
+        List<UserInterest> interests = userInterestRepository
+                .findByUserIdAndInterestType(userId, InterestType.STOCK);
+
+
+        return interests.stream()
+                .map(interest -> {
+                    Stock stock = stockRepository.findByStockName(interest.getInterestValue())
+                            .orElseThrow(() -> new BusinessException(ErrorCode.MARKET_STOCK_NOT_FOUND));
+                    PriceResponse price = marketService.getPrice(stock.getStockCode());
+                    return new WatchlistInfo(stock, price);
+                })
+                .toList();
     }
 
     @Transactional
