@@ -1,9 +1,6 @@
 package com.solv.wefin.domain.trading.market.client;
 
-import com.solv.wefin.domain.trading.market.client.dto.HantuCandleApiResponse;
-import com.solv.wefin.domain.trading.market.client.dto.HantuOrderbookApiResponse;
-import com.solv.wefin.domain.trading.market.client.dto.HantuPriceApiResponse;
-import com.solv.wefin.domain.trading.market.client.dto.HantuRecentTradeApiResponse;
+import com.solv.wefin.domain.trading.market.client.dto.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -108,5 +105,29 @@ public class HantuMarketClient {
                 .header("tr_id", "FHKST01010300")
                 .header("custtype", "P")
                 .retrieve().body(HantuRecentTradeApiResponse.class);
+    }
+
+    /**
+     * 국내 주식 당일 분봉 시세를 조회합니다.
+     * @param stockCode 종목코드
+     * @param inputHour 조회 시작 시간 (HHMMSS, ex: "153000")
+     * @return 분봉 시세 응답 (1분 단위 OHLCV)
+     */
+    public HantuMinuteCandleApiResponse fetchMinutePrice(String stockCode, String inputHour) {
+        return hantuRestClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice")
+                        .queryParam("FID_COND_MRKT_DIV_CODE", "J")
+                        .queryParam("FID_INPUT_ISCD", stockCode)
+                        .queryParam("FID_INPUT_HOUR_1", inputHour)
+                        .queryParam("FID_ETC_CLS_CODE", "")
+                        .queryParam("FID_PW_DATA_INCU_YN", "N")
+                        .build())
+                .header("authorization", "Bearer " + hantuTokenManager.getAccessToken())
+                .header("appkey", appKey)
+                .header("appsecret", appSecret)
+                .header("tr_id", "FHKST03010200")
+                .header("custtype", "P")
+                .retrieve().body(HantuMinuteCandleApiResponse.class);
     }
 }

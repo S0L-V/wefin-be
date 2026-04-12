@@ -3,6 +3,7 @@ package com.solv.wefin.domain.trading.market.service;
 import com.solv.wefin.domain.trading.common.ExchangeRateProvider;
 import com.solv.wefin.domain.trading.market.client.HantuMarketClient;
 import com.solv.wefin.domain.trading.market.client.dto.HantuCandleApiResponse;
+import com.solv.wefin.domain.trading.market.client.dto.HantuMinuteCandleApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuOrderbookApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuPriceApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuRecentTradeApiResponse;
@@ -37,6 +38,7 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
     private final ConcurrentHashMap<String, Long> priceCacheTimestamp = new ConcurrentHashMap<>();
     private static final long CACHE_TTL_MS = 5000; // 5초
     private static final Set<String> VALID_PERIOD_CODES = Set.of("D", "W", "M", "Y");
+    private static final Set<String> MINUTE_PERIOD_CODES = Set.of("1", "5", "15", "30", "60");
 
     public PriceResponse getPrice(String stockCode) {
         validateStockCode(stockCode);
@@ -145,6 +147,13 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
         }
 
         periodCode = periodCode.toUpperCase();
+
+        // 분봉 조회
+        if (MINUTE_PERIOD_CODES.contains(periodCode)) {
+            return getMinuteCandles(stockCode);
+        }
+
+        // 일봉/주봉/월봉 조회
         if (!VALID_PERIOD_CODES.contains(periodCode)) {
             throw new BusinessException(ErrorCode.MARKET_INVALID_PERIOD_CODE);
         }
@@ -156,7 +165,6 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
             return List.of();
         }
 
-        // 한투 API 응답 코드 검증 (rt_cd "0"이면 정상)
         if (response.output1() != null) {
             validateRtCode(response.output1().rt_cd());
         }
@@ -168,7 +176,28 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
         return response.output2().stream()
                     .map(CandleResponse::from)
                     .toList();
+    }
 
+    private List<CandleResponse> getMinuteCandles(String stockCode) {
+        // 장 마감 시간(153000)부터 역순으로 조회하면 당일 전체 분봉을 가져옴
+        HantuMinuteCandleApiResponse response = hantuMarketClient.fetchMinutePrice(stockCode, "153000");
+        log.info("분봉 API 응답: {}", response);
+
+        if (response == null) {
+            return List.of();
+        }
+
+        if (response.output1() != null) {
+            validateRtCode(response.output1().rt_cd());
+        }
+
+        if (response.output2() == null) {
+            return List.of();
+        }
+
+        return response.output2().stream()
+                    .map(CandleResponse::fromMinute)
+                    .toList();
     }
 
     public List<RecentTradeResponse> getRecentTrades(String stockCode) {
