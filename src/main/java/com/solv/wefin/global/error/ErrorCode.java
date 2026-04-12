@@ -37,6 +37,9 @@ public enum ErrorCode {
     AI_CHAT_TIMEOUT(504, "AI 응답 시간이 초과되었습니다."),
     NEWS_CLUSTER_NOT_FOUND(404, "뉴스 기사를 찾을 수 없습니다."),
 
+    // quest
+    QUEST_TEMPLATE_NOT_ENOUGH(500, "활성 퀘스트 템플릿 수가 부족합니다."),
+    DAILY_QUEST_NOT_FOUND(404, "오늘의 퀘스트를 찾을 수 없습니다."),
 
     // Common
     INVALID_INPUT(400, "잘못된 입력입니다."),
