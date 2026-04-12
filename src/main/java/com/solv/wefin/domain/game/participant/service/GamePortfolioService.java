@@ -68,9 +68,11 @@ public class GamePortfolioService {
         BigDecimal seedMoney = gameRoom.getSeed();
         BigDecimal cash = participant.getSeed();
         BigDecimal totalAsset = cash.add(stockValue).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal profitRate = totalAsset.subtract(seedMoney)
-                .multiply(new BigDecimal("100"))
-                .divide(seedMoney, 2, RoundingMode.HALF_UP);
+        BigDecimal profitRate = seedMoney.compareTo(BigDecimal.ZERO) == 0
+                ? BigDecimal.ZERO
+                : totalAsset.subtract(seedMoney)
+                        .multiply(new BigDecimal("100"))
+                        .divide(seedMoney, 2, RoundingMode.HALF_UP);
 
         return new PortfolioInfo(seedMoney, cash, stockValue, totalAsset, profitRate);
     }
@@ -110,9 +112,12 @@ public class GamePortfolioService {
                     BigDecimal currentPrice = stockDaily.getClosePrice();
                     BigDecimal evalAmount = currentPrice.multiply(BigDecimal.valueOf(holding.getQuantity()))
                             .setScale(2, RoundingMode.HALF_UP);
-                    BigDecimal profitRate = currentPrice.subtract(holding.getAvgPrice())
-                            .multiply(new BigDecimal("100"))
-                            .divide(holding.getAvgPrice(), 2, RoundingMode.HALF_UP);
+                    BigDecimal avgPrice = holding.getAvgPrice();
+                    BigDecimal profitRate = avgPrice.compareTo(BigDecimal.ZERO) == 0
+                            ? BigDecimal.ZERO
+                            : currentPrice.subtract(avgPrice)
+                                    .multiply(new BigDecimal("100"))
+                                    .divide(avgPrice, 2, RoundingMode.HALF_UP);
 
                     return new HoldingInfo(
                             holding.getStockInfo().getSymbol(),
