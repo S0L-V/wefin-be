@@ -10,22 +10,6 @@ import java.util.UUID;
 
 public interface UserQuestRepository extends JpaRepository<UserQuest, Long> {
 
-    boolean existsByUser_UserIdAndDailyQuest_QuestDate(UUID userId, LocalDate questDate);
-
-    @Query("""
-    select uq
-    from UserQuest uq
-    join fetch uq.dailyQuest dq
-    join fetch dq.questTemplate qt
-    join fetch uq.user u
-    where u.userId = :userId
-      and dq.questDate = :questDate
-    order by uq.id asc
-    """)
-    List<UserQuest> findAllByUser_UserIdAndDailyQuest_QuestDateOrderByIdAsc(UUID userId, LocalDate questDate);
-
-    List<UserQuest> findAllByUser_UserIdOrderByIdDesc(UUID userId);
-
     @Query("""
     select uq
     from UserQuest uq
