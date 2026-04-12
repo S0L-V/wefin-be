@@ -62,12 +62,8 @@ public class ClusterInteractionService {
     public void submitFeedback(UUID userId, Long clusterId, FeedbackType feedbackType) {
         validateActiveCluster(clusterId);
 
-        if (feedbackRepository.existsByUserIdAndNewsClusterId(userId, clusterId)) {
-            throw new BusinessException(ErrorCode.DUPLICATE_RESOURCE);
-        }
-
         try {
-            feedbackRepository.save(UserNewsClusterFeedback.create(userId, clusterId, feedbackType));
+            feedbackRepository.saveAndFlush(UserNewsClusterFeedback.create(userId, clusterId, feedbackType));
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(ErrorCode.DUPLICATE_RESOURCE);
         }
@@ -75,8 +71,8 @@ public class ClusterInteractionService {
         try {
             interestWeightService.updateWeights(userId, clusterId, feedbackType);
         } catch (Exception e) {
-            log.warn("가중치 업데이트 실패 (피드백은 저장됨) — userId: {}, clusterId: {}, error: {}",
-                    userId, clusterId, e.getMessage());
+            log.warn("가중치 업데이트 실패 (피드백은 저장됨) — userId: {}, clusterId: {}",
+                    userId, clusterId, e);
         }
     }
 

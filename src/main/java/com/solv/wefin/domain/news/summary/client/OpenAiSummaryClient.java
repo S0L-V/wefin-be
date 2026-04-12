@@ -305,7 +305,8 @@ public class OpenAiSummaryClient {
     public SummaryResult generateSingleArticleSummary(String title, String content) {
         String truncatedContent = content != null && content.length() > MAX_ARTICLE_LENGTH
                 ? content.substring(0, MAX_ARTICLE_LENGTH) : (content != null ? content : "");
-        String userMessage = "제목: " + title + "\n\n본문: " + truncatedContent;
+        String safeTitle = title != null ? title : "";
+        String userMessage = "제목: " + safeTitle + "\n\n본문: " + truncatedContent;
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

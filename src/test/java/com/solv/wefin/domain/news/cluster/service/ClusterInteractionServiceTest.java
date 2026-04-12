@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.OffsetDateTime;
@@ -85,11 +86,10 @@ class ClusterInteractionServiceTest {
     @DisplayName("submitFeedback — 정상 저장 + 가중치 업데이트 호출")
     void submitFeedback_success() {
         given(newsClusterRepository.findById(CLUSTER_ID)).willReturn(Optional.of(activeCluster()));
-        given(feedbackRepository.existsByUserIdAndNewsClusterId(USER_ID, CLUSTER_ID)).willReturn(false);
 
         service.submitFeedback(USER_ID, CLUSTER_ID, FeedbackType.HELPFUL);
 
-        verify(feedbackRepository).save(any());
+        verify(feedbackRepository).saveAndFlush(any());
         verify(interestWeightService).updateWeights(USER_ID, CLUSTER_ID, FeedbackType.HELPFUL);
     }
 
@@ -97,7 +97,8 @@ class ClusterInteractionServiceTest {
     @DisplayName("submitFeedback — 중복 시 DUPLICATE_RESOURCE")
     void submitFeedback_duplicate() {
         given(newsClusterRepository.findById(CLUSTER_ID)).willReturn(Optional.of(activeCluster()));
-        given(feedbackRepository.existsByUserIdAndNewsClusterId(USER_ID, CLUSTER_ID)).willReturn(true);
+        given(feedbackRepository.saveAndFlush(any()))
+                .willThrow(new DataIntegrityViolationException("unique constraint"));
 
         assertThatThrownBy(() -> service.submitFeedback(USER_ID, CLUSTER_ID, FeedbackType.HELPFUL))
                 .isInstanceOf(BusinessException.class)
@@ -108,13 +109,12 @@ class ClusterInteractionServiceTest {
     @DisplayName("submitFeedback — 가중치 실패해도 피드백은 저장됨")
     void submitFeedback_weightFailure_feedbackSaved() {
         given(newsClusterRepository.findById(CLUSTER_ID)).willReturn(Optional.of(activeCluster()));
-        given(feedbackRepository.existsByUserIdAndNewsClusterId(USER_ID, CLUSTER_ID)).willReturn(false);
         doThrow(new RuntimeException("가중치 오류"))
                 .when(interestWeightService).updateWeights(any(), any(), any());
 
         service.submitFeedback(USER_ID, CLUSTER_ID, FeedbackType.HELPFUL);
 
-        verify(feedbackRepository).save(any());
+        verify(feedbackRepository).saveAndFlush(any());
     }
 
     private NewsCluster activeCluster() {

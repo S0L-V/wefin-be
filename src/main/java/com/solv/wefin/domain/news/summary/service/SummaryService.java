@@ -182,8 +182,8 @@ public class SummaryService {
                 log.info("단독 클러스터 AI 요약 성공 — clusterId: {}, articleId: {}",
                         cluster.getId(), articleId);
             } catch (Exception e) {
-                log.warn("단독 클러스터 AI 요약 실패, fallback 사용 — clusterId: {}, error: {}",
-                        cluster.getId(), e.getMessage());
+                log.warn("단독 클러스터 AI 요약 실패, fallback 사용 — clusterId: {}",
+                        cluster.getId(), e);
                 title = resolveTitle(article);
                 summary = resolveSummaryFallback(article, title);
             }
