@@ -101,6 +101,33 @@ class GameRoomServiceTest {
     }
 
     @Test
+    @DisplayName("게임방 생성 성공 — 주말/공휴일이 뽑혀도 거래일로 보정된 start_date가 반영된다")
+    void createRoom_startDateAdjustedToTradeDay() {
+        // Given — 정상 조건 + 거래일 보정 스텁 (임의 날짜 → 2022-01-03 월요일)
+        given(gameRoomRepository.existsByGroupIdAndStatusIn(any(Long.class), any(List.class)))
+                .willReturn(false);
+        given(gameRoomRepository.existsByUserIdAndStatusIn(any(UUID.class), any(List.class)))
+                .willReturn(false);
+        given(gameRoomRepository.existsByUserIdAndStartedAtBetween(
+                any(UUID.class), any(OffsetDateTime.class), any(OffsetDateTime.class)))
+                .willReturn(false);
+        given(stockDailyRepository.findEarliestTradeDate())
+                .willReturn(Optional.of(LocalDate.of(2021, 1, 4)));
+        LocalDate adjustedTradeDate = LocalDate.of(2022, 1, 3);
+        given(stockDailyRepository.findLatestTradeDateOnOrBefore(any(LocalDate.class)))
+                .willReturn(Optional.of(adjustedTradeDate));
+
+        CreateRoomCommand request = createCommand();
+
+        // When
+        GameRoom result = gameRoomService.createRoom(TEST_USER_ID, TEST_GROUP_ID, request);
+
+        // Then — 보정된 거래일이 start_date로 반영되고, end_date는 + periodMonths
+        assertThat(result.getStartDate()).isEqualTo(adjustedTradeDate);
+        assertThat(result.getEndDate()).isEqualTo(adjustedTradeDate.plusMonths(request.periodMonths()));
+    }
+
+    @Test
     @DisplayName("게임방 생성 실패 — 방장 1일 1회 제한 위반 시 예외 발생")
     void createRoom_dailyLimitExceeded() {
         // Given — 그룹/방장 활성 방 없음, 오늘 이미 게임 시작 이력 있음
