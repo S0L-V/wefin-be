@@ -72,7 +72,7 @@ public class ClusterTagAggregator {
                     if (sources.size() >= MAX_SOURCES_PER_CLUSTER) break;
                 }
             }
-            result.put(entry.getKey(), sources);
+            result.put(entry.getKey(), List.copyOf(sources));
         }
         return result;
     }
@@ -90,7 +90,7 @@ public class ClusterTagAggregator {
         for (NewsArticleTag t : stockTags) {
             seen.putIfAbsent(t.getTagCode(), new StockInfo(t.getTagCode(), t.getTagName()));
         }
-        return new ArrayList<>(seen.values());
+        return List.copyOf(seen.values());
     }
 
     /**
@@ -106,7 +106,7 @@ public class ClusterTagAggregator {
         for (NewsArticleTag t : topicTags) {
             seen.add(t.getTagName());
         }
-        return new ArrayList<>(seen);
+        return List.copyOf(seen);
     }
 
     /**
@@ -126,7 +126,7 @@ public class ClusterTagAggregator {
                 tagsByArticle.getOrDefault(articleId, List.of()).forEach(t ->
                         seen.putIfAbsent(t.getTagCode(), new StockInfo(t.getTagCode(), t.getTagName())));
             }
-            result.put(entry.getKey(), new ArrayList<>(seen.values()));
+            result.put(entry.getKey(), List.copyOf(seen.values()));
         }
         return result;
     }
@@ -148,7 +148,7 @@ public class ClusterTagAggregator {
                 tagsByArticle.getOrDefault(articleId, List.of())
                         .forEach(t -> topics.add(t.getTagName()));
             }
-            result.put(entry.getKey(), new ArrayList<>(topics));
+            result.put(entry.getKey(), List.copyOf(topics));
         }
         return result;
     }
@@ -191,6 +191,6 @@ public class ClusterTagAggregator {
                 if (result.size() >= MAX_SOURCES_PER_CLUSTER) break;
             }
         }
-        return result;
+        return List.copyOf(result);
     }
 }
