@@ -1,6 +1,7 @@
 package com.solv.wefin.domain.game.news.service;
 
 import com.solv.wefin.domain.game.news.dto.BriefingInfo;
+import com.solv.wefin.domain.game.openai.OpenAiBriefingClient.BriefingParts;
 import com.solv.wefin.domain.game.participant.entity.GameParticipant;
 import com.solv.wefin.domain.game.participant.repository.GameParticipantRepository;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
@@ -49,7 +50,11 @@ class GameBriefingServiceTest {
 
     private static final UUID TEST_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000001");
     private static final Long TEST_GROUP_ID = 1L;
-    private static final String BRIEFING_TEXT = "2022-01-03 시장 브리핑: 코스피 상승 마감.";
+    private static final BriefingParts TEST_PARTS = new BriefingParts(
+            "코스피 상승 마감. 반도체 섹터 강세.",
+            "- 반도체 호황\n- 금융 규제",
+            "반도체 관련 종목에 주목하세요."
+    );
 
     // === 성공 케이스 ===
 
@@ -70,15 +75,17 @@ class GameBriefingServiceTest {
         given(gameTurnRepository.findByGameRoomAndStatus(gameRoom, TurnStatus.ACTIVE))
                 .willReturn(Optional.of(activeTurn));
         given(briefingService.getBriefingForDate(turnDate))
-                .willReturn(BRIEFING_TEXT);
+                .willReturn(TEST_PARTS);
 
         // When
         BriefingInfo result = gameBriefingService.getBriefingForRoom(roomId, TEST_USER_ID);
 
-        // Then — 활성 턴의 날짜와 브리핑 텍스트가 묶여서 반환
+        // Then — 활성 턴의 날짜와 3파트 브리핑이 묶여서 반환
         assertThat(result).isNotNull();
         assertThat(result.targetDate()).isEqualTo(turnDate);
-        assertThat(result.briefingText()).isEqualTo(BRIEFING_TEXT);
+        assertThat(result.marketOverview()).isEqualTo(TEST_PARTS.marketOverview());
+        assertThat(result.keyIssues()).isEqualTo(TEST_PARTS.keyIssues());
+        assertThat(result.investmentHint()).isEqualTo(TEST_PARTS.investmentHint());
 
         verify(briefingService).getBriefingForDate(turnDate);
     }

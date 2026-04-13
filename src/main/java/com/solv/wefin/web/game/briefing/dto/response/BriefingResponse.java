@@ -11,12 +11,16 @@ import java.time.LocalDate;
 public class BriefingResponse {
 
     private LocalDate targetDate;
-    private String briefingText;
+    private String marketOverview;
+    private String keyIssues;
+    private String investmentHint;
 
     public static BriefingResponse from(BriefingInfo info) {
         return new BriefingResponse(
                 info.targetDate(),
-                info.briefingText()
+                info.marketOverview(),
+                info.keyIssues(),
+                info.investmentHint()
         );
     }
 }

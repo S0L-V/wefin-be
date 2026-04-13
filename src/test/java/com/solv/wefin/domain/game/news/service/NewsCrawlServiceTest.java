@@ -4,7 +4,6 @@ import com.solv.wefin.domain.game.news.crawler.CrawledArticle;
 import com.solv.wefin.domain.game.news.crawler.NaverNewsCrawler;
 import com.solv.wefin.domain.game.news.entity.GameNewsArchive;
 import com.solv.wefin.domain.game.news.repository.GameNewsArchiveRepository;
-import com.solv.wefin.domain.game.news.service.NewsCrawlService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

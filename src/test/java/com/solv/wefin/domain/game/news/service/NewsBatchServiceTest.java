@@ -1,8 +1,7 @@
 package com.solv.wefin.domain.game.news.service;
 
 import com.solv.wefin.domain.game.news.repository.BriefingCacheRepository;
-import com.solv.wefin.domain.game.news.service.BriefingService;
-import com.solv.wefin.domain.game.news.service.NewsBatchService;
+import com.solv.wefin.domain.game.openai.OpenAiBriefingClient.BriefingParts;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,8 +21,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -54,7 +55,7 @@ class NewsBatchServiceTest {
         given(briefingCacheRepository.findExistingDatesBetween(COLLECT_START, COLLECT_END))
                 .willReturn(existingDates);
         given(briefingService.getBriefingForDate(any(LocalDate.class)))
-                .willReturn("브리핑 텍스트");
+                .willReturn(new BriefingParts("시장 개요", "주요 이슈", "투자 힌트"));
 
         // When — 3일치 배치 처리 요청
         int result = newsBatchService.collectBatch(3);
@@ -82,7 +83,7 @@ class NewsBatchServiceTest {
         given(briefingCacheRepository.findExistingDatesBetween(COLLECT_START, COLLECT_END))
                 .willReturn(existingDates);
         given(briefingService.getBriefingForDate(any(LocalDate.class)))
-                .willReturn("브리핑 텍스트");
+                .willReturn(new BriefingParts("시장 개요", "주요 이슈", "투자 힌트"));
 
         // When — 2일치만 처리 요청
         int result = newsBatchService.collectBatch(2);
@@ -135,7 +136,7 @@ class NewsBatchServiceTest {
                 .willAnswer(invocation -> {
                     firstCallStarted.countDown();
                     allowFirstCallToFinish.await();
-                    return "브리핑";
+                    return new BriefingParts("시장 개요", "주요 이슈", "투자 힌트");
                 });
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -184,10 +185,10 @@ class NewsBatchServiceTest {
         LocalDate day2 = LocalDate.of(2021, 1, 2);
         LocalDate day3 = LocalDate.of(2021, 1, 3);
 
-        given(briefingService.getBriefingForDate(day1)).willReturn("브리핑1");
+        given(briefingService.getBriefingForDate(day1)).willReturn(new BriefingParts("시장1", "이슈1", "힌트1"));
         given(briefingService.getBriefingForDate(day2))
                 .willThrow(new RuntimeException("크롤링 실패"));
-        given(briefingService.getBriefingForDate(day3)).willReturn("브리핑3");
+        given(briefingService.getBriefingForDate(day3)).willReturn(new BriefingParts("시장3", "이슈3", "힌트3"));
 
         // When
         int result = newsBatchService.collectBatch(3);

@@ -59,7 +59,7 @@ class GamePortfolioServiceTest {
     private static final Long TEST_GROUP_ID = 1L;
     private static final LocalDate TEST_TRADE_DATE = LocalDate.of(2022, 3, 2);
 
-    // === 포트폴리오 성공 테스트 ===
+    // === 성공 테스트 ===
 
     @Nested
     @DisplayName("포트폴리오 조회 성공")
@@ -68,6 +68,7 @@ class GamePortfolioServiceTest {
         @Test
         @DisplayName("보유종목 없음 — cash = seed, stockValue = 0")
         void portfolio_noHoldings() {
+            // Given
             GameRoom room = createGameRoom();
             GameParticipant participant = createParticipant(room, new BigDecimal("10000000"));
             GameTurn turn = createGameTurn(room);
@@ -76,8 +77,10 @@ class GamePortfolioServiceTest {
             given(gameHoldingRepository.findAllByParticipantAndQuantityGreaterThan(participant, 0))
                     .willReturn(List.of());
 
+            // When
             PortfolioInfo result = portfolioService.getPortfolio(TEST_ROOM_ID, TEST_USER_ID);
 
+            // Then
             assertThat(result.seedMoney()).isEqualByComparingTo(new BigDecimal("10000000"));
             assertThat(result.cash()).isEqualByComparingTo(new BigDecimal("10000000"));
             assertThat(result.stockValue()).isEqualByComparingTo(BigDecimal.ZERO);
@@ -88,6 +91,7 @@ class GamePortfolioServiceTest {
         @Test
         @DisplayName("보유종목 1개 — 종가 기준 평가금액 계산")
         void portfolio_oneHolding() {
+            // Given — 시드 1000만, 잔고 500만 (500만원어치 매수), 삼성전자 10주 보유
             GameRoom room = createGameRoom();
             GameParticipant participant = createParticipant(room, new BigDecimal("5000000"));
             GameTurn turn = createGameTurn(room);
@@ -101,10 +105,15 @@ class GamePortfolioServiceTest {
             given(stockDailyRepository.findAllByStockInfoInAndTradeDate(List.of(samsung), TEST_TRADE_DATE))
                     .willReturn(List.of(stockDaily));
 
+            // When
             PortfolioInfo result = portfolioService.getPortfolio(TEST_ROOM_ID, TEST_USER_ID);
 
+            // Then
+            // stockValue = 10 × 60000 = 600000
             assertThat(result.stockValue()).isEqualByComparingTo(new BigDecimal("600000"));
+            // totalAsset = 5000000 + 600000 = 5600000
             assertThat(result.totalAsset()).isEqualByComparingTo(new BigDecimal("5600000"));
+            // profitRate = (5600000 - 10000000) / 10000000 × 100 = -44.00
             BigDecimal expectedRate = new BigDecimal("5600000").subtract(new BigDecimal("10000000"))
                     .multiply(new BigDecimal("100"))
                     .divide(new BigDecimal("10000000"), 2, RoundingMode.HALF_UP);
@@ -114,6 +123,7 @@ class GamePortfolioServiceTest {
         @Test
         @DisplayName("보유종목 여러 개 — 전체 stockValue 합산")
         void portfolio_multipleHoldings() {
+            // Given — 시드 1000만, 잔고 300만, 삼성 10주 + SK 5주
             GameRoom room = createGameRoom();
             GameParticipant participant = createParticipant(room, new BigDecimal("3000000"));
             GameTurn turn = createGameTurn(room);
@@ -132,15 +142,20 @@ class GamePortfolioServiceTest {
             given(stockDailyRepository.findAllByStockInfoInAndTradeDate(List.of(samsung, sk), TEST_TRADE_DATE))
                     .willReturn(List.of(samsungDaily, skDaily));
 
+            // When
             PortfolioInfo result = portfolioService.getPortfolio(TEST_ROOM_ID, TEST_USER_ID);
 
+            // Then
+            // stockValue = (10 × 60000) + (5 × 130000) = 600000 + 650000 = 1250000
             assertThat(result.stockValue()).isEqualByComparingTo(new BigDecimal("1250000"));
+            // totalAsset = 3000000 + 1250000 = 4250000
             assertThat(result.totalAsset()).isEqualByComparingTo(new BigDecimal("4250000"));
+            // profitRate = (4250000 - 10000000) / 10000000 × 100 = -57.50
             assertThat(result.profitRate()).isEqualByComparingTo(new BigDecimal("-57.50"));
         }
     }
 
-    // === 포트폴리오 실패 테스트 ===
+    // === 실패 테스트 ===
 
     @Nested
     @DisplayName("포트폴리오 조회 실패")
@@ -265,7 +280,9 @@ class GamePortfolioServiceTest {
             assertThat(info.quantity()).isEqualTo(10);
             assertThat(info.avgPrice()).isEqualByComparingTo(new BigDecimal("55000"));
             assertThat(info.currentPrice()).isEqualByComparingTo(new BigDecimal("60000"));
+            // evalAmount = 10 × 60000 = 600000
             assertThat(info.evalAmount()).isEqualByComparingTo(new BigDecimal("600000"));
+            // profitRate = (60000 - 55000) / 55000 × 100 = 9.09
             assertThat(info.profitRate()).isEqualByComparingTo(new BigDecimal("9.09"));
         }
 
@@ -293,6 +310,7 @@ class GamePortfolioServiceTest {
 
             assertThat(result).hasSize(2);
 
+            // SK하이닉스: profitRate = (130000 - 120000) / 120000 × 100 = 8.33
             HoldingInfo skInfo = result.stream()
                     .filter(h -> h.symbol().equals("000660"))
                     .findFirst().orElseThrow();
