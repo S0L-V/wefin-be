@@ -5,10 +5,10 @@ import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.group.dto.GroupInviteInfo;
 import com.solv.wefin.domain.group.dto.GroupMemberInfo;
 import com.solv.wefin.domain.group.dto.LeaveGroupInfo;
+import com.solv.wefin.domain.group.dto.MyActiveGroupInfo;
 import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.entity.GroupInvite;
 import com.solv.wefin.domain.group.entity.GroupMember;
-import com.solv.wefin.domain.group.entity.GroupType;
 import com.solv.wefin.domain.group.repository.GroupInviteRepository;
 import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.domain.group.repository.GroupRepository;
@@ -39,10 +39,39 @@ public class GroupService {
         Group group = Group.createHomeGroup(user.getNickname() + "의 그룹");
         Group savedGroup = groupRepository.save(group);
 
+        user.setHomeGroup(savedGroup);
+
         GroupMember groupMember = GroupMember.createLeader(user, savedGroup);
         groupMemberRepository.save(groupMember);
 
         return savedGroup;
+    }
+
+    @Transactional
+    public GroupMemberInfo createSharedGroup(UUID userId, String groupName) {
+        User user = getUserForMembershipTransition(userId);
+
+        GroupMember currentActiveMember = groupMemberRepository
+                .findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE)
+                .orElse(null);
+
+        if (currentActiveMember != null && currentActiveMember.getGroup().isSharedGroup()) {
+            throw new BusinessException(ErrorCode.GROUP_CREATE_REQUIRES_HOME);
+        }
+
+        if (currentActiveMember != null) {
+            currentActiveMember.deactivate();
+            // deactivate()가 DB에 반영되기 전에 새 ACTIVE가 들어가면서 유니크 제약 충돌이 날 수 있어 flush로 순서 보장
+            groupMemberRepository.flush();
+        }
+
+        Group group = Group.createSharedGroup(groupName);
+        Group savedGroup = groupRepository.save(group);
+
+        GroupMember leader = GroupMember.createLeader(user, savedGroup);
+        groupMemberRepository.save(leader);
+
+        return GroupMemberInfo.from(leader);
     }
 
     public List<GroupMemberInfo> getActiveMembers(Long groupId) {
@@ -55,6 +84,20 @@ public class GroupService {
                 ).stream()
                 .map(GroupMemberInfo::from)
                 .toList();
+    }
+
+    public MyActiveGroupInfo getMyActiveGroup(UUID userId) {
+        GroupMember activeMember = groupMemberRepository
+                .findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
+
+        Group group = activeMember.getGroup();
+
+        return new MyActiveGroupInfo(
+                group.getId(),
+                group.getName(),
+                group.isHomeGroup()
+        );
     }
 
     @Transactional
@@ -104,15 +147,14 @@ public class GroupService {
             throw new BusinessException(ErrorCode.GROUP_INVITE_ALREADY_USED);
         }
 
+        User user = getUserForMembershipTransition(userId);
+
         Group targetGroup = groupRepository.findByIdForUpdate(invite.getGroup().getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
 
         if (targetGroup.isHomeGroup()) {
             throw new BusinessException(ErrorCode.GROUP_HOME_JOIN_NOT_ALLOWED);
         }
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         GroupMember currentActiveMember = groupMemberRepository
                 .findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE)
@@ -134,6 +176,7 @@ public class GroupService {
 
         if (currentActiveMember != null) {
             currentActiveMember.deactivate();
+            groupMemberRepository.flush();
         }
 
         GroupMember targetMembership = groupMemberRepository
@@ -155,6 +198,8 @@ public class GroupService {
 
     @Transactional
     public LeaveGroupInfo leaveGroup(Long groupId, UUID userId) {
+        User user = getUserForMembershipTransition(userId);
+
         Group group = groupRepository.findByIdForUpdate(groupId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
 
@@ -176,6 +221,7 @@ public class GroupService {
         }
 
         leavingMember.deactivate();
+        groupMemberRepository.flush();
 
         long remainingActiveMemberCount = groupMemberRepository.countByGroupAndStatus(
                 group,
@@ -194,18 +240,7 @@ public class GroupService {
             nextLeader.changeRoleToLeader();
         }
 
-        User user = userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        GroupMember homeGroupMember = groupMemberRepository
-                .findByUser_UserIdAndGroup_GroupType(userId, GroupType.HOME)
-                .orElseGet(() -> {
-                    GroupMember created = createDefaultGroupAndGetMembership(user);
-                    return groupMemberRepository
-                            .findByUser_UserIdAndGroup_GroupType(userId, GroupType.HOME)
-                            .orElse(created);
-                });
-
+        GroupMember homeGroupMember = restoreOrCreateHomeMembership(user);
         homeGroupMember.activate();
 
         return new LeaveGroupInfo(
@@ -214,9 +249,32 @@ public class GroupService {
         );
     }
 
+    private User getUserForMembershipTransition(UUID userId) {
+        return userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private GroupMember restoreOrCreateHomeMembership(User user) {
+        Group homeGroup = user.getHomeGroup();
+
+        if (homeGroup != null) {
+            Group managedHomeGroup = groupRepository.findById(homeGroup.getId())
+                    .orElse(null);
+
+            if (managedHomeGroup != null) {
+                return groupMemberRepository.findByUser_UserIdAndGroup_Id(user.getUserId(), managedHomeGroup.getId())
+                        .orElseGet(() -> groupMemberRepository.save(GroupMember.createLeader(user, managedHomeGroup)));
+            }
+        }
+
+        return createDefaultGroupAndGetMembership(user);
+    }
+
     private GroupMember createDefaultGroupAndGetMembership(User user) {
         Group group = Group.createHomeGroup(user.getNickname() + "의 그룹");
         Group savedGroup = groupRepository.save(group);
+
+        user.setHomeGroup(savedGroup);
 
         GroupMember groupMember = GroupMember.createLeader(user, savedGroup);
         return groupMemberRepository.save(groupMember);

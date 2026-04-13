@@ -25,6 +25,7 @@ public enum ErrorCode {
     GROUP_HOME_JOIN_NOT_ALLOWED(400, "홈 그룹에는 참여할 수 없습니다."),
     GROUP_HOME_LEAVE_NOT_ALLOWED(400, "홈 그룹은 탈퇴할 수 없습니다."),
     GROUP_HOME_MEMBERSHIP_NOT_FOUND(404, "홈 그룹 멤버십을 찾을 수 없습니다."),
+    GROUP_CREATE_REQUIRES_HOME(400, "단체 그룹을 생성하려면 기존 그룹에서 탈퇴해야 합니다."),
     GROUP_LEADER_TRANSFER_FAILED(500, "리더 권한 위임에 실패했습니다."),
 
     // Chat

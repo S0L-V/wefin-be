@@ -29,6 +29,18 @@ public class GroupController {
         return ApiResponse.success(responses);
     }
 
+    @PostMapping
+    public ApiResponse<CreateGroupResponse> createGroup(
+            @RequestBody @Valid CreateGroupRequest request,
+            @AuthenticationPrincipal UUID userId
+    ) {
+        CreateGroupResponse response = CreateGroupResponse.from(
+                groupService.createSharedGroup(userId, request.name())
+        );
+
+        return ApiResponse.success(response);
+    }
+
     @PostMapping("/{groupId}/invite-codes")
     public ApiResponse<CreateGroupInviteResponse> createInviteCode(
             @PathVariable Long groupId,
