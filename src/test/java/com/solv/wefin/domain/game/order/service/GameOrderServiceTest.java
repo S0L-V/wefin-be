@@ -225,7 +225,7 @@ class GameOrderServiceTest {
         }
 
         @Test
-        @DisplayName("��도 성공 — 전량 매도, 보유종목 삭제")
+        @DisplayName("매도 성공 — 전량 매도, 보유종목 삭제")
         void sell_success_allQuantity_holdingDeleted() {
             // Given
             GameRoom room = createGameRoom();

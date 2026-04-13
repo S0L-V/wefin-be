@@ -58,8 +58,20 @@ public class GameTurn {
                 .build();
     }
 
+    public static GameTurn createNext(GameTurn currentTurn, LocalDate nextDate) {
+        return GameTurn.builder()
+                .gameRoom(currentTurn.getGameRoom())
+                .turnNumber(currentTurn.getTurnNumber() + 1)
+                .turnDate(nextDate)
+                .build();
+    }
+
     public void complete() {
         this.status = COMPLETED;
+    }
+
+    public void assignBriefing(UUID briefingId) {
+        this.briefingId = briefingId;
     }
 
 }
