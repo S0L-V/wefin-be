@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
@@ -471,19 +472,19 @@ class TaggingServiceTest {
     }
 
     @Test
-    @DisplayName("종목 마스터 로드 실패 시 markProcessing 호출 없이 예외 전파")
-    void tagPendingArticles_stockMapLoadFailure_doesNotMarkProcessing() {
+    @DisplayName("종목 마스터 로드 실패 시 예외가 전파되고 markProcessing은 호출되지 않는다")
+    void tagPendingArticles_stockMapLoadFailure_throwsAndDoesNotMarkProcessing() {
         // given
         List<NewsArticle> articles = createArticles(2);
         stubFindTargets(articles);
         given(stockCodeValidator.loadStockMap())
                 .willThrow(new RuntimeException("DB 일시 장애"));
 
-        // when / then — 예외 전파되고 markProcessing은 호출되지 않아야 다음 배치에서 즉시 재시도 가능
-        try {
-            taggingService.tagPendingArticles();
-        } catch (RuntimeException ignored) {
-        }
+        // when / then — 예외가 실제로 전파되는지 assertThrows로 고정.
+        // markProcessing이 호출되지 않아야 다음 배치 틱에서 stale 대기 없이 즉시 재시도 가능
+        assertThatThrownBy(() -> taggingService.tagPendingArticles())
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("DB 일시 장애");
         verify(persistenceService, never()).markProcessing(anyList());
     }
 

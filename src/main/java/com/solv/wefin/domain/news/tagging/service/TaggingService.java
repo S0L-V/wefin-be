@@ -143,6 +143,10 @@ public class TaggingService {
         if (result.getStocks() != null) {
             Set<String> seenStockCodes = new HashSet<>();
             for (TaggingResult.TagItem item : result.getStocks()) {
+                if (item == null) {
+                    log.warn("STOCK 배열 내 null 원소 스킵 - articleId: {}", article.getId());
+                    continue;
+                }
                 String rawCode = item.getCode();
                 String code = rawCode == null ? null : rawCode.trim();
                 if (code == null || code.isEmpty() || !stockMap.containsKey(code)) {
@@ -189,6 +193,10 @@ public class TaggingService {
                                    TagType type, Long articleId) {
         Set<String> seen = new HashSet<>();
         for (TaggingResult.TagItem item : items) {
+            if (item == null) {
+                log.warn("{} 배열 내 null 원소 스킵 - articleId: {}", type, articleId);
+                continue;
+            }
             String rawCode = item.getCode();
             if (rawCode == null) continue;
             String code = rawCode.trim().toUpperCase(Locale.ROOT);
