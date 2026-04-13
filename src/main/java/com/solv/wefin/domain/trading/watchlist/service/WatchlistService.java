@@ -22,7 +22,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class WatchlistService {
 
+    /** 관심 종목 등록 가중치. 명시적 선호 신호이므로 HELPFUL 피드백(+1) 5회분에 해당 */
     public static final BigDecimal ADD_WATCHLIST_WEIGHT = new BigDecimal(5);
+    /** 관심 종목 해제 가중치. 등록과 동일 절대값 차감 */
     public static final BigDecimal DELETE_WATCHLIST_WEIGHT = new BigDecimal(-5);
 
     private final MarketService marketService;

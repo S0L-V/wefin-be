@@ -27,6 +27,7 @@ public interface UserInterestRepository extends JpaRepository<UserInterest, Long
     /**
      * 가중치를 원자적으로 upsert한다.
      * 존재하면 weight를 증감하고, 없으면 새로 생성한다.
+     * weight 범위는 0~30으로 제한된다.
      * PostgreSQL INSERT ON CONFLICT DO UPDATE로 단일 쿼리 실행
      */
     @Modifying
