@@ -45,7 +45,7 @@ public class ClusterTagAggregator {
      * {@link #MAX_SOURCES_PER_CLUSTER}개까지
      *
      * @param clusterArticleMap clusterId → 소속 articleIds
-     * @param allArticleIds     IN 절 조회용 전체 기사 ID (중복 제거된)
+     * @param allArticleIds     IN 절 조회용 전체 기사 ID
      * @return clusterId → 출처 목록
      */
     public Map<Long, List<SourceInfo>> aggregateSources(Map<Long, List<Long>> clusterArticleMap,
@@ -79,9 +79,6 @@ public class ClusterTagAggregator {
 
     /**
      * 단일 클러스터용 — 기사 목록의 관련 STOCK 태그를 집계한다
-     *
-     * 상세 조회 경로에서 {@code Map.of(id, articleIds)} 래핑 없이 직접 호출하기 위한
-     * 편의 오버로드
      */
     public List<StockInfo> aggregateStocksForCluster(List<Long> articleIds) {
         if (articleIds.isEmpty()) {
@@ -97,7 +94,7 @@ public class ClusterTagAggregator {
     }
 
     /**
-     * 단일 클러스터용 — 기사 목록의 TOPIC 태그명을 집계한다 (편의 오버로드)
+     * 단일 클러스터용 — 기사 목록의 TOPIC 태그명을 집계한다
      */
     public List<String> aggregateMarketTagsForCluster(List<Long> articleIds) {
         if (articleIds.isEmpty()) {
@@ -114,8 +111,6 @@ public class ClusterTagAggregator {
 
     /**
      * 클러스터별 관련 STOCK 태그(code + name)를 집계한다
-     *
-     * 같은 종목 코드가 여러 기사에서 반복되면 한 번만 포함한다
      */
     public Map<Long, List<StockInfo>> aggregateStocks(Map<Long, List<Long>> clusterArticleMap,
                                                       List<Long> allArticleIds) {
@@ -170,6 +165,10 @@ public class ClusterTagAggregator {
      */
     public List<ArticleSourceInfo> aggregateDetailSources(List<Long> articleIds,
                                                          Set<Long> prioritizedArticleIds) {
+        if (articleIds == null || articleIds.isEmpty()) {
+            return List.of();
+        }
+
         Map<Long, NewsArticleRepository.ArticleSourceProjection> projectionMap =
                 newsArticleRepository.findArticleSourceInfoByIdIn(articleIds).stream()
                         .collect(Collectors.toMap(
