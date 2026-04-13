@@ -1,9 +1,9 @@
 package com.solv.wefin.web.news.dto.response;
 
-import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ArticleSourceInfo;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterDetailResult;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.SectionDetail;
-import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.StockInfo;
+import com.solv.wefin.domain.news.cluster.dto.ArticleSourceInfo;
+import com.solv.wefin.domain.news.cluster.dto.StockInfo;
 
 import java.time.OffsetDateTime;
 import java.util.List;
