@@ -22,6 +22,7 @@ import com.solv.wefin.domain.trading.ranking.dto.DailyRankingRow;
 import com.solv.wefin.domain.trading.ranking.repository.RankingQueryRepository;
 import com.solv.wefin.domain.user.service.UserService;
 import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -114,6 +115,9 @@ public class RankingService {
 		try {
 			myAccountId = virtualAccountService.getAccountByUserId(callerUserId).getVirtualAccountId();
 		} catch (BusinessException e) {
+			if (e.getErrorCode() != ErrorCode.ACCOUNT_NOT_FOUND) {
+				throw e; // 예상 외 에러는 그대로 전파
+			}
 			log.warn("myRank 계산 - 계좌 조회 실패: userId={}, code={}", callerUserId, e.getErrorCode());
 			return null;
 		}

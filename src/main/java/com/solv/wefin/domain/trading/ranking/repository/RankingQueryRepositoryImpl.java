@@ -38,7 +38,7 @@ public class RankingQueryRepositoryImpl implements RankingQueryRepository {
 				trade.realizedProfit.isNotNull()
 			)
 			.groupBy(trade.virtualAccountId)
-			.orderBy(trade.realizedProfit.sum().desc())
+			.orderBy(trade.realizedProfit.sum().desc(), trade.tradeId.count().asc())
 			.fetch();
 	}
 
