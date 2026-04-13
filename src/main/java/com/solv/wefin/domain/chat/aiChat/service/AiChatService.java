@@ -7,6 +7,8 @@ import com.solv.wefin.domain.chat.aiChat.dto.command.AiChatCommand;
 import com.solv.wefin.domain.chat.aiChat.dto.info.AiChatInfo;
 import com.solv.wefin.domain.chat.aiChat.dto.info.AiChatMessagesInfo;
 import com.solv.wefin.domain.chat.aiChat.entity.AiChatMessage;
+import com.solv.wefin.domain.quest.entity.QuestEventType;
+import com.solv.wefin.domain.quest.service.QuestProgressService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class AiChatService {
     private final OpenAiChatClient openAiChatClient;
     private final AiChatMessagePersistenceService aiChatMessagePersistenceService;
     private final UserRepository userRepository;
+    private final QuestProgressService questProgressService;
 
     public AiChatMessagesInfo getMessages(UUID userId, Long beforeMessageId, int size) {
         validateUserId(userId);
@@ -64,6 +67,8 @@ public class AiChatService {
 
         aiChatMessagePersistenceService.saveUserMessage(user, command.message());
         AiChatMessage aiMessage = aiChatMessagePersistenceService.saveAiMessage(user, answer);
+
+        questProgressService.handleEvent(userId, QuestEventType.USE_AI_CHAT);
 
         return toInfo(aiMessage);
     }

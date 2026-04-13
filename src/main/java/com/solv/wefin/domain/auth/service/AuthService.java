@@ -10,6 +10,8 @@ import com.solv.wefin.domain.auth.repository.RefreshTokenRepository;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.service.GroupService;
+import com.solv.wefin.domain.quest.entity.QuestEventType;
+import com.solv.wefin.domain.quest.service.QuestProgressService;
 import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
@@ -37,6 +39,7 @@ public class AuthService {
     private final GroupService groupService;
     private final JwtProvider jwtProvider;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final QuestProgressService questProgressService;
 
     @Transactional
     public SignupInfo signup(SignupCommand command) {
@@ -136,6 +139,8 @@ public class AuthService {
                         .build());
 
         refreshTokenRepository.save(refreshToken);
+
+        questProgressService.handleEvent(user.getUserId(), QuestEventType.LOGIN);
 
         return new LoginInfo(
                 user.getUserId(),

@@ -19,6 +19,8 @@ import com.solv.wefin.domain.group.entity.GroupMember;
 import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
+import com.solv.wefin.domain.quest.entity.QuestEventType;
+import com.solv.wefin.domain.quest.service.QuestProgressService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +47,7 @@ public class ChatMessageService {
     private final ApplicationEventPublisher eventPublisher;
     private final GroupMemberRepository groupMemberRepository;
     private final ChatSpamGuard chatSpamGuard;
+    private final QuestProgressService questProgressService;
 
     private static final long SPAM_WINDOW_SECONDS = 3L;
     private static final String SYSTEM = "시스템";
@@ -91,6 +94,8 @@ public class ChatMessageService {
 
             eventPublisher.publishEvent(toEvent(savedMessage));
         }
+
+        questProgressService.handleEvent(userId, QuestEventType.SEND_GROUP_CHAT);
     }
 
     @Transactional
@@ -117,6 +122,8 @@ public class ChatMessageService {
         ChatMessageInfo info = toInfo(chatMessage);
 
         eventPublisher.publishEvent(new ChatMessageCreatedEvent(group.getId(), info));
+
+        questProgressService.handleEvent(userId, QuestEventType.SHARE_NEWS);
 
         return info;
     }
