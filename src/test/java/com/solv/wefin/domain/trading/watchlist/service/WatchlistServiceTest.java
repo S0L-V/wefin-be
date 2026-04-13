@@ -6,8 +6,8 @@ import com.solv.wefin.domain.trading.stock.entity.Stock;
 import com.solv.wefin.domain.trading.stock.repository.StockRepository;
 import com.solv.wefin.domain.trading.watchlist.dto.WatchlistInfo;
 import com.solv.wefin.domain.trading.watchlist.entity.InterestType;
-import com.solv.wefin.domain.trading.watchlist.entity.UserInterest;
-import com.solv.wefin.domain.trading.watchlist.repository.UserInterestRepository;
+import com.solv.wefin.domain.user.entity.UserInterest;
+import com.solv.wefin.domain.user.repository.UserInterestRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -69,10 +70,10 @@ class WatchlistServiceTest {
             // given
             when(stockRepository.existsByStockCode("005930")).thenReturn(true);
             when(userInterestRepository.existsByUserIdAndInterestTypeAndInterestValue(
-                    userId, InterestType.STOCK, "005930"))
+                    userId, InterestType.STOCK.name(), "005930"))
                     .thenReturn(false);
             when(userInterestRepository.countByUserIdAndInterestType(
-                    userId, InterestType.STOCK))
+                    userId, InterestType.STOCK.name()))
                     .thenReturn(0L);
 
             // when
@@ -83,8 +84,9 @@ class WatchlistServiceTest {
             verify(userInterestRepository).save(captor.capture());
 
             UserInterest saved = captor.getValue();
-            assertThat(saved.getInterestType()).isEqualTo(InterestType.STOCK);
+            assertThat(saved.getInterestType()).isEqualTo(InterestType.STOCK.name());
             assertThat(saved.getInterestValue()).isEqualTo("005930");
+            assertThat(saved.getWeight()).isEqualTo(WatchlistService.ADD_WATCHLIST_WEIGHT);
         }
 
         @Test
@@ -93,7 +95,7 @@ class WatchlistServiceTest {
             // given
             when(stockRepository.existsByStockCode("005930")).thenReturn(true);
             when(userInterestRepository.existsByUserIdAndInterestTypeAndInterestValue(
-                    userId, InterestType.STOCK, "005930"))
+                    userId, InterestType.STOCK.name(), "005930"))
                     .thenReturn(true);
 
             // when & then
@@ -109,10 +111,10 @@ class WatchlistServiceTest {
             // given
             when(stockRepository.existsByStockCode("005930")).thenReturn(true);
             when(userInterestRepository.existsByUserIdAndInterestTypeAndInterestValue(
-                    userId, InterestType.STOCK, "005930"))
+                    userId, InterestType.STOCK.name(), "005930"))
                     .thenReturn(false);
             when(userInterestRepository.countByUserIdAndInterestType(
-                    userId, InterestType.STOCK))
+                    userId, InterestType.STOCK.name()))
                     .thenReturn(10L);
 
             // when & then
@@ -128,14 +130,17 @@ class WatchlistServiceTest {
     class DeleteUserInterest {
 
         @Test
-        @DisplayName("정상 삭제")
+        @DisplayName("정상 삭제 — 가중치 차감 후 row 삭제")
         void success() {
             // when
             watchlistService.deleteUserInterest(userId, "005930");
 
-            // then
-            verify(userInterestRepository).deleteByUserIdAndInterestTypeAndInterestValue(
-                    userId, InterestType.STOCK, "005930");
+            // then — upsertWeight가 delete보다 먼저 호출되는지 순서 검증
+            InOrder inOrder = inOrder(userInterestRepository);
+            inOrder.verify(userInterestRepository).upsertWeight(
+                    userId, InterestType.STOCK.name(), "005930", WatchlistService.DELETE_WATCHLIST_WEIGHT);
+            inOrder.verify(userInterestRepository).deleteByUserIdAndInterestTypeAndInterestValue(
+                    userId, InterestType.STOCK.name(), "005930");
         }
     }
 
@@ -150,7 +155,7 @@ class WatchlistServiceTest {
             UserInterest interest = mock(UserInterest.class);
             when(interest.getInterestValue()).thenReturn("005930");
 
-            when(userInterestRepository.findByUserIdAndInterestType(userId, InterestType.STOCK))
+            when(userInterestRepository.findByUserIdAndInterestType(userId, InterestType.STOCK.name()))
                     .thenReturn(List.of(interest));
 
             Stock stock = mockStock();
