@@ -38,7 +38,7 @@ class NewsBatchServiceTest {
     @Mock
     private BriefingCacheRepository briefingCacheRepository;
 
-    private static final LocalDate COLLECT_START = LocalDate.of(2020, 1, 2);
+    private static final LocalDate COLLECT_START = LocalDate.of(2021, 1, 1);
     private static final LocalDate COLLECT_END = LocalDate.of(2024, 12, 31);
 
     // === 배치 수집 성공 테스트 ===
@@ -46,10 +46,10 @@ class NewsBatchServiceTest {
     @Test
     @DisplayName("배치 수집 성공 — 미처리 날짜만 처리한다")
     void collectBatch_success_processesUnprocessedDates() {
-        // Given — 1/2, 1/3은 이미 처리됨, 1/4, 1/5는 미처리
+        // Given — 1/1, 1/2는 이미 처리됨, 1/3, 1/4, 1/5는 미처리
         Set<LocalDate> existingDates = new HashSet<>();
-        existingDates.add(LocalDate.of(2020, 1, 2));
-        existingDates.add(LocalDate.of(2020, 1, 3));
+        existingDates.add(LocalDate.of(2021, 1, 1));
+        existingDates.add(LocalDate.of(2021, 1, 2));
 
         given(briefingCacheRepository.findExistingDatesBetween(COLLECT_START, COLLECT_END))
                 .willReturn(existingDates);
@@ -59,14 +59,14 @@ class NewsBatchServiceTest {
         // When — 3일치 배치 처리 요청
         int result = newsBatchService.collectBatch(3);
 
-        // Then — 미처리 3건 처리 (1/4, 1/5, 1/6)
+        // Then — 미처리 3건 처리 (1/3, 1/4, 1/5)
         assertThat(result).isEqualTo(3);
-        verify(briefingService).getBriefingForDate(LocalDate.of(2020, 1, 4));
-        verify(briefingService).getBriefingForDate(LocalDate.of(2020, 1, 5));
-        verify(briefingService).getBriefingForDate(LocalDate.of(2020, 1, 6));
+        verify(briefingService).getBriefingForDate(LocalDate.of(2021, 1, 3));
+        verify(briefingService).getBriefingForDate(LocalDate.of(2021, 1, 4));
+        verify(briefingService).getBriefingForDate(LocalDate.of(2021, 1, 5));
         // 이미 처리된 날짜는 호출되지 않음
-        verify(briefingService, never()).getBriefingForDate(LocalDate.of(2020, 1, 2));
-        verify(briefingService, never()).getBriefingForDate(LocalDate.of(2020, 1, 3));
+        verify(briefingService, never()).getBriefingForDate(LocalDate.of(2021, 1, 1));
+        verify(briefingService, never()).getBriefingForDate(LocalDate.of(2021, 1, 2));
     }
 
     // === 이미 처리된 날짜 스킵 테스트 ===
@@ -74,10 +74,10 @@ class NewsBatchServiceTest {
     @Test
     @DisplayName("이미 처리된 날짜 스킵 — 처리된 날짜 사이의 미처리만 처리")
     void collectBatch_skipsProcessedDates() {
-        // Given — 1/2는 처리됨, 1/3은 미처리, 1/4는 처리됨, 1/5는 미처리
+        // Given — 1/1은 처리됨, 1/2는 미처리, 1/3은 처리됨, 1/4는 미처리
         Set<LocalDate> existingDates = new HashSet<>();
-        existingDates.add(LocalDate.of(2020, 1, 2));
-        existingDates.add(LocalDate.of(2020, 1, 4));
+        existingDates.add(LocalDate.of(2021, 1, 1));
+        existingDates.add(LocalDate.of(2021, 1, 3));
 
         given(briefingCacheRepository.findExistingDatesBetween(COLLECT_START, COLLECT_END))
                 .willReturn(existingDates);
@@ -87,10 +87,10 @@ class NewsBatchServiceTest {
         // When — 2일치만 처리 요청
         int result = newsBatchService.collectBatch(2);
 
-        // Then — 미처리 2건 처리 (1/3, 1/5)
+        // Then — 미처리 2건 처리 (1/2, 1/4)
         assertThat(result).isEqualTo(2);
-        verify(briefingService).getBriefingForDate(LocalDate.of(2020, 1, 3));
-        verify(briefingService).getBriefingForDate(LocalDate.of(2020, 1, 5));
+        verify(briefingService).getBriefingForDate(LocalDate.of(2021, 1, 2));
+        verify(briefingService).getBriefingForDate(LocalDate.of(2021, 1, 4));
     }
 
     // === 모든 날짜 처리 완료 ===
@@ -180,9 +180,9 @@ class NewsBatchServiceTest {
         given(briefingCacheRepository.findExistingDatesBetween(COLLECT_START, COLLECT_END))
                 .willReturn(existingDates);
 
-        LocalDate day1 = LocalDate.of(2020, 1, 2);
-        LocalDate day2 = LocalDate.of(2020, 1, 3);
-        LocalDate day3 = LocalDate.of(2020, 1, 4);
+        LocalDate day1 = LocalDate.of(2021, 1, 1);
+        LocalDate day2 = LocalDate.of(2021, 1, 2);
+        LocalDate day3 = LocalDate.of(2021, 1, 3);
 
         given(briefingService.getBriefingForDate(day1)).willReturn("브리핑1");
         given(briefingService.getBriefingForDate(day2))
