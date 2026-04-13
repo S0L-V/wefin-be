@@ -297,6 +297,9 @@ class TurnAdvanceServiceTest {
                 .willReturn(Optional.of(turn));
         given(gameParticipantRepository.findByGameRoomAndStatus(room, ParticipantStatus.ACTIVE))
                 .willReturn(List.of(participant));
+        // save()가 인자를 그대로 반환하도록 설정 (이벤트 발행 시 Entity → SnapshotData 변환에 필요)
+        given(snapshotRepository.save(any(GamePortfolioSnapshot.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
     }
 
     private GameRoom createGameRoom() {

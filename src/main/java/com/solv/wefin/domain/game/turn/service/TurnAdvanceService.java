@@ -20,6 +20,7 @@ import com.solv.wefin.domain.game.turn.repository.GameTurnRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.domain.game.turn.event.TurnChangeEvent;
+import com.solv.wefin.domain.game.turn.event.TurnChangeEvent.SnapshotData;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -105,9 +106,17 @@ public class TurnAdvanceService {
         log.info("[턴 전환] 새 턴 생성: roomId={}, turn={}, date={}", roomId, nextTurn.getTurnNumber(), nextDate);
 
         // 10. 턴 전환 이벤트 발행 (커밋 후 WebSocket 브로드캐스트)
+        // 트랜잭션 안에서 Entity → SnapshotData 변환 (AFTER_COMMIT 시 Lazy Loading 방지)
+        List<SnapshotData> snapshotDataList = snapshots.stream()
+                .map(s -> new SnapshotData(
+                        s.getParticipant().getUserId(),
+                        s.getTotalAsset(),
+                        s.getProfitRate()))
+                .toList();
+
         eventPublisher.publishEvent(new TurnChangeEvent(
                 roomId, nextTurn.getTurnNumber(), nextDate,
-                nextTurn.getBriefingId(), snapshots));
+                nextTurn.getBriefingId(), snapshotDataList));
 
         return nextTurn;
     }

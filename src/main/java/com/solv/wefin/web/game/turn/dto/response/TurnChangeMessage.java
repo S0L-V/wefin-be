@@ -1,6 +1,6 @@
 package com.solv.wefin.web.game.turn.dto.response;
 
-import com.solv.wefin.domain.game.snapshot.entity.GamePortfolioSnapshot;
+import com.solv.wefin.domain.game.turn.event.TurnChangeEvent.SnapshotData;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -35,21 +35,18 @@ public record TurnChangeMessage(
      */
     public static TurnChangeMessage from(int turnNumber, LocalDate turnDate,
                                           UUID briefingId,
-                                          List<GamePortfolioSnapshot> snapshots,
+                                          List<SnapshotData> snapshots,
                                           Map<UUID, String> nicknameMap) {
         AtomicInteger rankCounter = new AtomicInteger(1);
 
         List<RankingEntry> rankings = snapshots.stream()
-                .sorted(Comparator.comparing(GamePortfolioSnapshot::getTotalAsset).reversed())
-                .map(s -> {
-                    UUID userId = s.getParticipant().getUserId();
-                    return new RankingEntry(
-                            rankCounter.getAndIncrement(),
-                            userId,
-                            nicknameMap.getOrDefault(userId, "알 수 없음"),
-                            s.getTotalAsset(),
-                            s.getProfitRate());
-                })
+                .sorted(Comparator.comparing(SnapshotData::totalAsset).reversed())
+                .map(s -> new RankingEntry(
+                        rankCounter.getAndIncrement(),
+                        s.userId(),
+                        nicknameMap.getOrDefault(s.userId(), "알 수 없음"),
+                        s.totalAsset(),
+                        s.profitRate()))
                 .toList();
 
         return new TurnChangeMessage("TURN_CHANGE", turnNumber, turnDate, briefingId, rankings);

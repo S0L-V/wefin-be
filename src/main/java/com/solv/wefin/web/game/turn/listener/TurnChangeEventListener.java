@@ -27,9 +27,9 @@ public class TurnChangeEventListener {
 
     @TransactionalEventListener(phase = AFTER_COMMIT)
     public void handle(TurnChangeEvent event) {
-        // 참가자 userId 목록 추출 → User 테이블에서 닉네임 일괄 조회
+        // SnapshotData에서 userId 추출 → User 테이블에서 닉네임 일괄 조회
         List<UUID> userIds = event.snapshots().stream()
-                .map(s -> s.getParticipant().getUserId())
+                .map(TurnChangeEvent.SnapshotData::userId)
                 .toList();
 
         Map<UUID, String> nicknameMap = userRepository.findAllById(userIds).stream()
