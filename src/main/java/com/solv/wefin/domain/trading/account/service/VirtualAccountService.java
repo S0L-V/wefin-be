@@ -96,6 +96,13 @@ public class VirtualAccountService {
 	}
 
 	/**
+	 * userId로 계좌 조회 (없으면 Optional.empty)
+	 */
+	public Optional<VirtualAccount> findByUserId(UUID userId) {
+		return accountRepository.findByUserId(userId);
+	}
+
+	/**
 	 * 전체 유저의 계좌 조회
 	 */
 	public List<VirtualAccount> getAllAccounts() {

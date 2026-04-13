@@ -9,6 +9,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -25,8 +26,6 @@ import com.solv.wefin.domain.trading.ranking.dto.DailyRankingInfo;
 import com.solv.wefin.domain.trading.ranking.dto.DailyRankingRow;
 import com.solv.wefin.domain.trading.ranking.repository.RankingQueryRepository;
 import com.solv.wefin.domain.user.service.UserService;
-import com.solv.wefin.global.error.BusinessException;
-import com.solv.wefin.global.error.ErrorCode;
 
 @ExtendWith(MockitoExtension.class)
 class RankingServiceTest {
@@ -140,7 +139,7 @@ class RankingServiceTest {
 		given(userService.findAllByIdIn(anyList()))
 			.willReturn(List.of(user1, user2, user3, user4, user5));
 
-		given(virtualAccountService.getAccountByUserId(callerUserId)).willReturn(account3);
+		given(virtualAccountService.findByUserId(callerUserId)).willReturn(Optional.of(account3));
 
 		// when
 		DailyRankingInfo result = rankingService.getDailyRanking(callerUserId);
@@ -180,8 +179,8 @@ class RankingServiceTest {
 			.willReturn(top10Accounts);
 		given(userService.findAllByIdIn(anyList()))
 			.willReturn(top10Users);
-		given(virtualAccountService.getAccountByUserId(callerUserId))
-			.willReturn(myAccount);
+		given(virtualAccountService.findByUserId(callerUserId))
+			.willReturn(Optional.of(myAccount));
 
 		// when
 		DailyRankingInfo result = rankingService.getDailyRanking(callerUserId);
@@ -216,8 +215,8 @@ class RankingServiceTest {
 			.willReturn(List.of(account1, account2));
 		given(userService.findAllByIdIn(anyList()))
 			.willReturn(List.of(user1, user2));
-		given(virtualAccountService.getAccountByUserId(callerUserId))
-			.willReturn(myAccount);
+		given(virtualAccountService.findByUserId(callerUserId))
+			.willReturn(Optional.of(myAccount));
 
 		// when
 		DailyRankingInfo result = rankingService.getDailyRanking(callerUserId);
@@ -239,8 +238,8 @@ class RankingServiceTest {
 		given(userService.findAllByIdIn(anyList()))
 			.willReturn(List.of());
 
-		given(virtualAccountService.getAccountByUserId(callerUserId))
-			.willThrow(new BusinessException(ErrorCode.ACCOUNT_NOT_FOUND));
+		given(virtualAccountService.findByUserId(callerUserId))
+			.willReturn(Optional.empty());
 
 		// when
 		DailyRankingInfo result = rankingService.getDailyRanking(callerUserId);
