@@ -19,7 +19,7 @@ public class StockSearchResponse {
                 stockDaily.getStockInfo().getSymbol(),
                 stockDaily.getStockInfo().getStockName(),
                 stockDaily.getStockInfo().getMarket(),
-                stockDaily.getOpenPrice()
+                stockDaily.getClosePrice()
         );
     }
 }

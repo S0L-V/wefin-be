@@ -5,6 +5,10 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
 
+  jackson:
+    generator:
+      write-bigdecimal-as-plain: true
+
   flyway:
     enabled: true
     locations: classpath:db/migration

@@ -408,9 +408,9 @@ class GameOrderServiceTest {
         return StockInfo.create(TEST_SYMBOL, "삼성전자", "KOSPI", "전기전자");
     }
 
-    private StockDaily createStockDaily(StockInfo stockInfo, BigDecimal openPrice) {
+    private StockDaily createStockDaily(StockInfo stockInfo, BigDecimal closePrice) {
         return StockDaily.create(stockInfo, TEST_TRADE_DATE,
-                openPrice, openPrice, openPrice, openPrice,
+                closePrice, closePrice, closePrice, closePrice,
                 BigDecimal.valueOf(1000000), BigDecimal.ZERO);
     }
 }

@@ -36,6 +36,9 @@ public interface StockDailyRepository extends JpaRepository<StockDaily, UUID> {
     /** 특정 종목의 특정 날짜 주가 데이터 조회 (매수/매도 시 시가 조회용) */
     Optional<StockDaily> findByStockInfoAndTradeDate(StockInfo stockInfo, LocalDate tradeDate);
 
+    /** 여러 종목의 특정 날짜 주가 데이터 일괄 조회 (N+1 방지용) */
+    List<StockDaily> findAllByStockInfoInAndTradeDate(List<StockInfo> stockInfos, LocalDate tradeDate);
+
    //키워드 검색. 짧은 키워드 대량 조회 제한
     @Query("SELECT sd FROM StockDaily sd " +
             "JOIN FETCH sd.stockInfo si " +
