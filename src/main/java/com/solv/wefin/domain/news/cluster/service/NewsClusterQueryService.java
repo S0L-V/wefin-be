@@ -4,6 +4,7 @@ import com.solv.wefin.domain.news.article.entity.NewsArticleTag;
 import com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
 import com.solv.wefin.domain.news.article.repository.NewsArticleTagRepository;
+import com.solv.wefin.domain.news.cluster.entity.ClusterSuggestedQuestion;
 import com.solv.wefin.domain.news.cluster.entity.ClusterSummarySection;
 import com.solv.wefin.domain.news.cluster.entity.ClusterSummarySectionSource;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
@@ -11,6 +12,7 @@ import com.solv.wefin.domain.news.cluster.entity.NewsCluster.ClusterStatus;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.SummaryStatus;
 import com.solv.wefin.domain.news.cluster.entity.NewsClusterArticle;
 import com.solv.wefin.domain.news.cluster.entity.UserNewsClusterRead;
+import com.solv.wefin.domain.news.cluster.repository.ClusterSuggestedQuestionRepository;
 import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionRepository;
 import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionSourceRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepository;
@@ -53,6 +55,7 @@ public class NewsClusterQueryService {
     private final NewsArticleTagRepository articleTagRepository;
     private final UserNewsClusterReadRepository readRepository;
     private final UserNewsClusterFeedbackRepository feedbackRepository;
+    private final ClusterSuggestedQuestionRepository questionRepository;
     private final ClusterSummarySectionRepository sectionRepository;
     private final ClusterSummarySectionSourceRepository sectionSourceRepository;
 
@@ -386,6 +389,11 @@ public class NewsClusterQueryService {
                     .orElse(null);
         }
 
+        // 추천 질문
+        List<String> suggestedQuestions = questionRepository
+                .findByNewsClusterIdOrderByQuestionOrder(clusterId)
+                .stream().map(ClusterSuggestedQuestion::getQuestion).toList();
+
         // 단독 클러스터(기사 1건 + 섹션 없음)는 기사 전문을 내려준다
         String articleContent = null;
         if (articleIds.size() == 1 && sectionDetails.isEmpty()) {
@@ -398,7 +406,7 @@ public class NewsClusterQueryService {
                 cluster.getId(), cluster.getTitle(), cluster.getSummary(),
                 cluster.getThumbnailUrl(), cluster.getPublishedAt(),
                 cluster.getArticleCount(), sources, stocks, marketTags, isRead,
-                feedbackType, sectionDetails, articleContent
+                feedbackType, sectionDetails, suggestedQuestions, articleContent
         );
     }
 
@@ -546,6 +554,7 @@ public class NewsClusterQueryService {
             boolean isRead,
             String feedbackType,
             List<SectionDetail> sections,
+            List<String> suggestedQuestions,
             String articleContent
     ) {
     }

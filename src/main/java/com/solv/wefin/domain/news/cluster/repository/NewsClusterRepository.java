@@ -3,15 +3,31 @@ package com.solv.wefin.domain.news.cluster.repository;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.ClusterStatus;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.SummaryStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> {
+
+    /**
+     * 클러스터 row에 비관적 쓰기 락을 걸고 조회한다
+     *
+     * 같은 클러스터에 대한 요약 저장이 병렬로 실행될 때(예: 배치가 다중 인스턴스에서
+     * 동시 실행되거나 앞선 배치가 길어져 다음 틱과 겹치는 경우), delete-then-insert 시
+     * question_order unique 제약 충돌을 방지한다. verifyArticlesUnchanged CAS는 기사
+     * 집합 변경만 감지하므로, 같은 articleIds로 동시 진행되는 경우의 보호는 이 락이
+     * 담당한다
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM NewsCluster c WHERE c.id = :id")
+    Optional<NewsCluster> findByIdForUpdate(@Param("id") Long id);
 
     /**
      * 특정 상태의 클러스터 목록을 조회한다.

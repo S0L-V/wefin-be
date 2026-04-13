@@ -3,10 +3,12 @@ package com.solv.wefin.domain.news.summary.service;
 import com.solv.wefin.common.IntegrationTestBase;
 import com.solv.wefin.domain.news.article.entity.NewsArticle;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
+import com.solv.wefin.domain.news.cluster.entity.ClusterSuggestedQuestion;
 import com.solv.wefin.domain.news.cluster.entity.ClusterSummarySection;
 import com.solv.wefin.domain.news.cluster.entity.ClusterSummarySectionSource;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.entity.NewsClusterArticle;
+import com.solv.wefin.domain.news.cluster.repository.ClusterSuggestedQuestionRepository;
 import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionRepository;
 import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionSourceRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepository;
@@ -41,6 +43,9 @@ class SummaryPersistenceServiceIntegrationTest extends IntegrationTestBase {
     private ClusterSummarySectionSourceRepository sectionSourceRepository;
 
     @Autowired
+    private ClusterSuggestedQuestionRepository questionRepository;
+
+    @Autowired
     private NewsArticleRepository articleRepository;
 
     @Test
@@ -59,7 +64,7 @@ class SummaryPersistenceServiceIntegrationTest extends IntegrationTestBase {
         );
 
         // when
-        persistenceService.markGeneratedWithSections(cluster.getId(), "제목", "리드 요약", sections, articleIds);
+        persistenceService.markGeneratedWithSections(cluster.getId(), "제목", "리드 요약", sections, null, articleIds);
 
         // then
         List<ClusterSummarySection> savedSections =
@@ -97,7 +102,7 @@ class SummaryPersistenceServiceIntegrationTest extends IntegrationTestBase {
                 createSectionItem("기존 소제목 A", "기존 본문 A", List.of(1)),
                 createSectionItem("기존 소제목 B", "기존 본문 B", List.of(2))
         );
-        persistenceService.markGeneratedWithSections(cluster.getId(), "기존 제목", "기존 요약", firstSections, articleIds);
+        persistenceService.markGeneratedWithSections(cluster.getId(), "기존 제목", "기존 요약", firstSections, null, articleIds);
 
         List<ClusterSummarySection> afterFirst =
                 sectionRepository.findByNewsClusterIdOrderBySectionOrderAsc(cluster.getId());
@@ -112,7 +117,7 @@ class SummaryPersistenceServiceIntegrationTest extends IntegrationTestBase {
         );
 
         // when
-        persistenceService.markGeneratedWithSections(cluster.getId(), "갱신된 제목", "갱신된 요약", newSections, articleIds);
+        persistenceService.markGeneratedWithSections(cluster.getId(), "갱신된 제목", "갱신된 요약", newSections, null, articleIds);
 
         // then — 섹션이 3개로 교체
         List<ClusterSummarySection> afterSecond =
@@ -148,7 +153,7 @@ class SummaryPersistenceServiceIntegrationTest extends IntegrationTestBase {
         );
 
         // when
-        persistenceService.markGeneratedWithSections(cluster.getId(), "제목", "요약", sections, articleIds);
+        persistenceService.markGeneratedWithSections(cluster.getId(), "제목", "요약", sections, null, articleIds);
 
         // then
         List<ClusterSummarySection> savedSections =
@@ -178,7 +183,7 @@ class SummaryPersistenceServiceIntegrationTest extends IntegrationTestBase {
         // when & then
         assertThatThrownBy(() ->
                 persistenceService.markGeneratedWithSections(
-                        cluster.getId(), "제목", "요약", sections, expectedArticleIds))
+                        cluster.getId(), "제목", "요약", sections, null, expectedArticleIds))
                 .isInstanceOf(StaleClusterException.class);
     }
 
@@ -200,7 +205,7 @@ class SummaryPersistenceServiceIntegrationTest extends IntegrationTestBase {
         // when & then
         assertThatThrownBy(() ->
                 persistenceService.markGeneratedWithSections(
-                        cluster.getId(), "제목", "요약", sections, expectedArticleIds))
+                        cluster.getId(), "제목", "요약", sections, null, expectedArticleIds))
                 .isInstanceOf(StaleClusterException.class);
     }
 
@@ -216,8 +221,157 @@ class SummaryPersistenceServiceIntegrationTest extends IntegrationTestBase {
         // when & then
         assertThatThrownBy(() ->
                 persistenceService.markGeneratedSingle(
-                        cluster.getId(), "제목", "요약", List.of(article1.getId())))
+                        cluster.getId(), "제목", "요약", null, List.of(article1.getId())))
                 .isInstanceOf(StaleClusterException.class);
+    }
+
+    @Test
+    @DisplayName("추천 질문 — 정확히 3개 정규화 통과 시 순서대로 저장된다")
+    void questions_validThreeQuestions_savedInOrder() {
+        // given
+        NewsArticle article1 = createAndSaveArticle();
+        NewsArticle article2 = createAndSaveArticle();
+        NewsCluster cluster = createAndSaveCluster(article1.getId(), 2);
+        List<Long> articleIds = List.of(article1.getId(), article2.getId());
+        createClusterArticleMappings(cluster.getId(), articleIds);
+
+        List<SummaryResult.SectionItem> sections = List.of(
+                createSectionItem("소제목", "본문", List.of(1, 2))
+        );
+        List<String> questions = List.of("질문 A", "질문 B", "질문 C");
+
+        // when
+        persistenceService.markGeneratedWithSections(cluster.getId(), "제목", "요약", sections, questions, articleIds);
+
+        // then
+        List<ClusterSuggestedQuestion> saved = questionRepository.findByNewsClusterIdOrderByQuestionOrder(cluster.getId());
+        assertThat(saved).hasSize(3);
+        assertThat(saved.get(0).getQuestion()).isEqualTo("질문 A");
+        assertThat(saved.get(0).getQuestionOrder()).isEqualTo(0);
+        assertThat(saved.get(1).getQuestion()).isEqualTo("질문 B");
+        assertThat(saved.get(1).getQuestionOrder()).isEqualTo(1);
+        assertThat(saved.get(2).getQuestion()).isEqualTo("질문 C");
+        assertThat(saved.get(2).getQuestionOrder()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("추천 질문 — 정규화 후 일부만 유효하면 유효한 만큼만 저장하고 기존은 교체된다")
+    void questions_partialValidAfterNormalization_savesAvailable() {
+        // given: 1차로 정상 3개 저장
+        NewsArticle article1 = createAndSaveArticle();
+        NewsArticle article2 = createAndSaveArticle();
+        NewsCluster cluster = createAndSaveCluster(article1.getId(), 2);
+        List<Long> articleIds = List.of(article1.getId(), article2.getId());
+        createClusterArticleMappings(cluster.getId(), articleIds);
+        List<SummaryResult.SectionItem> sections = List.of(
+                createSectionItem("소제목", "본문", List.of(1, 2))
+        );
+        persistenceService.markGeneratedWithSections(cluster.getId(), "제목1", "요약1", sections,
+                List.of("기존1", "기존2", "기존3"), articleIds);
+
+        // when: 2차 재생성 시 잘못된 응답(중복+blank로 1개만 유효)
+        List<String> badQuestions = List.of("새 질문", "새 질문", "  ", "");
+        persistenceService.markGeneratedWithSections(cluster.getId(), "제목2", "요약2", sections,
+                badQuestions, articleIds);
+
+        // then: 기존 질문은 삭제되고 유효한 1개만 저장된다
+        List<ClusterSuggestedQuestion> saved = questionRepository.findByNewsClusterIdOrderByQuestionOrder(cluster.getId());
+        assertThat(saved).hasSize(1);
+        assertThat(saved.get(0).getQuestion()).isEqualTo("새 질문");
+        assertThat(saved.get(0).getQuestionOrder()).isZero();
+    }
+
+    @Test
+    @DisplayName("추천 질문 — 정규화 후 0개면 기존 질문이 비워진다")
+    void questions_zeroValidAfterNormalization_clearsExisting() {
+        NewsArticle article1 = createAndSaveArticle();
+        NewsArticle article2 = createAndSaveArticle();
+        NewsCluster cluster = createAndSaveCluster(article1.getId(), 2);
+        List<Long> articleIds = List.of(article1.getId(), article2.getId());
+        createClusterArticleMappings(cluster.getId(), articleIds);
+        List<SummaryResult.SectionItem> sections = List.of(
+                createSectionItem("소제목", "본문", List.of(1, 2))
+        );
+        persistenceService.markGeneratedWithSections(cluster.getId(), "제목1", "요약1", sections,
+                List.of("기존1", "기존2", "기존3"), articleIds);
+
+        List<String> emptyQuestions = List.of("  ", "", "\t");
+        persistenceService.markGeneratedWithSections(cluster.getId(), "제목2", "요약2", sections,
+                emptyQuestions, articleIds);
+
+        List<ClusterSuggestedQuestion> saved = questionRepository.findByNewsClusterIdOrderByQuestionOrder(cluster.getId());
+        assertThat(saved).isEmpty();
+    }
+
+    @Test
+    @DisplayName("추천 질문 — 제어문자/연속공백/과도한 길이 정규화")
+    void questions_normalizesWhitespaceAndControlChars() {
+        NewsArticle article1 = createAndSaveArticle();
+        NewsArticle article2 = createAndSaveArticle();
+        NewsCluster cluster = createAndSaveCluster(article1.getId(), 2);
+        List<Long> articleIds = List.of(article1.getId(), article2.getId());
+        createClusterArticleMappings(cluster.getId(), articleIds);
+        List<SummaryResult.SectionItem> sections = List.of(
+                createSectionItem("소제목", "본문", List.of(1, 2))
+        );
+
+        String longQuestion = "Q".repeat(500);
+        List<String> dirty = List.of(
+                "질문\tA\n개행 포함",       // 제어문자 → 공백
+                "  질문   B   공백   과다  ", // 연속 공백
+                longQuestion                  // 길이 초과
+        );
+
+        persistenceService.markGeneratedWithSections(cluster.getId(), "제목", "요약", sections,
+                dirty, articleIds);
+
+        List<ClusterSuggestedQuestion> saved = questionRepository.findByNewsClusterIdOrderByQuestionOrder(cluster.getId());
+        assertThat(saved).hasSize(3);
+        assertThat(saved.get(0).getQuestion()).isEqualTo("질문 A 개행 포함");
+        assertThat(saved.get(1).getQuestion()).isEqualTo("질문 B 공백 과다");
+        assertThat(saved.get(2).getQuestion()).hasSize(200); // MAX_QUESTION_LENGTH
+    }
+
+    @Test
+    @DisplayName("추천 질문 — 4개 이상 응답 시 정규화로 첫 3개만 저장")
+    void questions_moreThanThree_takesFirstThree() {
+        NewsArticle article1 = createAndSaveArticle();
+        NewsArticle article2 = createAndSaveArticle();
+        NewsCluster cluster = createAndSaveCluster(article1.getId(), 2);
+        List<Long> articleIds = List.of(article1.getId(), article2.getId());
+        createClusterArticleMappings(cluster.getId(), articleIds);
+        List<SummaryResult.SectionItem> sections = List.of(
+                createSectionItem("소제목", "본문", List.of(1, 2))
+        );
+
+        persistenceService.markGeneratedWithSections(cluster.getId(), "제목", "요약", sections,
+                List.of("Q1", "Q2", "Q3", "Q4", "Q5"), articleIds);
+
+        List<ClusterSuggestedQuestion> saved = questionRepository.findByNewsClusterIdOrderByQuestionOrder(cluster.getId());
+        assertThat(saved).hasSize(3);
+        assertThat(saved).extracting(ClusterSuggestedQuestion::getQuestion).containsExactly("Q1", "Q2", "Q3");
+    }
+
+    @Test
+    @DisplayName("추천 질문 — STALE 재생성 시 기존 질문이 새 질문으로 교체된다")
+    void questions_staleRegeneration_replacesQuestions() {
+        NewsArticle article1 = createAndSaveArticle();
+        NewsArticle article2 = createAndSaveArticle();
+        NewsCluster cluster = createAndSaveCluster(article1.getId(), 2);
+        List<Long> articleIds = List.of(article1.getId(), article2.getId());
+        createClusterArticleMappings(cluster.getId(), articleIds);
+        List<SummaryResult.SectionItem> sections = List.of(
+                createSectionItem("소제목", "본문", List.of(1, 2))
+        );
+
+        persistenceService.markGeneratedWithSections(cluster.getId(), "제목1", "요약1", sections,
+                List.of("기존1", "기존2", "기존3"), articleIds);
+        persistenceService.markGeneratedWithSections(cluster.getId(), "제목2", "요약2", sections,
+                List.of("새1", "새2", "새3"), articleIds);
+
+        List<ClusterSuggestedQuestion> saved = questionRepository.findByNewsClusterIdOrderByQuestionOrder(cluster.getId());
+        assertThat(saved).hasSize(3);
+        assertThat(saved).extracting(ClusterSuggestedQuestion::getQuestion).containsExactly("새1", "새2", "새3");
     }
 
     private NewsCluster createAndSaveCluster(Long representativeArticleId, int articleCount) {

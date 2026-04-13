@@ -26,6 +26,7 @@ public record ClusterDetailResponse(
         boolean isRead,
         String feedbackType,
         List<SectionResponse> sections,
+        List<String> suggestedQuestions,
         String articleContent
 ) {
 
@@ -49,7 +50,8 @@ public record ClusterDetailResponse(
                 result.clusterId(), result.title(), result.summary(),
                 result.thumbnailUrl(), result.publishedAt(),
                 result.sourceCount(), sources, stocks, result.marketTags(),
-                result.isRead(), result.feedbackType(), sections, result.articleContent()
+                result.isRead(), result.feedbackType(), sections,
+                result.suggestedQuestions(), result.articleContent()
         );
     }
 

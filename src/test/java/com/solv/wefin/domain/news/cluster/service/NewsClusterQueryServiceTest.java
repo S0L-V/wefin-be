@@ -5,6 +5,7 @@ import com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository.ArticleSourceProjection;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository.SourceProjection;
+import com.solv.wefin.domain.news.cluster.entity.ClusterSuggestedQuestion;
 import com.solv.wefin.domain.news.cluster.entity.ClusterSummarySection;
 import com.solv.wefin.domain.news.cluster.entity.ClusterSummarySectionSource;
 import com.solv.wefin.domain.news.article.repository.NewsArticleTagRepository;
@@ -13,6 +14,7 @@ import com.solv.wefin.domain.news.cluster.entity.NewsCluster.ClusterStatus;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.SummaryStatus;
 import com.solv.wefin.domain.news.cluster.entity.NewsClusterArticle;
 import com.solv.wefin.domain.news.cluster.entity.UserNewsClusterRead;
+import com.solv.wefin.domain.news.cluster.repository.ClusterSuggestedQuestionRepository;
 import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionRepository;
 import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionSourceRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepository;
@@ -52,6 +54,7 @@ class NewsClusterQueryServiceTest {
     @Mock private UserNewsClusterReadRepository readRepository;
     @Mock private UserNewsClusterFeedbackRepository feedbackRepository;
     @Mock private ClusterSummarySectionRepository sectionRepository;
+    @Mock private ClusterSuggestedQuestionRepository questionRepository;
     @Mock private ClusterSummarySectionSourceRepository sectionSourceRepository;
 
     private NewsClusterQueryService queryService;
@@ -61,7 +64,7 @@ class NewsClusterQueryServiceTest {
         queryService = new NewsClusterQueryService(
                 newsClusterRepository, clusterArticleRepository,
                 newsArticleRepository, articleTagRepository, readRepository,
-                feedbackRepository, sectionRepository, sectionSourceRepository);
+                feedbackRepository, questionRepository, sectionRepository, sectionSourceRepository);
     }
 
     @Test
@@ -233,6 +236,43 @@ class NewsClusterQueryServiceTest {
 
         assertThatThrownBy(() -> queryService.getDetail(1L, null))
                 .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    @DisplayName("상세 조회 — suggestedQuestions가 question_order 순서대로 응답에 포함된다")
+    void getDetail_suggestedQuestionsInOrder() {
+        NewsCluster cluster = createCluster(1L, "제목", "요약", OffsetDateTime.now(), 2);
+
+        given(newsClusterRepository.findById(1L)).willReturn(Optional.of(cluster));
+        given(clusterArticleRepository.findByNewsClusterId(1L)).willReturn(List.of());
+        given(sectionRepository.findByNewsClusterIdOrderBySectionOrderAsc(1L)).willReturn(List.of());
+
+        // Repository는 메서드 이름(OrderByQuestionOrder) 기반으로 정렬된 결과를 반환한다고 가정
+        ClusterSuggestedQuestion q0 = ClusterSuggestedQuestion.create(1L, 0, "첫 번째 질문");
+        ClusterSuggestedQuestion q1 = ClusterSuggestedQuestion.create(1L, 1, "두 번째 질문");
+        ClusterSuggestedQuestion q2 = ClusterSuggestedQuestion.create(1L, 2, "세 번째 질문");
+        given(questionRepository.findByNewsClusterIdOrderByQuestionOrder(1L))
+                .willReturn(List.of(q0, q1, q2));
+
+        ClusterDetailResult result = queryService.getDetail(1L, null);
+
+        assertThat(result.suggestedQuestions())
+                .containsExactly("첫 번째 질문", "두 번째 질문", "세 번째 질문");
+    }
+
+    @Test
+    @DisplayName("상세 조회 — 추천 질문이 없으면 빈 리스트")
+    void getDetail_noQuestions_returnsEmpty() {
+        NewsCluster cluster = createCluster(1L, "제목", "요약", OffsetDateTime.now(), 2);
+
+        given(newsClusterRepository.findById(1L)).willReturn(Optional.of(cluster));
+        given(clusterArticleRepository.findByNewsClusterId(1L)).willReturn(List.of());
+        given(sectionRepository.findByNewsClusterIdOrderBySectionOrderAsc(1L)).willReturn(List.of());
+        given(questionRepository.findByNewsClusterIdOrderByQuestionOrder(1L)).willReturn(List.of());
+
+        ClusterDetailResult result = queryService.getDetail(1L, null);
+
+        assertThat(result.suggestedQuestions()).isEmpty();
     }
 
     @Test

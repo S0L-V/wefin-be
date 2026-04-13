@@ -1,9 +1,11 @@
 package com.solv.wefin.domain.news.summary.service;
 
+import com.solv.wefin.domain.news.cluster.entity.ClusterSuggestedQuestion;
 import com.solv.wefin.domain.news.cluster.entity.ClusterSummarySection;
 import com.solv.wefin.domain.news.cluster.entity.ClusterSummarySectionSource;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.entity.NewsClusterArticle;
+import com.solv.wefin.domain.news.cluster.repository.ClusterSuggestedQuestionRepository;
 import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionRepository;
 import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionSourceRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepository;
@@ -17,8 +19,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -33,30 +37,46 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SummaryPersistenceService {
 
+    private static final int MAX_QUESTION_COUNT = 3;
+    private static final int MAX_QUESTION_LENGTH = 200; // 추천 질문 1건의 최대 길이 (XSS/레이아웃 오염 방지)
+
+    private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
+
     private final NewsClusterRepository newsClusterRepository;
     private final NewsClusterArticleRepository clusterArticleRepository;
     private final ClusterSummarySectionRepository sectionRepository;
     private final ClusterSummarySectionSourceRepository sectionSourceRepository;
+    private final ClusterSuggestedQuestionRepository questionRepository;
 
     /**
      * 단독 클러스터의 AI 요약 생성 성공을 반영한다 (섹션 없음)
-     * 저장 직전 기사 집합이 변경되었으면 StaleClusterException을 던진다
+     * 저장 직전 기사 집합이 변경되었으면 StaleClusterException을 던진다.
+     *
+     * 추천 질문은 섹션과 동일하게 항상 덮어쓴다: 기존 질문을 먼저 모두 삭제한 뒤,
+     * 정규화 후 유효한 질문을 최대 {@link #MAX_QUESTION_COUNT}개까지 저장한다.
+     * 유효 질문이 0개면 저장을 스킵하여 "신규 요약 + 과거 질문" 혼재 상태를 방지한다
      *
      * @param clusterId 클러스터 ID
      * @param title 대표 제목
      * @param summary Lead 요약
+     * @param questions 추천 질문 목록 (nullable)
      * @param expectedArticleIds 조회 시점의 기사 ID 목록 (기사 집합 변경 감지용)
      * @throws StaleClusterException 기사 집합이 변경된 경우
      */
     @Transactional
     public void markGeneratedSingle(Long clusterId, String title, String summary,
-                                    List<Long> expectedArticleIds) {
-        findCluster(clusterId);
+                                    List<String> questions, List<Long> expectedArticleIds) {
+        // 동시 실행 방어: 같은 클러스터 row에 쓰기 락을 걸어 직렬화한다
+        findClusterForUpdate(clusterId);
         verifyArticlesUnchanged(clusterId, expectedArticleIds);
 
-        // 다건→단독 전환 시 기존 섹션/출처를 정리한다
+        // 다건→단독 전환 시 기존 섹션/출처/질문을 먼저 모두 삭제한다 (단독은 섹션 없음)
         sectionRepository.deleteSourcesByNewsClusterId(clusterId);
         sectionRepository.deleteByNewsClusterId(clusterId);
+        questionRepository.deleteByNewsClusterId(clusterId);
+
+        // 정규화 후 유효 질문을 최대 MAX_QUESTION_COUNT개까지 저장 (0개면 스킵)
+        saveNormalizedQuestions(clusterId, questions);
 
         // bulk delete의 clearAutomatically로 영속성 컨텍스트가 초기화되므로 재조회한다
         NewsCluster cluster = findCluster(clusterId);
@@ -80,13 +100,16 @@ public class SummaryPersistenceService {
      */
     @Transactional
     public void markGeneratedWithSections(Long clusterId, String title, String leadSummary,
-                                          List<SummaryResult.SectionItem> sections, List<Long> articleIds) {
-        findCluster(clusterId);
+                                          List<SummaryResult.SectionItem> sections,
+                                          List<String> questions, List<Long> articleIds) {
+        // 동시 실행 방어: 같은 클러스터 row에 쓰기 락을 걸어 직렬화한다
+        findClusterForUpdate(clusterId);
         verifyArticlesUnchanged(clusterId, articleIds);
 
-        // 1) 기존 섹션 삭제 (STALE 재생성 대응)
+        // 1) 기존 섹션/질문 삭제 (STALE 재생성 대응)
         sectionRepository.deleteSourcesByNewsClusterId(clusterId);
         sectionRepository.deleteByNewsClusterId(clusterId);
+        questionRepository.deleteByNewsClusterId(clusterId);
 
         // 2) 새 섹션/출처 저장 — 유효한 출처가 없는 섹션은 드롭
         int savedOrder = 0;
@@ -120,17 +143,105 @@ public class SummaryPersistenceService {
             throw new BusinessException(ErrorCode.SUMMARY_NO_VALID_SECTIONS);
         }
 
-        // 4) bulk delete의 clearAutomatically로 영속성 컨텍스트가 초기화되었으므로 재조회한다
+        // 4) 새 질문 저장 (기존은 1단계에서 이미 삭제됨). 정규화 후 0개면 저장 스킵
+        saveNormalizedQuestions(clusterId, questions);
+
+        // 5) bulk delete의 clearAutomatically로 영속성 컨텍스트가 초기화되었으므로 재조회
         NewsCluster cluster = findCluster(clusterId);
         cluster.markSummaryGenerated(title, leadSummary);
     }
 
     /**
+     * 정규화된 추천 질문을 저장한다
+     *
+     * 정규화 결과가 1개 이상이면 최대 {@link #MAX_QUESTION_COUNT}개까지 저장한다.
+     * 0개면 저장 스킵(기존 질문은 호출자가 이미 삭제한 상태).
+     * 일부만 유효한 경우에도 버리지 않고 저장하여 사용자에게 가능한 정보를 제공한다.
+     *
+     * @param clusterId 클러스터 ID
+     * @param questions AI가 생성한 추천 질문 목록 (nullable)
+     */
+    private void saveNormalizedQuestions(Long clusterId, List<String> questions) {
+        List<String> normalized = normalizeQuestions(questions);
+
+        if (normalized.isEmpty()) {
+            log.warn("추천 질문 저장 스킵 — clusterId: {}, 유효 질문 없음", clusterId);
+            return;
+        }
+
+        int saveCount = Math.min(normalized.size(), MAX_QUESTION_COUNT);
+
+        if (questions != null && questions.size() > MAX_QUESTION_COUNT) {
+            log.warn("AI 응답이 {}개를 초과함 — clusterId: {}, raw count: {}, 앞 {}개만 저장",
+                    MAX_QUESTION_COUNT, clusterId, questions.size(), saveCount);
+        }
+
+        for (int i = 0; i < saveCount; i++) {
+            questionRepository.save(ClusterSuggestedQuestion.create(clusterId, i, normalized.get(i)));
+        }
+
+        log.info("추천 질문 저장 완료 — clusterId: {}, count: {}", clusterId, saveCount);
+    }
+
+    /**
+     * 추천 질문 목록을 정규화한다
+     *
+     * 처리 순서:
+     * 1. null 원소 제거
+     * 2. 제어 문자(개행/탭/0x00~0x1F 등) 공백으로 치환
+     * 3. 연속 공백 1개로 축소 + trim
+     * 4. blank 제거
+     * 5. 최대 길이({@link #MAX_QUESTION_LENGTH}자) 초과 시 컷
+     * 6. 중복 제거 (정규화된 키 기준, insertion order 유지)
+     */
+    static List<String> normalizeQuestions(List<String> questions) {
+        if (questions == null || questions.isEmpty()) {
+            return List.of();
+        }
+        Set<String> seen = new LinkedHashSet<>();
+        for (String q : questions) {
+            String normalized = normalizeOne(q);
+            if (normalized == null) {
+                continue;
+            }
+            seen.add(normalized);
+        }
+        return List.copyOf(seen);
+    }
+
+    private static String normalizeOne(String q) {
+        if (q == null) {
+            return null;
+        }
+        // 제어 문자를 공백으로 치환 (탭, 개행, 0x00~0x1F)
+        String cleaned = q.replaceAll("[\\p{Cntrl}]", " ");
+        // 연속 공백 1개로 축소
+        cleaned = WHITESPACE_PATTERN.matcher(cleaned).replaceAll(" ").trim();
+        if (cleaned.isEmpty()) {
+            return null;
+        }
+        if (cleaned.length() > MAX_QUESTION_LENGTH) {
+            cleaned = cleaned.substring(0, MAX_QUESTION_LENGTH);
+        }
+        return cleaned;
+    }
+
+    /**
      * AI 요약 생성 실패를 반영한다
+     *
+     * 동시성: markGeneratedSingle/markGeneratedWithSections와 동일하게
+     * {@link #findClusterForUpdate}로 쓰기 락을 획득하여 성공 경로
+     * (markSummaryGenerated)와의 경합을 직렬화한다.
+     * 이미 GENERATED로 마킹된 경우(성공이 먼저 커밋된 뒤 지연된 실패 처리)
+     * no-op으로 스킵하여 성공 결과가 FAILED로 덮이지 않도록 한다
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markFailed(Long clusterId) {
-        NewsCluster cluster = findCluster(clusterId);
+        NewsCluster cluster = findClusterForUpdate(clusterId);
+        if (cluster.getSummaryStatus() == NewsCluster.SummaryStatus.GENERATED) {
+            log.warn("markFailed 스킵 — 이미 GENERATED 상태, clusterId: {}", clusterId);
+            return;
+        }
         cluster.markSummaryFailed();
     }
 
@@ -163,6 +274,14 @@ public class SummaryPersistenceService {
 
     private NewsCluster findCluster(Long clusterId) {
         return newsClusterRepository.findById(clusterId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SUMMARY_CLUSTER_NOT_FOUND));
+    }
+
+    /**
+     * 클러스터를 쓰기 락으로 조회한다 (동시 실행 시 직렬화 보장)
+     */
+    private NewsCluster findClusterForUpdate(Long clusterId) {
+        return newsClusterRepository.findByIdForUpdate(clusterId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SUMMARY_CLUSTER_NOT_FOUND));
     }
 
