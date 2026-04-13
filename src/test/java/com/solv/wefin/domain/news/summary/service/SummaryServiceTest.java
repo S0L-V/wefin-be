@@ -7,6 +7,7 @@ import com.solv.wefin.domain.news.cluster.entity.NewsCluster.SummaryStatus;
 import com.solv.wefin.domain.news.cluster.entity.NewsClusterArticle;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
+import com.solv.wefin.domain.news.summary.client.OpenAiClientException;
 import com.solv.wefin.domain.news.summary.client.OpenAiSummaryClient;
 import com.solv.wefin.domain.news.summary.dto.SummaryResult;
 import com.solv.wefin.domain.news.summary.dto.SummaryResult.SectionItem;
@@ -101,7 +102,7 @@ class SummaryServiceTest {
 
         // then
         verify(openAiSummaryClient).generateSummary(any());
-        verify(persistenceService).markGeneratedWithSections(eq(10L), eq("테스트 제목"), eq("테스트 요약"), any(), any());
+        verify(persistenceService).markGeneratedWithSections(eq(10L), eq("테스트 제목"), eq("테스트 요약"), any(), any(), any());
         verify(persistenceService, never()).markFailed(any());
     }
 
@@ -131,12 +132,12 @@ class SummaryServiceTest {
         // then
         verify(openAiSummaryClient).generateSingleArticleSummary(any(), any());
         verify(openAiSummaryClient, never()).generateSummary(any());
-        verify(persistenceService).markGeneratedSingle(eq(10L), eq("AI 생성 제목"), eq("AI 생성 요약"), any());
+        verify(persistenceService).markGeneratedSingle(eq(10L), eq("AI 생성 제목"), eq("AI 생성 요약"), any(), any());
     }
 
     @Test
-    @DisplayName("단독 클러스터 — AI 실패 시 기사 제목/요약 fallback")
-    void generatePendingSummaries_singleArticle_aiFail_fallback() {
+    @DisplayName("단독 클러스터 — AI 요약 실패 시 fallback 사용하고 질문 생성은 스킵")
+    void generatePendingSummaries_singleArticle_aiFail_skipsQuestionGeneration() {
         // given
         NewsCluster cluster = createCluster(10L, 1, SummaryStatus.PENDING);
         NewsArticle article = createArticle(1L);
@@ -153,8 +154,9 @@ class SummaryServiceTest {
         // when
         summaryService.generatePendingSummaries();
 
-        // then
-        verify(persistenceService).markGeneratedSingle(eq(10L), eq("테스트 기사 1"), any(), any());
+        // then — fallback 입력으로 질문 생성 시 할루시네이션 우려로 스킵
+        verify(persistenceService).markGeneratedSingle(eq(10L), eq("테스트 기사 1"), any(), eq(List.of()), any());
+        verify(openAiSummaryClient, never()).generateQuestions(any(), any());
     }
 
     @Test
@@ -181,7 +183,7 @@ class SummaryServiceTest {
 
         // then
         verify(persistenceService).markFailed(10L);
-        verify(persistenceService, never()).markGeneratedWithSections(any(), any(), any(), any(), any());
+        verify(persistenceService, never()).markGeneratedWithSections(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -196,7 +198,7 @@ class SummaryServiceTest {
 
         // then
         verify(openAiSummaryClient, never()).generateSummary(any());
-        verify(persistenceService, never()).markGeneratedWithSections(any(), any(), any(), any(), any());
+        verify(persistenceService, never()).markGeneratedWithSections(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -224,7 +226,7 @@ class SummaryServiceTest {
         summaryService.generatePendingSummaries();
 
         // then
-        verify(persistenceService).markGeneratedWithSections(eq(10L), eq("갱신된 제목"), eq("갱신된 요약"), any(), any());
+        verify(persistenceService).markGeneratedWithSections(eq(10L), eq("갱신된 제목"), eq("갱신된 요약"), any(), any(), any());
     }
 
     @Test
@@ -254,7 +256,7 @@ class SummaryServiceTest {
 
         // then
         verify(outlierDetectionService).removeOutliers(cluster);
-        verify(persistenceService).markGeneratedWithSections(eq(10L), eq("정제된 제목"), eq("정제된 요약"), any(), any());
+        verify(persistenceService).markGeneratedWithSections(eq(10L), eq("정제된 제목"), eq("정제된 요약"), any(), any(), any());
     }
 
     @Test
@@ -306,7 +308,7 @@ class SummaryServiceTest {
 
         // then
         verify(persistenceService).markFailed(10L);
-        verify(persistenceService, never()).markGeneratedWithSections(any(), any(), any(), any(), any());
+        verify(persistenceService, never()).markGeneratedWithSections(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -338,7 +340,7 @@ class SummaryServiceTest {
 
         // then
         verify(persistenceService).markFailed(10L);
-        verify(persistenceService, never()).markGeneratedWithSections(any(), any(), any(), any(), any());
+        verify(persistenceService, never()).markGeneratedWithSections(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -376,7 +378,7 @@ class SummaryServiceTest {
 
         // then
         verify(persistenceService).markFailed(10L);
-        verify(persistenceService, never()).markGeneratedWithSections(any(), any(), any(), any(), any());
+        verify(persistenceService, never()).markGeneratedWithSections(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -401,7 +403,7 @@ class SummaryServiceTest {
         given(openAiSummaryClient.generateSummary(any()))
                 .willReturn(result);
         doThrow(new StaleClusterException("기사 집합 변경"))
-                .when(persistenceService).markGeneratedWithSections(any(), any(), any(), any(), any());
+                .when(persistenceService).markGeneratedWithSections(any(), any(), any(), any(), any(), any());
 
         // when
         summaryService.generatePendingSummaries();
@@ -410,10 +412,134 @@ class SummaryServiceTest {
         verify(persistenceService, never()).markFailed(any());
     }
 
+    @Test
+    @DisplayName("다건 클러스터 — AI 응답의 추천 질문이 markGeneratedWithSections에 전달된다")
+    void generatePendingSummaries_multiArticle_passesQuestionsToPersistence() {
+        // given
+        NewsCluster cluster = createCluster(10L, 2, SummaryStatus.PENDING);
+
+        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any(), any()))
+                .willReturn(List.of(cluster));
+        given(outlierDetectionService.removeOutliers(cluster)).willReturn(0);
+        given(clusterArticleRepository.findByNewsClusterId(10L))
+                .willReturn(List.of(
+                        NewsClusterArticle.create(10L, 1L, 1, false),
+                        NewsClusterArticle.create(10L, 2L, 2, false)));
+        given(newsArticleRepository.findAllById(any()))
+                .willReturn(List.of(createArticle(1L), createArticle(2L)));
+
+        SummaryResult result = createSummaryResultWithQuestions("제목", "요약",
+                List.of("질문1", "질문2", "질문3"));
+        given(openAiSummaryClient.generateSummary(any())).willReturn(result);
+
+        // when
+        summaryService.generatePendingSummaries();
+
+        // then — questions가 markGeneratedWithSections로 전달되어 같은 트랜잭션에서 저장
+        verify(persistenceService).markGeneratedWithSections(
+                eq(10L), eq("제목"), eq("요약"), any(),
+                eq(List.of("질문1", "질문2", "질문3")), any());
+    }
+
+    @Test
+    @DisplayName("단독 클러스터 — generateQuestions 호출 + markGeneratedSingle에 질문 전달")
+    void generatePendingSummaries_singleArticle_passesQuestionsToPersistence() {
+        // given
+        NewsCluster cluster = createCluster(10L, 1, SummaryStatus.PENDING);
+        NewsArticle article = createArticle(1L);
+
+        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any(), any()))
+                .willReturn(List.of(cluster));
+        given(clusterArticleRepository.findByNewsClusterId(10L))
+                .willReturn(List.of(NewsClusterArticle.create(10L, 1L, 1, false)));
+        given(newsArticleRepository.findById(1L)).willReturn(Optional.of(article));
+
+        SummaryResult aiResult = mock(SummaryResult.class);
+        given(aiResult.getTitle()).willReturn("AI 제목");
+        given(aiResult.getLeadSummary()).willReturn("AI 요약");
+        given(openAiSummaryClient.generateSingleArticleSummary(any(), any()))
+                .willReturn(aiResult);
+        given(openAiSummaryClient.generateQuestions("AI 제목", "AI 요약"))
+                .willReturn(List.of("질문A", "질문B", "질문C"));
+
+        // when
+        summaryService.generatePendingSummaries();
+
+        // then
+        verify(openAiSummaryClient).generateQuestions("AI 제목", "AI 요약");
+        verify(persistenceService).markGeneratedSingle(
+                eq(10L), eq("AI 제목"), eq("AI 요약"),
+                eq(List.of("질문A", "질문B", "질문C")), any());
+    }
+
+    @Test
+    @DisplayName("단독 클러스터 — 질문 파싱 실패 시 빈 리스트로 요약 저장 정상 진행")
+    void generatePendingSummaries_singleArticle_questionEmpty_summarySaved() {
+        // given
+        NewsCluster cluster = createCluster(10L, 1, SummaryStatus.PENDING);
+        NewsArticle article = createArticle(1L);
+
+        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any(), any()))
+                .willReturn(List.of(cluster));
+        given(clusterArticleRepository.findByNewsClusterId(10L))
+                .willReturn(List.of(NewsClusterArticle.create(10L, 1L, 1, false)));
+        given(newsArticleRepository.findById(1L)).willReturn(Optional.of(article));
+
+        SummaryResult aiResult = mock(SummaryResult.class);
+        given(aiResult.getTitle()).willReturn("AI 제목");
+        given(aiResult.getLeadSummary()).willReturn("AI 요약");
+        given(openAiSummaryClient.generateSingleArticleSummary(any(), any()))
+                .willReturn(aiResult);
+        // 재시도 불가 (파싱 실패 등) → 빈 리스트 반환
+        given(openAiSummaryClient.generateQuestions(any(), any())).willReturn(List.of());
+
+        // when
+        summaryService.generatePendingSummaries();
+
+        // then — 빈 리스트라도 요약 저장은 정상 진행
+        verify(persistenceService).markGeneratedSingle(
+                eq(10L), eq("AI 제목"), eq("AI 요약"), eq(List.of()), any());
+        verify(persistenceService, never()).markFailed(any());
+    }
+
+    @Test
+    @DisplayName("단독 클러스터 — 질문 API 429 오류 시 propagate되어 markFailed (다음 배치 재시도)")
+    void generatePendingSummaries_singleArticle_questionRetryable_marksFailed() {
+        // given
+        NewsCluster cluster = createCluster(10L, 1, SummaryStatus.PENDING);
+        NewsArticle article = createArticle(1L);
+
+        given(newsClusterRepository.findByStatusAndSummaryStatusIn(any(), any(), any()))
+                .willReturn(List.of(cluster));
+        given(clusterArticleRepository.findByNewsClusterId(10L))
+                .willReturn(List.of(NewsClusterArticle.create(10L, 1L, 1, false)));
+        given(newsArticleRepository.findById(1L)).willReturn(Optional.of(article));
+
+        SummaryResult aiResult = mock(SummaryResult.class);
+        given(aiResult.getTitle()).willReturn("AI 제목");
+        given(aiResult.getLeadSummary()).willReturn("AI 요약");
+        given(openAiSummaryClient.generateSingleArticleSummary(any(), any()))
+                .willReturn(aiResult);
+        // 재시도 가능 오류 (429)
+        given(openAiSummaryClient.generateQuestions(any(), any()))
+                .willThrow(new OpenAiClientException("Rate limited", null, new RuntimeException()));
+
+        // when
+        summaryService.generatePendingSummaries();
+
+        // then — 요약 저장은 건너뛰고 markFailed, 다음 배치에서 재시도
+        verify(persistenceService).markFailed(10L);
+        verify(persistenceService, never()).markGeneratedSingle(any(), any(), any(), any(), any());
+    }
+
     /**
      * 유효한 섹션(heading + body + sourceArticleIndices)을 포함한 SummaryResult를 생성한다
      */
     private SummaryResult createSummaryResult(String title, String leadSummary) {
+        return createSummaryResultWithQuestions(title, leadSummary, null);
+    }
+
+    private SummaryResult createSummaryResultWithQuestions(String title, String leadSummary, List<String> questions) {
         SummaryResult result = new SummaryResult();
         ReflectionTestUtils.setField(result, "title", title);
         ReflectionTestUtils.setField(result, "leadSummary", leadSummary);
@@ -424,6 +550,9 @@ class SummaryServiceTest {
         ReflectionTestUtils.setField(section, "sourceArticleIndices", List.of(1, 2));
 
         ReflectionTestUtils.setField(result, "sections", List.of(section));
+        if (questions != null) {
+            ReflectionTestUtils.setField(result, "suggestedQuestions", questions);
+        }
         return result;
     }
 }
