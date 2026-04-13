@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SummaryPersistenceService {
 
-    private static final int REQUIRED_QUESTION_COUNT = 3;
+    private static final int MAX_QUESTION_COUNT = 3;
     private static final int MAX_QUESTION_LENGTH = 200; // 추천 질문 1건의 최대 길이 (XSS/레이아웃 오염 방지)
 
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
@@ -53,8 +53,8 @@ public class SummaryPersistenceService {
      * 저장 직전 기사 집합이 변경되었으면 StaleClusterException을 던진다.
      *
      * 추천 질문은 섹션과 동일하게 항상 덮어쓴다: 기존 질문을 먼저 모두 삭제한 뒤,
-     * 정규화 후 정확히 3개일 때만 새 질문을 저장한다. 미달이면 질문 테이블이 비워져
-     * "신규 요약 + 과거 질문" 혼재 상태를 방지한다
+     * 정규화 후 유효한 질문을 최대 {@link #MAX_QUESTION_COUNT}개까지 저장한다.
+     * 유효 질문이 0개면 저장을 스킵하여 "신규 요약 + 과거 질문" 혼재 상태를 방지한다
      *
      * @param clusterId 클러스터 ID
      * @param title 대표 제목
@@ -75,7 +75,7 @@ public class SummaryPersistenceService {
         sectionRepository.deleteByNewsClusterId(clusterId);
         questionRepository.deleteByNewsClusterId(clusterId);
 
-        // 정규화 후 3개일 때만 새 질문 저장 (미달 시 기존은 이미 삭제되어 비어있음)
+        // 정규화 후 유효 질문을 최대 MAX_QUESTION_COUNT개까지 저장 (0개면 스킵)
         saveNormalizedQuestions(clusterId, questions);
 
         // bulk delete의 clearAutomatically로 영속성 컨텍스트가 초기화되므로 재조회한다
@@ -143,7 +143,7 @@ public class SummaryPersistenceService {
             throw new BusinessException(ErrorCode.SUMMARY_NO_VALID_SECTIONS);
         }
 
-        // 4) 새 질문 저장 (기존은 1단계에서 이미 삭제됨). 정규화 후 3개 미만이면 저장 스킵
+        // 4) 새 질문 저장 (기존은 1단계에서 이미 삭제됨). 정규화 후 0개면 저장 스킵
         saveNormalizedQuestions(clusterId, questions);
 
         // 5) bulk delete의 clearAutomatically로 영속성 컨텍스트가 초기화되었으므로 재조회
@@ -154,7 +154,9 @@ public class SummaryPersistenceService {
     /**
      * 정규화된 추천 질문을 저장한다
      *
-     * 기존 삭제 후 정규화 결과가 {@link #REQUIRED_QUESTION_COUNT}개 이상이면 앞 3개만 저장, 미달이면 저장 스킵
+     * 정규화 결과가 1개 이상이면 최대 {@link #MAX_QUESTION_COUNT}개까지 저장한다.
+     * 0개면 저장 스킵(기존 질문은 호출자가 이미 삭제한 상태).
+     * 일부만 유효한 경우에도 버리지 않고 저장하여 사용자에게 가능한 정보를 제공한다.
      *
      * @param clusterId 클러스터 ID
      * @param questions AI가 생성한 추천 질문 목록 (nullable)
@@ -162,22 +164,23 @@ public class SummaryPersistenceService {
     private void saveNormalizedQuestions(Long clusterId, List<String> questions) {
         List<String> normalized = normalizeQuestions(questions);
 
-        if (normalized.size() < REQUIRED_QUESTION_COUNT) {
-            log.warn("추천 질문 저장 스킵 — clusterId: {}, normalized count: {}, 질문 없음 확정",
-                    clusterId, normalized.size());
+        if (normalized.isEmpty()) {
+            log.warn("추천 질문 저장 스킵 — clusterId: {}, 유효 질문 없음", clusterId);
             return;
         }
 
-        if (questions != null && questions.size() > REQUIRED_QUESTION_COUNT) {
+        int saveCount = Math.min(normalized.size(), MAX_QUESTION_COUNT);
+
+        if (questions != null && questions.size() > MAX_QUESTION_COUNT) {
             log.warn("AI 응답이 {}개를 초과함 — clusterId: {}, raw count: {}, 앞 {}개만 저장",
-                    REQUIRED_QUESTION_COUNT, clusterId, questions.size(), REQUIRED_QUESTION_COUNT);
+                    MAX_QUESTION_COUNT, clusterId, questions.size(), saveCount);
         }
 
-        for (int i = 0; i < REQUIRED_QUESTION_COUNT; i++) {
+        for (int i = 0; i < saveCount; i++) {
             questionRepository.save(ClusterSuggestedQuestion.create(clusterId, i, normalized.get(i)));
         }
 
-        log.info("추천 질문 저장 완료 — clusterId: {}, count: {}", clusterId, REQUIRED_QUESTION_COUNT);
+        log.info("추천 질문 저장 완료 — clusterId: {}, count: {}", clusterId, saveCount);
     }
 
     /**
