@@ -31,7 +31,7 @@ public interface UserInterestRepository extends JpaRepository<UserInterest, Long
      */
     @Modifying
     @Query(value = "INSERT INTO user_interest (user_id, interest_type, interest_value, weight, created_at) " +
-            "VALUES (:userId, :type, :value, :delta, NOW()) " +
+            "VALUES (:userId, :type, :value, LEAST(GREATEST(:delta, 0), 30), NOW()) " +
             "ON CONFLICT (user_id, interest_type, interest_value) " +
             "DO UPDATE SET weight = LEAST( GREATEST( COALESCE(user_interest.weight, 0) + :delta, 0 ), 30 )",
             nativeQuery = true)
