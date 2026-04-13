@@ -22,6 +22,8 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -182,8 +184,9 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
     }
 
     private List<CandleResponse> getMinuteCandles(String stockCode, int periodMinutes) {
-        // 장 마감 시간(153000)부터 역순으로 조회하면 당일 전체 분봉을 가져옴
-        HantuMinuteCandleApiResponse response = hantuMarketClient.fetchMinutePrice(stockCode, "153000");
+        // 현재 KST 시간 기준으로 분봉 조회 (역순으로 반환됨)
+        String inputHour = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("HHmmss"));
+        HantuMinuteCandleApiResponse response = hantuMarketClient.fetchMinutePrice(stockCode, inputHour);
         log.info("분봉 API 응답: {}", response);
 
         if (response == null) {
