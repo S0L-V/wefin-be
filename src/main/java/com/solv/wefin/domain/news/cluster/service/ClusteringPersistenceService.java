@@ -30,18 +30,22 @@ public class ClusteringPersistenceService {
     @Transactional
     public void addToCluster(NewsCluster cluster, NewsArticle article,
                              float[] articleVector, boolean suspicious) {
-        cluster.addArticle(
+        // 쓰기 락으로 re-fetch. 같은 클러스터에 대한 요약 저장/병합/이상치 제거
+        // 경로와 기사 집합 변경을 직렬화하여 CAS 검증 틈을 제거한다
+        NewsCluster managed = clusterRepository.findByIdForUpdate(cluster.getId())
+                .orElseThrow(() -> new IllegalStateException("클러스터 없음: " + cluster.getId()));
+
+        managed.addArticle(
                 articleVector,
                 article.getId(),
                 article.getThumbnailUrl(),
                 article.getPublishedAt()
         );
-        clusterRepository.save(cluster);
 
-        int order = cluster.getArticleCount();
+        int order = managed.getArticleCount();
         // 클러스터-기사 매핑 생성
         NewsClusterArticle mapping = NewsClusterArticle.create(
-                cluster.getId(), article.getId(), order, suspicious);
+                managed.getId(), article.getId(), order, suspicious);
         clusterArticleRepository.save(mapping);
     }
 

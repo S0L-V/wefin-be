@@ -46,6 +46,17 @@ public class ClusterMergePersistenceService {
             return false;
         }
 
+        // Deadlock 방지: 두 클러스터에 락을 걸 때 항상 id 오름차순 순서로 획득한다.
+        // (서로 다른 병합 요청이 서로의 survivor/loser를 역방향으로 잡으면 데드락 발생)
+        Long firstId = Math.min(survivorId, loserId);
+        Long secondId = Math.max(survivorId, loserId);
+        newsClusterRepository.findByIdForUpdate(firstId)
+                .orElseThrow(() -> new IllegalStateException("클러스터 없음: " + firstId));
+        newsClusterRepository.findByIdForUpdate(secondId)
+                .orElseThrow(() -> new IllegalStateException("클러스터 없음: " + secondId));
+
+        // 락 획득 후 논리적 역할(survivor/loser)로 다시 조회. 이미 영속 컨텍스트에
+        // 있으므로 추가 쿼리는 발생하지 않는다
         NewsCluster survivor = newsClusterRepository.findById(survivorId)
                 .orElseThrow(() -> new IllegalStateException("survivor 클러스터 없음: " + survivorId));
         NewsCluster loser = newsClusterRepository.findById(loserId)

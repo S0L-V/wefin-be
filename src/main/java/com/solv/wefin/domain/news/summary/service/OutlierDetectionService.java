@@ -87,8 +87,10 @@ public class OutlierDetectionService {
      */
     @Transactional
     public int removeOutliers(NewsCluster cluster) {
-        // 0. 현재 트랜잭션의 영속 컨텍스트에서 관리되는 엔티티로 re-fetch.
-        NewsCluster managedCluster = newsClusterRepository.findById(cluster.getId())
+        // 0. 쓰기 락으로 re-fetch. 기사 매핑 변경(clusterArticleRepository.delete)과
+        //    cluster 집계 갱신이 이번 트랜잭션에서 발생하므로, 동시에 요약 저장이나
+        //    병합 배치가 같은 클러스터를 수정하는 경로와 직렬화되어야 한다
+        NewsCluster managedCluster = newsClusterRepository.findByIdForUpdate(cluster.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.SUMMARY_CLUSTER_NOT_FOUND));
 
         // 1. 클러스터에 속한 기사-매핑 조회
