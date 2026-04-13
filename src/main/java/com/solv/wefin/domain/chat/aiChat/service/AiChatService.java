@@ -12,6 +12,7 @@ import com.solv.wefin.domain.quest.service.QuestProgressService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
@@ -20,6 +21,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AiChatService {
 
     private static final int MAX_MESSAGE_LENGTH = 1000;
@@ -68,7 +70,11 @@ public class AiChatService {
         aiChatMessagePersistenceService.saveUserMessage(user, command.message());
         AiChatMessage aiMessage = aiChatMessagePersistenceService.saveAiMessage(user, answer);
 
-        questProgressService.handleEvent(userId, QuestEventType.USE_AI_CHAT);
+        try {
+            questProgressService.handleEvent(userId, QuestEventType.USE_AI_CHAT);
+        } catch (RuntimeException e) {
+            log.warn("퀘스트 진행도 반영 실패 userId={}", userId, e);
+        }
 
         return toInfo(aiMessage);
     }

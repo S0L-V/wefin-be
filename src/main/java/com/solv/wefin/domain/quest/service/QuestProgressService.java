@@ -22,7 +22,7 @@ public class QuestProgressService {
 
     public void handleEvent(UUID userId, QuestEventType eventType) {
         List<UserQuest> todayUserQuests =
-                userQuestRepository.findTodayUserQuests(userId, LocalDate.now());
+                userQuestRepository.findTodayUserQuestsForUpdate(userId, LocalDate.now());
 
         todayUserQuests.stream()
                 .filter(userQuest -> userQuest.getDailyQuest()
@@ -45,7 +45,7 @@ public class QuestProgressService {
                         .getQuestTemplate()
                         .getCompleteType() == QuestCompleteType.PERCENT)
                 .forEach(userQuest -> {
-                    int currentRate = profitRate.intValue();
+                    int currentRate = profitRate.max(BigDecimal.ZERO).intValue();
                     userQuest.updateProgress(currentRate);
                 });
     }

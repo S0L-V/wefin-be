@@ -16,6 +16,7 @@ import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +30,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class AuthService {
 
     private static final String UK_USERS_EMAIL = "uk_users_email";
@@ -140,7 +142,11 @@ public class AuthService {
 
         refreshTokenRepository.save(refreshToken);
 
-        questProgressService.handleEvent(user.getUserId(), QuestEventType.LOGIN);
+        try {
+            questProgressService.handleEvent(user.getUserId(), QuestEventType.LOGIN);
+        } catch (RuntimeException e) {
+            log.warn("로그인 퀘스트 반영 실패 userId={}", user.getUserId(), e);
+        }
 
         return new LoginInfo(
                 user.getUserId(),
