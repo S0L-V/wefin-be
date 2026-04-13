@@ -66,11 +66,19 @@ public class DailyQuestService {
     }
 
     private int resolveRandomTargetValue(QuestTemplate template) {
-        int baseTargetValue = template.getTargetValue() != null ? template.getTargetValue() : 1;
+        return switch (template.getCode()) {
+            case "LOGIN_DAILY" -> 1;
+            case "SHARE_NEWS_DAILY" -> randomBetween(1, 3);
+            case "USE_AI_CHAT_DAILY" -> randomBetween(1, 5);
+            case "SEND_GROUP_CHAT_DAILY" -> randomBetween(2, 5);
+            case "BUY_STOCK_DAILY" -> randomBetween(1, 5);
+            case "JOIN_GAME_ROOM_DAILY" -> randomBetween(1, 3);
+            case "CREATE_GAME_ROOM_DAILY" -> 1;
+            default -> template.getTargetValue();
+        };
+    }
 
-        int min = Math.max(1, baseTargetValue - 1);
-        int max = baseTargetValue + 1;
-
+    private int randomBetween(int min, int max) {
         return ThreadLocalRandom.current().nextInt(min, max + 1);
     }
 }
