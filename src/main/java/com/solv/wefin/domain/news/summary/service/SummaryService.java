@@ -178,13 +178,24 @@ public class SummaryService {
             try {
                 SummaryResult result = openAiSummaryClient.generateSingleArticleSummary(
                         article.getTitle(), article.getContent());
-                title = result.getTitle() != null && !result.getTitle().isBlank()
-                        ? result.getTitle() : resolveTitle(article);
-                summary = result.getLeadSummary() != null && !result.getLeadSummary().isBlank()
-                        ? result.getLeadSummary() : resolveSummaryFallback(article, title);
-                aiSummarySucceeded = true;
-                log.info("단독 클러스터 AI 요약 성공 — clusterId: {}, articleId: {}",
-                        cluster.getId(), articleId);
+                boolean hasAiLeadSummary = result.getLeadSummary() != null
+                        && !result.getLeadSummary().isBlank();
+
+                if (hasAiLeadSummary) {
+                    title = result.getTitle() != null && !result.getTitle().isBlank()
+                            ? result.getTitle() : resolveTitle(article);
+                    summary = result.getLeadSummary();
+                    aiSummarySucceeded = true;
+                    log.info("단독 클러스터 AI 요약 성공 — clusterId: {}, articleId: {}",
+                            cluster.getId(), articleId);
+                } else {
+                    // AI가 응답했지만 lead summary가 비어있음 → fallback과 동일하게 취급
+                    // (질문 생성 입력이 기사 원문/제목이 되어 할루시네이션 위험)
+                    log.warn("단독 클러스터 AI 요약 응답에 lead summary 없음, fallback 사용 — clusterId: {}",
+                            cluster.getId());
+                    title = resolveTitle(article);
+                    summary = resolveSummaryFallback(article, title);
+                }
             } catch (Exception e) {
                 log.warn("단독 클러스터 AI 요약 실패, fallback 사용 — clusterId: {}",
                         cluster.getId(), e);
