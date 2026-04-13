@@ -44,7 +44,7 @@ class QuestProgressServiceTest {
         UserQuest matchingQuest = createUserQuest(userId, QuestEventType.SEND_GROUP_CHAT, QuestCompleteType.COUNT, 3, 2);
         UserQuest nonMatchingQuest = createUserQuest(userId, QuestEventType.SHARE_NEWS, QuestCompleteType.COUNT, 1, 0);
 
-        when(userQuestRepository.findTodayUserQuests(eq(userId), any(LocalDate.class)))
+        when(userQuestRepository.findTodayUserQuestsForUpdate(eq(userId), any(LocalDate.class)))
                 .thenReturn(List.of(matchingQuest, nonMatchingQuest));
 
         // when
@@ -55,7 +55,7 @@ class QuestProgressServiceTest {
         assertEquals(QuestStatus.COMPLETED, matchingQuest.getStatus());
         assertEquals(0, nonMatchingQuest.getProgress());
         assertEquals(QuestStatus.NOT_STARTED, nonMatchingQuest.getStatus());
-        verify(userQuestRepository).findTodayUserQuests(eq(userId), any(LocalDate.class));
+        verify(userQuestRepository).findTodayUserQuestsForUpdate(eq(userId), any(LocalDate.class));
     }
 
     @Test
