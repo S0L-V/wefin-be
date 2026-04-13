@@ -25,6 +25,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
@@ -201,8 +202,10 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
             return List.of();
         }
 
+        // 한투 API가 내림차순(최신→과거)으로 반환하므로 오름차순 정렬
         List<CandleResponse> oneMinuteCandles = response.output2().stream()
                 .map(CandleResponse::fromMinute)
+                .sorted(Comparator.comparing(CandleResponse::date))
                 .toList();
 
         // 1분봉이면 그대로 반환
