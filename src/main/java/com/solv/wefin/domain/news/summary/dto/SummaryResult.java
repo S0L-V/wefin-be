@@ -20,6 +20,7 @@ public class SummaryResult {
     private String title;       // 클러스터 대표 제목 (50자 이내)
     private String leadSummary; // Lead 요약 (피드 목록 카드에서 사용, 200~400자)
     private List<SectionItem> sections; // 상세 페이지용 섹션 목록
+    private List<String> suggestedQuestions; // AI 추천 질문 (3개)
 
     /**
      * title 또는 leadSummary가 비어있으면 유효하지 않은 응답으로 판단한다
@@ -33,6 +34,13 @@ public class SummaryResult {
      */
     public boolean hasSections() {
         return sections != null && !sections.isEmpty();
+    }
+
+    /**
+     * 추천 질문이 존재하는지 확인한다
+     */
+    public boolean hasQuestions() {
+        return suggestedQuestions != null && !suggestedQuestions.isEmpty();
     }
 
     /**

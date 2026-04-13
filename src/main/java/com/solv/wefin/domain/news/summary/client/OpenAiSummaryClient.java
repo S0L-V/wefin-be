@@ -100,6 +100,12 @@ public class OpenAiSummaryClient {
                  · 반드시 입력 기사의 번호만 사용할 것
                  · 각 섹션은 가능하면 서로 다른 기사를 인용할 것 (같은 기사만 반복 금지)
                  · 기사에 직접 언급된 내용만 근거로 사용하고 추론하지 말 것
+            4. suggestedQuestions: 추천 질문 배열 (정확히 3개)
+               - 브리핑을 읽은 사용자가 추가로 궁금해할 만한 질문
+               - 기사에서 다루지 않은 후속 이슈, 영향, 전망 중심
+               - 한글 의문형 문장 ("~할까?", "~일까?", "~될까?" 등)
+               - 너무 일반적인 질문 금지 (예: "앞으로 어떻게 될까?")
+               - 구체적 기업명, 수치, 정책명 등을 포함할 것
 
             주의사항:
             - 기사에 없는 인과관계를 만들지 말 것 (예: 무관한 기업/사건 연결 금지)
@@ -120,6 +126,11 @@ public class OpenAiSummaryClient {
                   "body": "엔비디아 급락 여파로 삼성전자, SK하이닉스 등...",
                   "sourceArticleIndices": [2, 3]
                 }
+              ],
+              "suggestedQuestions": [
+                "엔비디아 실적 부진이 국내 반도체 수출에 미치는 영향은?",
+                "SK하이닉스의 HBM 매출 비중 변화가 주가에 어떤 의미일까?",
+                "반도체 업종 조정이 ETF 투자자에게 매수 기회가 될 수 있을까?"
               ]
             }
             """;
@@ -344,6 +355,91 @@ public class OpenAiSummaryClient {
         }
 
         return parseSummaryResult(firstChoice.getMessage().getContent());
+    }
+
+    private static final String QUESTION_PROMPT = """
+            당신은 금융 뉴스 전문 에디터입니다.
+            아래 뉴스 브리핑을 읽은 사용자가 추가로 궁금해할 만한 질문 3개를 생성하세요.
+
+            규칙:
+            1. 정확히 3개의 질문을 생성
+            2. 기사에서 다루지 않은 후속 이슈, 영향, 전망 중심
+            3. 한글 의문형 문장 ("~할까?", "~일까?" 등)
+            4. 구체적 기업명, 수치, 정책명 등을 포함할 것
+            5. "앞으로 어떻게 될까?" 같은 일반적 질문 금지
+
+            반드시 아래 JSON 형식으로만 응답하세요:
+            {
+              "suggestedQuestions": ["질문1", "질문2", "질문3"]
+            }
+            """;
+
+    /**
+     * 단독 클러스터용 — 제목 + 요약을 기반으로 추천 질문 3개를 생성한다
+     *
+     * 다건 클러스터는 요약 프롬프트에서 질문을 함께 생성하지만,
+     * 단독 클러스터는 요약 흐름이 다르므로 별도 AI 호출이 필요하다.
+     *
+     * 에러 분류 (CLAUDE.md 10번 규정):
+     * - 재시도 가능 (HTTP 429/5xx, 네트워크 오류): OpenAiClientException 전파 →
+     *   호출자가 이번 틱 클러스터를 skip하거나 markFailed하여 다음 배치에서 재시도
+     * - 재시도 불가 (응답 비어있음, JSON 파싱 실패): 빈 리스트 반환. 요약은 정상 저장
+     *
+     * @param title 클러스터 제목
+     * @param summary 클러스터 요약
+     * @return 추천 질문 목록 (응답 이상/파싱 실패 시 빈 리스트)
+     * @throws OpenAiClientException HTTP 오류 또는 네트워크 오류 (재시도 대상)
+     */
+    public List<String> generateQuestions(String title, String summary) {
+        String safeTitle = title != null ? title : "";
+        String safeSummary = summary != null ? summary : "";
+        String userMessage = "제목: " + safeTitle + "\n\n요약: " + safeSummary;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiKey);
+
+        Map<String, Object> body = Map.of(
+                "model", model,
+                "response_format", Map.of("type", "json_object"),
+                "messages", List.of(
+                        Map.of("role", "system", "content", QUESTION_PROMPT),
+                        Map.of("role", "user", "content", userMessage)
+                )
+        );
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+
+        OpenAiChatApiResponse response;
+        try {
+            response = restTemplate.postForObject(OPENAI_CHAT_URL, request, OpenAiChatApiResponse.class);
+        } catch (HttpStatusCodeException e) {
+            throw new OpenAiClientException(
+                    "OpenAI Questions API HTTP 오류: " + e.getStatusCode(), e.getStatusCode(), e);
+        } catch (RestClientException e) {
+            throw new OpenAiClientException(
+                    "OpenAI Questions API 호출 실패: " + e.getMessage(), null, e);
+        }
+
+        // 응답 구조 이상은 재시도해도 같은 결과일 확률이 높아 빈 리스트로 처리
+        if (response == null || response.getChoices() == null || response.getChoices().isEmpty()) {
+            log.warn("OpenAI Questions API 응답 비어있음 — title: {}", title);
+            return List.of();
+        }
+
+        OpenAiChatApiResponse.Choice firstChoice = response.getChoices().get(0);
+        if (firstChoice == null || firstChoice.getMessage() == null || firstChoice.getMessage().getContent() == null) {
+            log.warn("OpenAI Questions API 메시지 비어있음 — title: {}", title);
+            return List.of();
+        }
+
+        try {
+            SummaryResult parsed = parseSummaryResult(firstChoice.getMessage().getContent());
+            return parsed.hasQuestions() ? parsed.getSuggestedQuestions() : List.of();
+        } catch (Exception e) {
+            log.warn("추천 질문 JSON 파싱 실패 — title: {}", title, e);
+            return List.of();
+        }
     }
 
     /**
