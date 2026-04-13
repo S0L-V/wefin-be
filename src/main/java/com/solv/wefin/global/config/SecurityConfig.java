@@ -34,7 +34,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/news/**", "/api/market/**", "/api/stocks/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/news/**", "/api/market/**",
+                            "/api/stocks/**", "/api/ranking/**").permitAll()
                         .requestMatchers("/api/admin/**").permitAll() // 임시
                         .anyRequest().authenticated()
                 )

@@ -4,6 +4,7 @@ import static com.solv.wefin.domain.trading.common.TradingConstants.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -95,10 +96,24 @@ public class VirtualAccountService {
 	}
 
 	/**
+	 * userId로 계좌 조회 (없으면 Optional.empty)
+	 */
+	public Optional<VirtualAccount> findByUserId(UUID userId) {
+		return accountRepository.findByUserId(userId);
+	}
+
+	/**
 	 * 전체 유저의 계좌 조회
 	 */
 	public List<VirtualAccount> getAllAccounts() {
 		return accountRepository.findAll();
+	}
+
+	/**
+	 * 여러 계좌를 ID 일괄 조회 (랭킹 닉네임 매핑 등 배치 용도)
+	 */
+	public List<VirtualAccount> findAllByIdIn(Collection<Long> virtualAccountIds) {
+		return accountRepository.findAllById(virtualAccountIds);
 	}
 
 	/**
