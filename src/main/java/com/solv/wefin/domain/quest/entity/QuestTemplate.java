@@ -1,14 +1,14 @@
 package com.solv.wefin.domain.quest.entity;
 
 import com.solv.wefin.global.common.BaseEntity;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-
-import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "quest_template")
@@ -56,11 +56,28 @@ public class QuestTemplate extends BaseEntity {
 
     @PrePersist
     protected void onCreate() {
+        validateInvariant();
+
         if (this.repeatable == null) {
             this.repeatable = false;
         }
         if (this.active == null) {
             this.active = true;
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        validateInvariant();
+    }
+
+    private void validateInvariant() {
+        if (this.targetValue == null || this.targetValue <= 0) {
+            throw new BusinessException(ErrorCode.QUEST_TARGET_VALUE_INVALID);
+        }
+
+        if (this.reward == null || this.reward < 0) {
+            throw new BusinessException(ErrorCode.QUEST_REWARD_INVALID);
         }
     }
 

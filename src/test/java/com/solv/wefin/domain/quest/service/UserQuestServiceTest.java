@@ -19,7 +19,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class UserQuestServiceTest {
@@ -42,11 +44,11 @@ class UserQuestServiceTest {
     void getOrIssueTodayUserQuests_returns_existing() {
         // given
         UUID userId = UUID.randomUUID();
-        LocalDate today = LocalDate.now();
 
         UserQuest userQuest = mock(UserQuest.class);
 
-        when(userQuestRepository.findTodayUserQuests(userId, today)).thenReturn(List.of(userQuest));
+        when(userQuestRepository.findTodayUserQuests(eq(userId), any(LocalDate.class)))
+                .thenReturn(List.of(userQuest));
 
         // when
         List<UserQuest> result = userQuestService.getOrIssueTodayUserQuests(userId);
@@ -76,7 +78,8 @@ class UserQuestServiceTest {
         DailyQuest dailyQuest2 = DailyQuest.create(mock(QuestTemplate.class), today, 2, 80);
         DailyQuest dailyQuest3 = DailyQuest.create(mock(QuestTemplate.class), today, 1, 50);
 
-        when(userQuestRepository.findTodayUserQuests(userId, today)).thenReturn(List.of());
+        when(userQuestRepository.findTodayUserQuests(eq(userId), any(LocalDate.class)))
+                .thenReturn(List.of());
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(dailyQuestService.getOrCreateTodayDailyQuests()).thenReturn(List.of(dailyQuest1, dailyQuest2, dailyQuest3));
         when(userQuestRepository.saveAllAndFlush(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -115,9 +118,9 @@ class UserQuestServiceTest {
     void getOrIssueTodayUserQuests_fail_when_user_not_found() {
         // given
         UUID userId = UUID.randomUUID();
-        LocalDate today = LocalDate.now();
 
-        when(userQuestRepository.findTodayUserQuests(userId, today)).thenReturn(List.of());
+        when(userQuestRepository.findTodayUserQuests(eq(userId), any(LocalDate.class)))
+                .thenReturn(List.of());
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
         // when
