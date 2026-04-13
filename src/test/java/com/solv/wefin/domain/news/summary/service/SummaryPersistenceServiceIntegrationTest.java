@@ -255,8 +255,8 @@ class SummaryPersistenceServiceIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @DisplayName("추천 질문 — 정규화 후 3개 미만이면 기존 질문도 비운다 (요약/질문 정합성)")
-    void questions_underThreeAfterNormalization_clearsExisting() {
+    @DisplayName("추천 질문 — 정규화 후 일부만 유효하면 유효한 만큼만 저장하고 기존은 교체된다")
+    void questions_partialValidAfterNormalization_savesAvailable() {
         // given: 1차로 정상 3개 저장
         NewsArticle article1 = createAndSaveArticle();
         NewsArticle article2 = createAndSaveArticle();
@@ -274,7 +274,31 @@ class SummaryPersistenceServiceIntegrationTest extends IntegrationTestBase {
         persistenceService.markGeneratedWithSections(cluster.getId(), "제목2", "요약2", sections,
                 badQuestions, articleIds);
 
-        // then: 새 요약 + 과거 질문 혼재 방지를 위해 질문 테이블이 비워진다
+        // then: 기존 질문은 삭제되고 유효한 1개만 저장된다
+        List<ClusterSuggestedQuestion> saved = questionRepository.findByNewsClusterIdOrderByQuestionOrder(cluster.getId());
+        assertThat(saved).hasSize(1);
+        assertThat(saved.get(0).getQuestion()).isEqualTo("새 질문");
+        assertThat(saved.get(0).getQuestionOrder()).isZero();
+    }
+
+    @Test
+    @DisplayName("추천 질문 — 정규화 후 0개면 기존 질문이 비워진다")
+    void questions_zeroValidAfterNormalization_clearsExisting() {
+        NewsArticle article1 = createAndSaveArticle();
+        NewsArticle article2 = createAndSaveArticle();
+        NewsCluster cluster = createAndSaveCluster(article1.getId(), 2);
+        List<Long> articleIds = List.of(article1.getId(), article2.getId());
+        createClusterArticleMappings(cluster.getId(), articleIds);
+        List<SummaryResult.SectionItem> sections = List.of(
+                createSectionItem("소제목", "본문", List.of(1, 2))
+        );
+        persistenceService.markGeneratedWithSections(cluster.getId(), "제목1", "요약1", sections,
+                List.of("기존1", "기존2", "기존3"), articleIds);
+
+        List<String> emptyQuestions = List.of("  ", "", "\t");
+        persistenceService.markGeneratedWithSections(cluster.getId(), "제목2", "요약2", sections,
+                emptyQuestions, articleIds);
+
         List<ClusterSuggestedQuestion> saved = questionRepository.findByNewsClusterIdOrderByQuestionOrder(cluster.getId());
         assertThat(saved).isEmpty();
     }
