@@ -1,27 +1,30 @@
 package com.solv.wefin.domain.trading.market.dto;
 
 import com.solv.wefin.domain.trading.market.client.dto.HantuPriceApiResponse;
+import com.solv.wefin.global.util.ParseUtils;
+
+import java.math.BigDecimal;
 
 public record PriceResponse(
         String stockCode,
-        int currentPrice,
-        int changePrice,
+        BigDecimal currentPrice,
+        BigDecimal changePrice,
         float changeRate,
         long volume,
-        int openPrice,
-        int highPrice,
-        int lowPrice
+        BigDecimal openPrice,
+        BigDecimal highPrice,
+        BigDecimal lowPrice
 ) {
     public static PriceResponse from(String stockCode, HantuPriceApiResponse.Output output) {
         return new PriceResponse(
                 stockCode,
-                Integer.parseInt(output.stck_prpr()),
-                Integer.parseInt(output.prdy_vrss()),
-                Float.parseFloat(output.prdy_ctrt()),
-                Long.parseLong(output.acml_vol()),
-                Integer.parseInt(output.stck_oprc()),
-                Integer.parseInt(output.stck_hgpr()),
-                Integer.parseInt(output.stck_lwpr())
+                ParseUtils.parseBigDecimal(output.stck_prpr()),
+                ParseUtils.parseBigDecimal(output.prdy_vrss()),
+                ParseUtils.parseFloat(output.prdy_ctrt()),
+                ParseUtils.parseLong(output.acml_vol()),
+                ParseUtils.parseBigDecimal(output.stck_oprc()),
+                ParseUtils.parseBigDecimal(output.stck_hgpr()),
+                ParseUtils.parseBigDecimal(output.stck_lwpr())
         );
     }
 }

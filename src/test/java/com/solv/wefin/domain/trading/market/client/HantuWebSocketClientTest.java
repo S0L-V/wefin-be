@@ -16,6 +16,8 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.WebSocketClient;
 
+import java.math.BigDecimal;
+
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatCode;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.never;
@@ -94,12 +96,12 @@ class HantuWebSocketClientTest {
 
         verify(marketService).updatePriceCache(
                 eq("005930"),
-                argThat(p -> p.currentPrice() == 97500
-                        && p.changePrice() == 1200
+                argThat(p -> p.currentPrice().equals(new BigDecimal("97500"))
+                        && p.changePrice().equals(new BigDecimal("1200"))
                         && p.volume() == 12340567
-                        && p.openPrice() == 96800
-                        && p.highPrice() == 98200
-                        && p.lowPrice() == 96300
+                        && p.openPrice().equals(new BigDecimal("96800"))
+                        && p.highPrice().equals(new BigDecimal("98200"))
+                        && p.lowPrice().equals(new BigDecimal("96300"))
                 )
         );
     }

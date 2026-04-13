@@ -132,7 +132,7 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
     @Override
     public BigDecimal getCurrentPrice(String stockCode) {
         PriceResponse response = getPrice(stockCode);
-        return BigDecimal.valueOf(response.currentPrice());
+        return response.currentPrice();
     }
 
     @Override
