@@ -228,10 +228,20 @@ public class SummaryPersistenceService {
 
     /**
      * AI 요약 생성 실패를 반영한다
+     *
+     * 동시성: markGeneratedSingle/markGeneratedWithSections와 동일하게
+     * {@link #findClusterForUpdate}로 쓰기 락을 획득하여 성공 경로
+     * (markSummaryGenerated)와의 경합을 직렬화한다.
+     * 이미 GENERATED로 마킹된 경우(성공이 먼저 커밋된 뒤 지연된 실패 처리)
+     * no-op으로 스킵하여 성공 결과가 FAILED로 덮이지 않도록 한다
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markFailed(Long clusterId) {
-        NewsCluster cluster = findCluster(clusterId);
+        NewsCluster cluster = findClusterForUpdate(clusterId);
+        if (cluster.getSummaryStatus() == NewsCluster.SummaryStatus.GENERATED) {
+            log.warn("markFailed 스킵 — 이미 GENERATED 상태, clusterId: {}", clusterId);
+            return;
+        }
         cluster.markSummaryFailed();
     }
 
