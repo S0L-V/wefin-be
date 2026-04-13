@@ -23,31 +23,26 @@ public class StockCollectScheduler {
     }
 
     /**
-     * 하루 5회 × 320종목 = 1,600종목/일 → 2일이면 전 종목 완료
+     * 하루 4회 × 320종목 = 1,280종목/일 → 약 2일이면 전 종목 완료
      */
+    @Scheduled(cron = "0 42 1 * * *")
+    public void collectAt0142() {
+        runCollect("01:42");
+    }
+
+    @Scheduled(cron = "0 30 9 * * *")
+    public void collectAt0930() {
+        runCollect("09:30");
+    }
+
     @Scheduled(cron = "0 0 13 * * *")
     public void collectAt1300() {
         runCollect("13:00");
     }
 
-    @Scheduled(cron = "0 0 16 * * *")
-    public void collectAt1600() {
-        runCollect("16:00");
-    }
-
-    @Scheduled(cron = "0 0 20 * * *")
-    public void collectAt2000() {
-        runCollect("20:00");
-    }
-
-    @Scheduled(cron = "0 0 23 * * *")
-    public void collectAt2300() {
-        runCollect("23:00");
-    }
-
-    @Scheduled(cron = "0 30 2 * * *")
-    public void collectAt0230() {
-        runCollect("02:30");
+    @Scheduled(cron = "0 0 18 * * *")
+    public void collectAt1800() {
+        runCollect("18:00");
     }
 
     private void runCollect(String scheduleLabel) {

@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RequiredArgsConstructor
 public class NewsBatchService {
 
-    private static final LocalDate COLLECT_START = LocalDate.of(2020, 1, 2);
+    private static final LocalDate COLLECT_START = LocalDate.of(2021, 1, 1);
     private static final LocalDate COLLECT_END = LocalDate.of(2024, 12, 31);
     private static final int BATCH_SIZE = 150;
     private static final long OPENAI_DELAY_MS = 1_000;

@@ -98,8 +98,8 @@ class GamePortfolioServiceTest {
             setupCommonMocks(room, participant, turn);
             given(gameHoldingRepository.findAllByParticipantAndQuantityGreaterThan(participant, 0))
                     .willReturn(List.of(holding));
-            given(stockDailyRepository.findByStockInfoAndTradeDate(samsung, TEST_TRADE_DATE))
-                    .willReturn(Optional.of(stockDaily));
+            given(stockDailyRepository.findAllByStockInfoInAndTradeDate(List.of(samsung), TEST_TRADE_DATE))
+                    .willReturn(List.of(stockDaily));
 
             PortfolioInfo result = portfolioService.getPortfolio(TEST_ROOM_ID, TEST_USER_ID);
 
@@ -129,10 +129,8 @@ class GamePortfolioServiceTest {
             setupCommonMocks(room, participant, turn);
             given(gameHoldingRepository.findAllByParticipantAndQuantityGreaterThan(participant, 0))
                     .willReturn(List.of(holdingSamsung, holdingSk));
-            given(stockDailyRepository.findByStockInfoAndTradeDate(samsung, TEST_TRADE_DATE))
-                    .willReturn(Optional.of(samsungDaily));
-            given(stockDailyRepository.findByStockInfoAndTradeDate(sk, TEST_TRADE_DATE))
-                    .willReturn(Optional.of(skDaily));
+            given(stockDailyRepository.findAllByStockInfoInAndTradeDate(List.of(samsung, sk), TEST_TRADE_DATE))
+                    .willReturn(List.of(samsungDaily, skDaily));
 
             PortfolioInfo result = portfolioService.getPortfolio(TEST_ROOM_ID, TEST_USER_ID);
 
@@ -211,8 +209,8 @@ class GamePortfolioServiceTest {
             setupCommonMocks(room, participant, turn);
             given(gameHoldingRepository.findAllByParticipantAndQuantityGreaterThan(participant, 0))
                     .willReturn(List.of(holding));
-            given(stockDailyRepository.findByStockInfoAndTradeDate(stockInfo, TEST_TRADE_DATE))
-                    .willReturn(Optional.empty());
+            given(stockDailyRepository.findAllByStockInfoInAndTradeDate(List.of(stockInfo), TEST_TRADE_DATE))
+                    .willReturn(List.of());
 
             assertThatThrownBy(() -> portfolioService.getPortfolio(TEST_ROOM_ID, TEST_USER_ID))
                     .isInstanceOf(BusinessException.class)
@@ -255,8 +253,8 @@ class GamePortfolioServiceTest {
             setupCommonMocks(room, participant, turn);
             given(gameHoldingRepository.findAllByParticipantAndQuantityGreaterThan(participant, 0))
                     .willReturn(List.of(holding));
-            given(stockDailyRepository.findByStockInfoAndTradeDate(samsung, TEST_TRADE_DATE))
-                    .willReturn(Optional.of(stockDaily));
+            given(stockDailyRepository.findAllByStockInfoInAndTradeDate(List.of(samsung), TEST_TRADE_DATE))
+                    .willReturn(List.of(stockDaily));
 
             List<HoldingInfo> result = portfolioService.getHoldings(TEST_ROOM_ID, TEST_USER_ID);
 
@@ -288,10 +286,8 @@ class GamePortfolioServiceTest {
             setupCommonMocks(room, participant, turn);
             given(gameHoldingRepository.findAllByParticipantAndQuantityGreaterThan(participant, 0))
                     .willReturn(List.of(holdingSamsung, holdingSk));
-            given(stockDailyRepository.findByStockInfoAndTradeDate(samsung, TEST_TRADE_DATE))
-                    .willReturn(Optional.of(samsungDaily));
-            given(stockDailyRepository.findByStockInfoAndTradeDate(sk, TEST_TRADE_DATE))
-                    .willReturn(Optional.of(skDaily));
+            given(stockDailyRepository.findAllByStockInfoInAndTradeDate(List.of(samsung, sk), TEST_TRADE_DATE))
+                    .willReturn(List.of(samsungDaily, skDaily));
 
             List<HoldingInfo> result = portfolioService.getHoldings(TEST_ROOM_ID, TEST_USER_ID);
 
@@ -374,8 +370,8 @@ class GamePortfolioServiceTest {
             setupCommonMocks(room, participant, turn);
             given(gameHoldingRepository.findAllByParticipantAndQuantityGreaterThan(participant, 0))
                     .willReturn(List.of(holding));
-            given(stockDailyRepository.findByStockInfoAndTradeDate(stockInfo, TEST_TRADE_DATE))
-                    .willReturn(Optional.empty());
+            given(stockDailyRepository.findAllByStockInfoInAndTradeDate(List.of(stockInfo), TEST_TRADE_DATE))
+                    .willReturn(List.of());
 
             assertThatThrownBy(() -> portfolioService.getHoldings(TEST_ROOM_ID, TEST_USER_ID))
                     .isInstanceOf(BusinessException.class)

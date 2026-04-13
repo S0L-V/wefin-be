@@ -11,6 +11,7 @@ import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.room.entity.RoomStatus;
 import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
 import com.solv.wefin.domain.game.stock.entity.StockDaily;
+import com.solv.wefin.domain.game.stock.entity.StockInfo;
 import com.solv.wefin.domain.game.stock.repository.StockDailyRepository;
 import com.solv.wefin.domain.game.turn.entity.GameTurn;
 import com.solv.wefin.domain.game.turn.entity.TurnStatus;
@@ -25,7 +26,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -103,11 +107,15 @@ public class GamePortfolioService {
         List<GameHolding> holdings = gameHoldingRepository
                 .findAllByParticipantAndQuantityGreaterThan(participant, 0);
 
+        // N+1 방지: 보유종목 전체의 주가를 한 번에 조회
+        Map<String, StockDaily> priceMap = buildPriceMap(holdings, turnDate);
+
         return holdings.stream()
                 .map(holding -> {
-                    StockDaily stockDaily = stockDailyRepository
-                            .findByStockInfoAndTradeDate(holding.getStockInfo(), turnDate)
-                            .orElseThrow(() -> new BusinessException(ErrorCode.GAME_STOCK_PRICE_NOT_FOUND));
+                    StockDaily stockDaily = priceMap.get(holding.getStockInfo().getSymbol());
+                    if (stockDaily == null) {
+                        throw new BusinessException(ErrorCode.GAME_STOCK_PRICE_NOT_FOUND);
+                    }
 
                     BigDecimal currentPrice = stockDaily.getClosePrice();
                     BigDecimal evalAmount = currentPrice.multiply(BigDecimal.valueOf(holding.getQuantity()))
@@ -136,12 +144,20 @@ public class GamePortfolioService {
         List<GameHolding> holdings = gameHoldingRepository
                 .findAllByParticipantAndQuantityGreaterThan(participant, 0);
 
+        if (holdings.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        // N+1 방지: 보유종목 전체의 주가를 한 번에 조회
+        Map<String, StockDaily> priceMap = buildPriceMap(holdings, turnDate);
+
         BigDecimal stockValue = BigDecimal.ZERO;
 
         for (GameHolding holding : holdings) {
-            StockDaily stockDaily = stockDailyRepository
-                    .findByStockInfoAndTradeDate(holding.getStockInfo(), turnDate)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.GAME_STOCK_PRICE_NOT_FOUND));
+            StockDaily stockDaily = priceMap.get(holding.getStockInfo().getSymbol());
+            if (stockDaily == null) {
+                throw new BusinessException(ErrorCode.GAME_STOCK_PRICE_NOT_FOUND);
+            }
 
             BigDecimal holdingValue = stockDaily.getClosePrice()
                     .multiply(BigDecimal.valueOf(holding.getQuantity()));
@@ -149,5 +165,22 @@ public class GamePortfolioService {
         }
 
         return stockValue;
+    }
+
+    /**
+     * 보유종목 목록의 주가를 한 번의 쿼리로 일괄 조회하여 Map으로 반환한다.
+     * key: symbol (StockInfo PK), value: StockDaily
+     */
+    private Map<String, StockDaily> buildPriceMap(List<GameHolding> holdings, LocalDate turnDate) {
+        List<StockInfo> stockInfos = holdings.stream()
+                .map(GameHolding::getStockInfo)
+                .toList();
+
+        return stockDailyRepository.findAllByStockInfoInAndTradeDate(stockInfos, turnDate)
+                .stream()
+                .collect(Collectors.toMap(
+                        sd -> sd.getStockInfo().getSymbol(),
+                        Function.identity()
+                ));
     }
 }
