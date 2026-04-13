@@ -37,6 +37,13 @@ public enum ErrorCode {
     AI_CHAT_TIMEOUT(504, "AI 응답 시간이 초과되었습니다."),
     NEWS_CLUSTER_NOT_FOUND(404, "뉴스 기사를 찾을 수 없습니다."),
 
+    // quest
+    QUEST_TEMPLATE_NOT_ENOUGH(500, "활성 퀘스트 템플릿 수가 부족합니다."),
+    DAILY_QUEST_NOT_FOUND(404, "오늘의 퀘스트를 찾을 수 없습니다."),
+    QUEST_PROGRESS_INVALID(400, "퀘스트 진행도는 0 이상이어야 합니다."),
+    QUEST_REWARD_NOT_ALLOWED(400, "완료된 퀘스트만 보상 처리할 수 있습니다."),
+    QUEST_TARGET_VALUE_INVALID(400, "퀘스트 목표치는 1 이상이어야 합니다."),
+    QUEST_REWARD_INVALID(400, "퀘스트 보상은 0 이상이어야 합니다."),
 
     // Common
     INVALID_INPUT(400, "잘못된 입력입니다."),
