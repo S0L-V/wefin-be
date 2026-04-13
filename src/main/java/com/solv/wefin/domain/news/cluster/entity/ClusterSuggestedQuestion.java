@@ -62,13 +62,13 @@ public class ClusterSuggestedQuestion {
      */
     public static ClusterSuggestedQuestion create(Long clusterId, int order, String question) {
         if (clusterId == null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT);
-        }
-        if (question == null || question.isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT);
+            throw new BusinessException(ErrorCode.SUGGESTED_QUESTION_CLUSTER_ID_NULL);
         }
         if (order < 0) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT);
+            throw new BusinessException(ErrorCode.SUGGESTED_QUESTION_ORDER_INVALID);
+        }
+        if (question == null || question.isBlank()) {
+            throw new BusinessException(ErrorCode.SUGGESTED_QUESTION_TEXT_BLANK);
         }
         return ClusterSuggestedQuestion.builder()
                 .newsClusterId(clusterId)

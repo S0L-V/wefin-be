@@ -113,6 +113,9 @@ public enum ErrorCode {
     SUMMARY_NO_SECTIONS(500, "AI 요약에 섹션이 포함되지 않았습니다."),
     SUMMARY_NO_VALID_SECTIONS(500, "AI 요약에 유효한 출처를 가진 섹션이 없습니다."),
     SUMMARY_ARTICLE_MISMATCH(500, "프롬프트 기사 수와 실제 조회 기사 수가 불일치합니다."),
+    SUGGESTED_QUESTION_CLUSTER_ID_NULL(400, "추천 질문의 클러스터 ID는 null일 수 없습니다."),
+    SUGGESTED_QUESTION_ORDER_INVALID(400, "추천 질문의 순서는 0 이상이어야 합니다."),
+    SUGGESTED_QUESTION_TEXT_BLANK(400, "추천 질문 텍스트는 비어 있을 수 없습니다."),
     CLUSTER_NOT_FOUND(404, "클러스터를 찾을 수 없습니다."),
 
     // Feed Filter
