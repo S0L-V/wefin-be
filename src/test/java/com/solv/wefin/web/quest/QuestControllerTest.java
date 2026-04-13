@@ -30,7 +30,9 @@ import java.util.UUID;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -110,6 +112,70 @@ class QuestControllerTest {
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.status").value(500))
                 .andExpect(jsonPath("$.code").value("QUEST_TEMPLATE_NOT_ENOUGH"));
+    }
+
+    @Test
+    @DisplayName("퀘스트 보상 수령 요청 시 REWARDED 상태를 반환한다")
+    void claimReward_success() throws Exception {
+        // given
+        UUID userId = UUID.randomUUID();
+        LocalDate today = LocalDate.now();
+
+        QuestTemplate template = buildTemplate();
+        DailyQuest dailyQuest = DailyQuest.create(template, today, 3, 100);
+        ReflectionTestUtils.setField(dailyQuest, "id", 11L);
+
+        User user = User.builder()
+                .email("test@test.com")
+                .nickname("questUser")
+                .password("password")
+                .build();
+        ReflectionTestUtils.setField(user, "userId", userId);
+
+        UserQuest userQuest = UserQuest.assign(user, dailyQuest);
+        ReflectionTestUtils.setField(userQuest, "id", 21L);
+        ReflectionTestUtils.setField(userQuest, "status", QuestStatus.REWARDED);
+        ReflectionTestUtils.setField(userQuest, "progress", 3);
+
+        when(userQuestService.claimReward(userId, 21L)).thenReturn(userQuest);
+
+        // when // then
+        mockMvc.perform(post("/api/quests/21/reward")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userId,
+                                null,
+                                AuthorityUtils.NO_AUTHORITIES
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.questId").value(21))
+                .andExpect(jsonPath("$.data.dailyQuestId").value(11))
+                .andExpect(jsonPath("$.data.status").value("REWARDED"))
+                .andExpect(jsonPath("$.data.progress").value(3))
+                .andExpect(jsonPath("$.data.reward").value(100));
+    }
+
+    @Test
+    @DisplayName("보상 수령 대상 퀘스트가 없으면 404 에러를 반환한다")
+    void claimReward_fail_when_user_quest_not_found() throws Exception {
+        // given
+        UUID userId = UUID.randomUUID();
+
+        when(userQuestService.claimReward(userId, 21L))
+                .thenThrow(new BusinessException(ErrorCode.USER_QUEST_NOT_FOUND));
+
+        // when // then
+        mockMvc.perform(post("/api/quests/21/reward")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userId,
+                                null,
+                                AuthorityUtils.NO_AUTHORITIES
+                        ))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.code").value("USER_QUEST_NOT_FOUND"));
     }
 
     private QuestTemplate buildTemplate() {

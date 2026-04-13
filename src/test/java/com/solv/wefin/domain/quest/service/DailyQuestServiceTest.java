@@ -102,6 +102,7 @@ class DailyQuestServiceTest {
     private QuestTemplate mockTemplate(Long id, Integer targetValue, Integer reward) {
         QuestTemplate template = mock(QuestTemplate.class);
         when(template.getId()).thenReturn(id);
+        when(template.getCode()).thenReturn("TEST_" + id);
         when(template.getTargetValue()).thenReturn(targetValue);
         when(template.getReward()).thenReturn(reward);
         return template;

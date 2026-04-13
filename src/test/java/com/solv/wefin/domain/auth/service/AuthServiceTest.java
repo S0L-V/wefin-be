@@ -10,6 +10,8 @@ import com.solv.wefin.domain.auth.repository.RefreshTokenRepository;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.service.GroupService;
+import com.solv.wefin.domain.quest.entity.QuestEventType;
+import com.solv.wefin.domain.quest.service.QuestProgressService;
 import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
@@ -55,6 +57,9 @@ class AuthServiceTest {
 
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
+
+    @Mock
+    private QuestProgressService questProgressService;
 
     @InjectMocks
     private AuthService authService;
@@ -267,6 +272,7 @@ class AuthServiceTest {
                     () -> assertThat(savedToken.getExpiresAt()).isEqualTo(expiresAt),
                     () -> assertThat(savedToken.isRevoked()).isFalse()
             );
+            verify(questProgressService).handleEvent(userId, QuestEventType.LOGIN);
         }
 
         @Test

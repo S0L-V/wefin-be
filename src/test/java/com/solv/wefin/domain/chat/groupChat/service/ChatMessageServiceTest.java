@@ -16,6 +16,8 @@ import com.solv.wefin.domain.group.entity.GroupMember;
 import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
+import com.solv.wefin.domain.quest.entity.QuestEventType;
+import com.solv.wefin.domain.quest.service.QuestProgressService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,6 +53,7 @@ class ChatMessageServiceTest {
     private ChatMessageService chatMessageService;
     private NewsClusterRepository newsClusterRepository;
     private ChatMessageNewsShareService chatMessageNewsShareService;
+    private QuestProgressService questProgressService;
 
     @BeforeEach
     void setUp() {
@@ -61,6 +64,7 @@ class ChatMessageServiceTest {
         chatSpamGuard = mock(ChatSpamGuard.class);
         newsClusterRepository = mock(NewsClusterRepository.class);
         chatMessageNewsShareService = mock(ChatMessageNewsShareService.class);
+        questProgressService = mock(QuestProgressService.class);
 
         chatMessageService = new ChatMessageService(
                 chatMessageRepository,
@@ -68,6 +72,7 @@ class ChatMessageServiceTest {
                 eventPublisher,
                 groupMemberRepository,
                 chatSpamGuard,
+                questProgressService,
                 newsClusterRepository,
                 chatMessageNewsShareService
         );
@@ -128,6 +133,7 @@ class ChatMessageServiceTest {
                 .validate(eq(ChatScope.groupKey(1L, userId)), eq(0L), any(OffsetDateTime.class));
         verify(chatMessageRepository).save(captor.capture());
         verify(eventPublisher).publishEvent(any(ChatMessageCreatedEvent.class));
+        verify(questProgressService).handleEvent(userId, QuestEventType.SEND_GROUP_CHAT);
 
         ChatMessage capturedMessage = captor.getValue();
         assertEquals(group, capturedMessage.getGroup());
@@ -505,6 +511,7 @@ class ChatMessageServiceTest {
         ));
         verify(chatMessageNewsShareService).save(savedMessage, newsCluster);
         verify(eventPublisher).publishEvent(any(ChatMessageCreatedEvent.class));
+        verify(questProgressService).handleEvent(userId, QuestEventType.SHARE_NEWS);
 
         assertEquals(10L, result.messageId());
         assertEquals("NEWS", result.messageType());
