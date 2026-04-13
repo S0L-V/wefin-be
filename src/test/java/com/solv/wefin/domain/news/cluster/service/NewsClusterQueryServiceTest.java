@@ -43,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class NewsClusterQueryServiceTest {
@@ -61,14 +62,17 @@ class NewsClusterQueryServiceTest {
 
     @BeforeEach
     void setUp() {
+        // aggregator는 실제 구현으로 wiring (내부에서 NewsArticleRepository/TagRepository 사용)
+        ClusterTagAggregator tagAggregator = new ClusterTagAggregator(newsArticleRepository, articleTagRepository);
         queryService = new NewsClusterQueryService(
                 newsClusterRepository, clusterArticleRepository,
-                newsArticleRepository, articleTagRepository, readRepository,
-                feedbackRepository, questionRepository, sectionRepository, sectionSourceRepository);
+                newsArticleRepository, readRepository, feedbackRepository,
+                questionRepository, sectionRepository, sectionSourceRepository,
+                tagAggregator);
     }
 
     @Test
-    @DisplayName("첫 페이지 조회 — 클러스터 목록을 반환한다")
+    @DisplayName("첫 페이지 조회 — STOCK/TOPIC 분기별 쿼리 + relatedStocks/marketTags 반영")
     void getFeed_firstPage() {
         NewsCluster cluster = createCluster(1L, "삼성전자 실적 호조", "반도체 부문 회복...",
                 OffsetDateTime.now(), 3);
@@ -79,20 +83,27 @@ class NewsClusterQueryServiceTest {
                 .willReturn(List.of(NewsClusterArticle.create(1L, 100L, 0, false)));
         given(newsArticleRepository.findSourceInfoByIdIn(any()))
                 .willReturn(List.of(createSourceProjection(100L, "매일경제", "https://example.com/100")));
-        given(articleTagRepository.findByNewsArticleIdInAndTagType(any(), any()))
+        // STOCK과 TOPIC은 분기별로 stub — 매퍼 연결 실수 방어
+        given(articleTagRepository.findByNewsArticleIdInAndTagType(any(), eq(TagType.STOCK)))
                 .willReturn(List.of(createTag(100L, TagType.STOCK, "005930", "삼성전자")));
+        given(articleTagRepository.findByNewsArticleIdInAndTagType(any(), eq(TagType.TOPIC)))
+                .willReturn(List.of(createTag(100L, TagType.TOPIC, "EARNINGS", "실적")));
 
         ClusterFeedResult result = queryService.getFeed(null, null, 10, null, null, null);
 
         assertThat(result.items()).hasSize(1);
         assertThat(result.items().get(0).title()).isEqualTo("삼성전자 실적 호조");
-        assertThat(result.items().get(0).sourceCount()).isEqualTo(3);
         assertThat(result.items().get(0).sources()).hasSize(1);
         assertThat(result.items().get(0).relatedStocks()).hasSize(1);
         assertThat(result.items().get(0).relatedStocks().get(0).code()).isEqualTo("005930");
         assertThat(result.items().get(0).relatedStocks().get(0).name()).isEqualTo("삼성전자");
+        assertThat(result.items().get(0).marketTags()).containsExactly("실적");
         assertThat(result.items().get(0).isRead()).isFalse();
         assertThat(result.hasNext()).isFalse();
+
+        // QueryService → aggregator 경로에서 STOCK/TOPIC 쿼리 모두 발생했는지 검증
+        verify(articleTagRepository).findByNewsArticleIdInAndTagType(any(), eq(TagType.STOCK));
+        verify(articleTagRepository).findByNewsArticleIdInAndTagType(any(), eq(TagType.TOPIC));
     }
 
     @Test
@@ -195,6 +206,52 @@ class NewsClusterQueryServiceTest {
         assertThat(result.sections().get(1).heading()).isEqualTo("소제목2");
         assertThat(result.sections().get(1).sourceCount()).isEqualTo(1);
         assertThat(result.sources()).isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("상세 조회 — 상세 출처는 섹션 출처 기사 우선, publisher dedup, 최대 3개")
+    void getDetail_sourcesPrioritizeSectionArticles() {
+        NewsCluster cluster = createCluster(1L, "제목", "요약", OffsetDateTime.now(), 5);
+
+        given(newsClusterRepository.findById(1L)).willReturn(Optional.of(cluster));
+        // 기사 순서: 100, 200, 300, 400, 500 — 200과 400만 섹션 출처
+        given(clusterArticleRepository.findByNewsClusterId(1L))
+                .willReturn(List.of(
+                        NewsClusterArticle.create(1L, 100L, 0, false),
+                        NewsClusterArticle.create(1L, 200L, 1, false),
+                        NewsClusterArticle.create(1L, 300L, 2, false),
+                        NewsClusterArticle.create(1L, 400L, 3, false),
+                        NewsClusterArticle.create(1L, 500L, 4, false)));
+
+        given(newsArticleRepository.findArticleSourceInfoByIdIn(any()))
+                .willReturn(List.of(
+                        createArticleSourceProjection(100L, "기사A", "매일경제", "https://a.com"),
+                        createArticleSourceProjection(200L, "기사B", "한경", "https://b.com"),     // 섹션 출처
+                        createArticleSourceProjection(300L, "기사C", "한경", "https://c.com"),     // dedup 대상
+                        createArticleSourceProjection(400L, "기사D", "연합", "https://d.com"),     // 섹션 출처
+                        createArticleSourceProjection(500L, "기사E", "동아", "https://e.com")));   // cap 컷
+
+        // 섹션 두 개 — 각각 200, 400을 출처로 가짐
+        ClusterSummarySection s1 = createSection(10L, 1L, 0, "소제목1", "본문1");
+        ClusterSummarySection s2 = createSection(20L, 1L, 1, "소제목2", "본문2");
+        given(sectionRepository.findByNewsClusterIdOrderBySectionOrderAsc(1L))
+                .willReturn(List.of(s1, s2));
+        given(sectionSourceRepository.findByClusterSummarySectionIdIn(List.of(10L, 20L)))
+                .willReturn(List.of(
+                        ClusterSummarySectionSource.create(10L, 200L),
+                        ClusterSummarySectionSource.create(20L, 400L)));
+
+        ClusterDetailResult result = queryService.getDetail(1L, null);
+
+        // 정책:
+        // 1) 섹션 출처(200, 400)가 비섹션 출처(100)보다 앞
+        // 2) 300은 200과 같은 "한경"이라 dedup
+        // 3) 최대 3개 (500은 컷)
+        assertThat(result.sources()).hasSize(3);
+        assertThat(result.sources()).extracting(s -> s.articleId())
+                .containsExactly(200L, 400L, 100L);
+        assertThat(result.sources()).extracting(s -> s.publisherName())
+                .containsExactly("한경", "연합", "매일경제");
     }
 
     @Test
