@@ -61,6 +61,8 @@ public class GroupService {
 
         if (currentActiveMember != null) {
             currentActiveMember.deactivate();
+            // deactivate()가 DB에 반영되기 전에 새 ACTIVE가 들어가면서 유니크 제약 충돌이 날 수 있어 flush로 순서 보장
+            groupMemberRepository.flush();
         }
 
         Group group = Group.createSharedGroup(groupName);
@@ -174,6 +176,7 @@ public class GroupService {
 
         if (currentActiveMember != null) {
             currentActiveMember.deactivate();
+            groupMemberRepository.flush();
         }
 
         GroupMember targetMembership = groupMemberRepository
@@ -218,6 +221,7 @@ public class GroupService {
         }
 
         leavingMember.deactivate();
+        groupMemberRepository.flush();
 
         long remainingActiveMemberCount = groupMemberRepository.countByGroupAndStatus(
                 group,

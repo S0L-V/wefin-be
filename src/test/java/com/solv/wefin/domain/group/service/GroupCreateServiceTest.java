@@ -96,6 +96,7 @@ class GroupCreateServiceTest {
             );
 
             verify(groupRepository).save(any(Group.class));
+            verify(groupMemberRepository).flush();
             verify(groupMemberRepository).save(any(GroupMember.class));
         }
 
@@ -132,6 +133,7 @@ class GroupCreateServiceTest {
             assertThat(exception.getErrorCode()).isEqualTo(com.solv.wefin.global.error.ErrorCode.GROUP_CREATE_REQUIRES_HOME);
 
             verify(groupRepository, never()).save(any(Group.class));
+            verify(groupMemberRepository, never()).flush();
             verify(groupMemberRepository, never()).save(any(GroupMember.class));
         }
     }

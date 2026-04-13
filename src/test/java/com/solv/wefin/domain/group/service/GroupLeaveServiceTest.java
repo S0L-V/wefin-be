@@ -102,6 +102,8 @@ class GroupLeaveServiceTest {
                     () -> assertThat(leavingMember.isLeader()).isFalse(),
                     () -> assertThat(homeGroupMember.isActive()).isTrue()
             );
+
+            verify(groupMemberRepository).flush();
         }
 
         @Test
@@ -165,6 +167,8 @@ class GroupLeaveServiceTest {
                     () -> assertThat(homeGroupMember.isActive()).isTrue(),
                     () -> assertThat(remainingMember.isLeader()).isTrue()
             );
+
+            verify(groupMemberRepository).flush();
         }
 
         @Test
@@ -270,6 +274,7 @@ class GroupLeaveServiceTest {
                     () -> assertThat(user.getHomeGroup()).isEqualTo(createdHomeGroup)
             );
 
+            verify(groupMemberRepository).flush();
             verify(groupRepository).save(any(Group.class));
             verify(groupMemberRepository).save(any(GroupMember.class));
         }
@@ -324,6 +329,7 @@ class GroupLeaveServiceTest {
                     () -> assertThat(createdHomeGroupMember.isActive()).isTrue()
             );
 
+            verify(groupMemberRepository).flush();
             verify(groupRepository, never()).save(any(Group.class));
             verify(groupMemberRepository).save(any(GroupMember.class));
         }

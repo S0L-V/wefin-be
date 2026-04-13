@@ -125,6 +125,7 @@ class GroupJoinServiceTest {
                     () -> assertThat(invite.getStatus()).isEqualTo(GroupInvite.InviteStatus.ACCEPTED)
             );
 
+            verify(groupMemberRepository).flush();
             verify(groupMemberRepository).save(any(GroupMember.class));
         }
 
@@ -194,6 +195,7 @@ class GroupJoinServiceTest {
                     () -> assertThat(invite.getStatus()).isEqualTo(GroupInvite.InviteStatus.ACCEPTED)
             );
 
+            verify(groupMemberRepository).flush();
             verify(groupMemberRepository, never()).save(any(GroupMember.class));
         }
 
@@ -234,6 +236,7 @@ class GroupJoinServiceTest {
             verify(groupMemberRepository, never()).findByUser_UserIdAndStatus(any(), any());
             verify(groupMemberRepository, never()).countByGroupAndStatus(any(), any());
             verify(groupMemberRepository, never()).findByUser_UserIdAndGroup_Id(any(), anyLong());
+            verify(groupMemberRepository, never()).flush();
             verify(groupMemberRepository, never()).save(any());
         }
 
@@ -285,6 +288,7 @@ class GroupJoinServiceTest {
 
             verify(groupMemberRepository, never()).countByGroupAndStatus(any(), any());
             verify(groupMemberRepository, never()).findByUser_UserIdAndGroup_Id(any(), anyLong());
+            verify(groupMemberRepository, never()).flush();
             verify(groupMemberRepository, never()).save(any());
         }
 
@@ -341,6 +345,7 @@ class GroupJoinServiceTest {
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_FULL);
 
             verify(groupMemberRepository, never()).findByUser_UserIdAndGroup_Id(any(), anyLong());
+            verify(groupMemberRepository, never()).flush();
             verify(groupMemberRepository, never()).save(any());
         }
 
@@ -375,6 +380,7 @@ class GroupJoinServiceTest {
 
             // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_INVITE_EXPIRED);
+            verify(groupMemberRepository, never()).flush();
         }
 
         @Test
@@ -407,6 +413,7 @@ class GroupJoinServiceTest {
 
             // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_INVITE_ALREADY_USED);
+            verify(groupMemberRepository, never()).flush();
         }
 
         @Test
@@ -427,6 +434,7 @@ class GroupJoinServiceTest {
 
             // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_INVITE_NOT_FOUND);
+            verify(groupMemberRepository, never()).flush();
         }
     }
 }
