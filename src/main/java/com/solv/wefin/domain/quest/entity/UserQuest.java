@@ -1,6 +1,7 @@
 package com.solv.wefin.domain.quest.entity;
 
 import com.solv.wefin.domain.auth.entity.User;
+import com.solv.wefin.global.common.BaseEntity;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import jakarta.persistence.*;
@@ -21,7 +22,7 @@ import java.time.OffsetDateTime;
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class UserQuest {
+public class UserQuest extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -48,12 +49,6 @@ public class UserQuest {
 
     @Column(name = "completed_at")
     private OffsetDateTime completedAt;
-
-    @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
 
     @Builder
     private UserQuest (
@@ -87,14 +82,6 @@ public class UserQuest {
         if (this.progress == null) {
             this.progress = 0;
         }
-
-        this.createdAt = now;
-        this.updatedAt = now;
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = OffsetDateTime.now();
     }
 
     public void start() {
@@ -114,20 +101,20 @@ public class UserQuest {
             return;
         }
 
-        this.progress = progress;
+        Integer targetValue = this.dailyQuest.getTargetValue();
+        this.progress = targetValue != null ? Math.min(progress, targetValue) : progress;
 
         if (progress > 0 && this.status == QuestStatus.NOT_STARTED) {
             this.status = QuestStatus.IN_PROGRESS;
             this.startedAt = OffsetDateTime.now();
         }
 
-        Integer targetValue = this.dailyQuest.getTargetValue();
         if (targetValue != null && progress >= targetValue) {
             complete();
         }
     }
 
-    public void complete() {
+    private void complete() {
 
         if (this.status == QuestStatus.COMPLETED || this.status == QuestStatus.REWARDED) {
             return;

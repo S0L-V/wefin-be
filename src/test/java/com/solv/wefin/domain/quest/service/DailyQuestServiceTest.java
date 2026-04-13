@@ -50,7 +50,7 @@ class DailyQuestServiceTest {
         assertEquals(1, result.size());
         assertEquals(1L, result.get(0).getId());
         verify(questTemplateRepository, never()).findByActiveTrue();
-        verify(dailyQuestRepository, never()).saveAll(anyList());
+        verify(dailyQuestRepository, never()).saveAllAndFlush(anyList());
     }
 
     @Test
@@ -65,7 +65,7 @@ class DailyQuestServiceTest {
 
         when(dailyQuestRepository.findAllByQuestDate(today)).thenReturn(List.of());
         when(questTemplateRepository.findByActiveTrue()).thenReturn(List.of(t1, t2, t3));
-        when(dailyQuestRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(dailyQuestRepository.saveAllAndFlush(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
         // when
         List<DailyQuest> result = dailyQuestService.getOrCreateTodayDailyQuests();
@@ -73,7 +73,7 @@ class DailyQuestServiceTest {
         // then
         assertEquals(3, result.size());
         assertTrue(result.stream().allMatch(q -> q.getQuestDate().equals(today)));
-        verify(dailyQuestRepository).saveAll(anyList());
+        verify(dailyQuestRepository).saveAllAndFlush(anyList());
     }
 
     @Test
@@ -96,7 +96,7 @@ class DailyQuestServiceTest {
 
         // then
         assertEquals(ErrorCode.QUEST_TEMPLATE_NOT_ENOUGH, exception.getErrorCode());
-        verify(dailyQuestRepository, never()).saveAll(anyList());
+        verify(dailyQuestRepository, never()).saveAllAndFlush(anyList());
     }
 
     private QuestTemplate mockTemplate(Long id, Integer targetValue, Integer reward) {

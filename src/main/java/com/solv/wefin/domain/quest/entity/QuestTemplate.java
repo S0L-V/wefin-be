@@ -1,5 +1,6 @@
 package com.solv.wefin.domain.quest.entity;
 
+import com.solv.wefin.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -13,7 +14,7 @@ import java.time.OffsetDateTime;
 @Table(name = "quest_template")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class QuestTemplate {
+public class QuestTemplate extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -53,29 +54,14 @@ public class QuestTemplate {
     @Column(name = "is_active", nullable = false)
     private Boolean active;
 
-    @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
-
     @PrePersist
     protected void onCreate() {
-        OffsetDateTime now = OffsetDateTime.now();
-        this.createdAt = now;
-        this.updatedAt = now;
-
         if (this.repeatable == null) {
             this.repeatable = false;
         }
         if (this.active == null) {
             this.active = true;
         }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = OffsetDateTime.now();
     }
 
     public void deactivate() {

@@ -54,7 +54,7 @@ public class DailyQuestService {
                 .toList();
 
         try {
-            return dailyQuestRepository.saveAll(dailyQuests);
+            return dailyQuestRepository.saveAllAndFlush(dailyQuests);
         } catch (DataIntegrityViolationException e) {
             return dailyQuestRepository.findAllByQuestDate(today);
         }

@@ -55,7 +55,7 @@ class UserQuestServiceTest {
         assertEquals(1, result.size());
         verify(userRepository, never()).findById(any());
         verify(dailyQuestService, never()).getOrCreateTodayDailyQuests();
-        verify(userQuestRepository, never()).saveAll(anyList());
+        verify(userQuestRepository, never()).saveAllAndFlush(anyList());
     }
 
     @Test
@@ -79,14 +79,22 @@ class UserQuestServiceTest {
         when(userQuestRepository.findTodayUserQuests(userId, today)).thenReturn(List.of());
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(dailyQuestService.getOrCreateTodayDailyQuests()).thenReturn(List.of(dailyQuest1, dailyQuest2, dailyQuest3));
-        when(userQuestRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userQuestRepository.saveAllAndFlush(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
         // when
         List<UserQuest> result = userQuestService.getOrIssueTodayUserQuests(userId);
 
         // then
         assertEquals(3, result.size());
-        verify(userQuestRepository).saveAll(anyList());
+        assertAll(
+                () -> assertSame(user, result.get(0).getUser()),
+                () -> assertSame(user, result.get(1).getUser()),
+                () -> assertSame(user, result.get(2).getUser()),
+                () -> assertSame(dailyQuest1, result.get(0).getDailyQuest()),
+                () -> assertSame(dailyQuest2, result.get(1).getDailyQuest()),
+                () -> assertSame(dailyQuest3, result.get(2).getDailyQuest())
+        );
+        verify(userQuestRepository).saveAllAndFlush(anyList());
     }
 
     @Test

@@ -49,7 +49,7 @@ public class UserQuestService {
                 .toList();
 
         try {
-            return userQuestRepository.saveAll(userQuests);
+            return userQuestRepository.saveAllAndFlush(userQuests);
         } catch (DataIntegrityViolationException e) {
             return userQuestRepository.findTodayUserQuests(userId, today);
         }

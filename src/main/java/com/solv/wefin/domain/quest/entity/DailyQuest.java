@@ -1,5 +1,6 @@
 package com.solv.wefin.domain.quest.entity;
 
+import com.solv.wefin.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -19,7 +20,7 @@ import java.time.OffsetDateTime;
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class DailyQuest {
+public class DailyQuest extends BaseEntity {
 
         @Id
         @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,12 +39,6 @@ public class DailyQuest {
 
         @Column(name = "reward", nullable = false)
         private Integer reward;
-
-        @Column(name = "created_at", nullable = false)
-        private OffsetDateTime createdAt;
-
-        @Column(name = "updated_at", nullable = false)
-        private OffsetDateTime updatedAt;
 
         @Builder
         private DailyQuest(
@@ -70,17 +65,5 @@ public class DailyQuest {
                         .targetValue(targetValue)
                         .reward(reward)
                         .build();
-        }
-
-        @PrePersist
-        protected void onCreate() {
-                OffsetDateTime now = OffsetDateTime.now();
-                this.createdAt = now;
-                this.updatedAt = now;
-        }
-
-        @PreUpdate
-        protected void onUpdate() {
-                this.updatedAt = OffsetDateTime.now();
         }
 }
