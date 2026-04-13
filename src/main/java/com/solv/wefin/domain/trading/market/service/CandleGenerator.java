@@ -22,8 +22,11 @@ public class CandleGenerator {
 
     private final SimpMessagingTemplate messagingTemplate;
 
+    // period 목록
+    private static final int[] PERIODS = {1, 5, 15, 30, 60};
+
     // 종목별 현재 생성중인 분봉
-    private final ConcurrentHashMap<String, MinuteCandleData> currentCandles = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, CandleData> currentCandles = new ConcurrentHashMap<>();
 
     // 체결가 수신 시 호출
     public void onTrade(String stockCode, BigDecimal price, long volume, String tradeTime) {
@@ -31,59 +34,64 @@ public class CandleGenerator {
             log.warn("유효하지 않은 tradeTime: stockCode={}, tradeTime={}", stockCode, tradeTime);
             return;
         }
-        // tradeTime "112654" → 분 키 "1126" 추출
-        String minuteKey = tradeTime.substring(0, 4);
 
-        // onTrade 시작: 체결 수신 확인
-        // log.debug("캔들 체결 수신: {} price={} minute={}", stockCode, price, minuteKey);
+        int hour = Integer.parseInt(tradeTime.substring(0, 2));
+        int minute = Integer.parseInt(tradeTime.substring(2, 4));
 
-        final AtomicReference<MinuteCandleData> toPush = new AtomicReference<>();
+        for (int period : PERIODS) {
+            int floored = (minute / period) * period;
+            String timeKey = String.format("%02d%02d", hour, floored);
+            String mapKey = stockCode + ":" + period;
 
-        currentCandles.compute(stockCode, (key, existing) -> {
-            if (existing == null || !existing.minuteKey.equals(minuteKey)) {
-                if (existing != null) {
-                    toPush.set(existing);
+            final AtomicReference<CandleData> toPush = new AtomicReference<>();
+
+            currentCandles.compute(mapKey, (key, existing) -> {
+                if (existing == null || !existing.timeKey.equals(timeKey)) {
+                    if (existing != null) {
+                        toPush.set(existing);
+                    }
+                    return new CandleData(timeKey, period, price, price, price, price, volume);
                 }
-                return new MinuteCandleData(minuteKey, price, price, price, price, volume);
-            }
-            existing.update(price, volume);
-            return existing;
-        });
+                existing.update(price, volume);
+                return existing;
+            });
 
-        if (toPush.get() != null) {
-            pushCandle(stockCode, toPush.get());
+            if (toPush.get() != null) {
+                pushCandle(stockCode, toPush.get());
+            }
         }
     }
 
-    private void pushCandle(String stockCode, MinuteCandleData data) {
-        // pushCandle: 분봉 확정 push
-        log.info("분봉 확정 push: {} time={} O={} H={} L={} C={} V={}",
-                stockCode, data.minuteKey, data.open, data.high, data.low, data.close, data.volume);
+    private void pushCandle(String stockCode, CandleData data) {
+        log.info("분봉 확정 push: {} period={}m time={} O={} H={} L={} C={} V={}",
+                stockCode, data.period, data.timeKey,
+                data.open, data.high, data.low, data.close, data.volume);
 
-        // "1126" → 오늘 날짜 11:26:00
         LocalDateTime time = LocalDate.now(ZoneId.of("Asia/Seoul"))
-                .atTime(Integer.parseInt(data.minuteKey.substring(0, 2)),
-                        Integer.parseInt(data.minuteKey.substring(2, 4)));
+                .atTime(Integer.parseInt(data.timeKey.substring(0, 2)),
+                        Integer.parseInt(data.timeKey.substring(2, 4)));
 
         MinuteCandleResponse response = new MinuteCandleResponse(
                 WebSocketMessageType.CANDLE,
                 stockCode,
                 time,
                 data.open, data.high, data.low, data.close,
-                data.volume
+                data.volume,
+                String.valueOf(data.period)
         );
         messagingTemplate.convertAndSend("/topic/stocks/" + stockCode + "/candle", response);
     }
 
-    // 분봉 데이터를 담는 내부 클래스
-    private static class MinuteCandleData {
-        String minuteKey;  // "1126"
+    private static class CandleData {
+        String timeKey;    // "1125"
+        int period;        // 5
         BigDecimal open, high, low, close;
         long volume;
 
-        MinuteCandleData(String minuteKey, BigDecimal open, BigDecimal high, BigDecimal low,
-                         BigDecimal close, long volume) {
-            this.minuteKey = minuteKey;
+        CandleData(String timeKey, int period, BigDecimal open, BigDecimal high,
+                   BigDecimal low, BigDecimal close, long volume) {
+            this.timeKey = timeKey;
+            this.period = period;
             this.open = open;
             this.high = high;
             this.low = low;
@@ -102,7 +110,9 @@ public class CandleGenerator {
     @Scheduled(cron = "0 30 15 * * MON-FRI", zone = "Asia/Seoul")
     public void flushAll() {
         log.info("장 마감 분봉 flush 시작");
-        currentCandles.forEach((stockCode, data) -> {
+        currentCandles.forEach((mapKey, data) -> {
+            // mapKey: "005930:5:1125" → stockCode 추출
+            String stockCode = mapKey.substring(0, mapKey.indexOf(':'));
             pushCandle(stockCode, data);
         });
         currentCandles.clear();

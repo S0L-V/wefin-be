@@ -3,6 +3,7 @@ package com.solv.wefin.domain.trading.market.service;
 import com.solv.wefin.domain.trading.common.ExchangeRateProvider;
 import com.solv.wefin.domain.trading.market.client.HantuMarketClient;
 import com.solv.wefin.domain.trading.market.client.dto.HantuCandleApiResponse;
+import com.solv.wefin.domain.trading.market.client.dto.HantuMinuteCandleApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuOrderbookApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuPriceApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuRecentTradeApiResponse;
@@ -20,6 +21,12 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
@@ -37,6 +44,7 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
     private final ConcurrentHashMap<String, Long> priceCacheTimestamp = new ConcurrentHashMap<>();
     private static final long CACHE_TTL_MS = 5000; // 5초
     private static final Set<String> VALID_PERIOD_CODES = Set.of("D", "W", "M", "Y");
+    private static final Set<String> MINUTE_PERIOD_CODES = Set.of("1", "5", "15", "30", "60");
 
     public PriceResponse getPrice(String stockCode) {
         validateStockCode(stockCode);
@@ -145,6 +153,13 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
         }
 
         periodCode = periodCode.toUpperCase();
+
+        // 분봉 조회
+        if (MINUTE_PERIOD_CODES.contains(periodCode)) {
+            return getMinuteCandles(stockCode, Integer.parseInt(periodCode));
+        }
+
+        // 일봉/주봉/월봉 조회
         if (!VALID_PERIOD_CODES.contains(periodCode)) {
             throw new BusinessException(ErrorCode.MARKET_INVALID_PERIOD_CODE);
         }
@@ -156,7 +171,6 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
             return List.of();
         }
 
-        // 한투 API 응답 코드 검증 (rt_cd "0"이면 정상)
         if (response.output1() != null) {
             validateRtCode(response.output1().rt_cd());
         }
@@ -168,7 +182,76 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
         return response.output2().stream()
                     .map(CandleResponse::from)
                     .toList();
+    }
 
+    private List<CandleResponse> getMinuteCandles(String stockCode, int periodMinutes) {
+        // 현재 KST 시간 기준으로 분봉 조회 (역순으로 반환됨)
+        String inputHour = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("HHmmss"));
+        HantuMinuteCandleApiResponse response = hantuMarketClient.fetchMinutePrice(stockCode, inputHour);
+        log.info("분봉 API 응답: {}", response);
+
+        if (response == null) {
+            return List.of();
+        }
+
+        if (response.output1() != null) {
+            validateRtCode(response.output1().rt_cd());
+        }
+
+        if (response.output2() == null) {
+            return List.of();
+        }
+
+        // 한투 API가 내림차순(최신→과거)으로 반환하므로 오름차순 정렬
+        List<CandleResponse> oneMinuteCandles = response.output2().stream()
+                .map(CandleResponse::fromMinute)
+                .sorted(Comparator.comparing(CandleResponse::date))
+                .toList();
+
+        // 1분봉이면 그대로 반환
+        if (periodMinutes == 1) {
+            return oneMinuteCandles;
+        }
+
+        // N분봉 집계
+        return aggregateCandles(oneMinuteCandles, periodMinutes);
+    }
+
+    // date의 분을 period 단위로 내림한 값을 키로 그룹핑
+    // 예: 09:33 → 09:30 (5분봉), 09:47 → 09:45 (15분봉)
+    private List<CandleResponse> aggregateCandles(List<CandleResponse> candles, int periodMinutes) {
+        LinkedHashMap<LocalDateTime, List<CandleResponse>> groups = new LinkedHashMap<>();
+
+        for (CandleResponse candle : candles) {
+            int minute = candle.date().getMinute();
+            int floored = (minute / periodMinutes) * periodMinutes;
+            LocalDateTime groupKey = candle.date().withMinute(floored).withSecond(0);
+
+            groups.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(candle);
+        }
+
+        // 각 그룹을 하나의 캔들로 합침
+        return groups.entrySet().stream()
+                .map(entry -> {
+                    LocalDateTime time = entry.getKey();
+                    List<CandleResponse> group = entry.getValue();
+
+                    BigDecimal open = group.get(0).openPrice();
+                    BigDecimal close = group.get(group.size()-1).closePrice();
+
+                    BigDecimal high = group.get(0).highPrice();
+                    BigDecimal low = group.get(0).lowPrice();
+                    long volume = 0L;
+
+                    for (CandleResponse candle : group) {
+                        if (candle.highPrice().compareTo(high) > 0) high = candle.highPrice();
+                        if (candle.lowPrice().compareTo(low) < 0) low = candle.lowPrice();
+                        volume += candle.volume();
+                    }
+
+                    return new CandleResponse(time, open, high, low, close, volume);
+                })
+                .toList();
     }
 
     public List<RecentTradeResponse> getRecentTrades(String stockCode) {

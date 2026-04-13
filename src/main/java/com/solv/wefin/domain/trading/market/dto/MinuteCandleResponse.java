@@ -11,5 +11,6 @@ public record MinuteCandleResponse(
         BigDecimal highPrice,
         BigDecimal lowPrice,
         BigDecimal closePrice,
-        long volume
+        long volume,
+        String periodCode
 ) {}
