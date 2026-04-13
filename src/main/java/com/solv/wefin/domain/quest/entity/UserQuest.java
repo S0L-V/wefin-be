@@ -114,6 +114,47 @@ public class UserQuest extends BaseEntity {
         }
     }
 
+    public void completeWithProgress(int progress) {
+        if (progress < 0) {
+            throw new BusinessException(ErrorCode.QUEST_PROGRESS_INVALID);
+        }
+
+        if (this.status == QuestStatus.COMPLETED || this.status == QuestStatus.REWARDED) {
+            return;
+        }
+
+        this.progress = progress;
+
+        if (this.progress > 0 && this.status == QuestStatus.NOT_STARTED) {
+            this.status = QuestStatus.IN_PROGRESS;
+            this.startedAt = OffsetDateTime.now();
+        }
+
+        this.status = QuestStatus.COMPLETED;
+        this.completedAt = OffsetDateTime.now();
+
+        if (this.startedAt == null) {
+            this.startedAt = this.completedAt;
+        }
+    }
+
+    public void recordProgress(int progress) {
+        if (progress < 0) {
+            throw new BusinessException(ErrorCode.QUEST_PROGRESS_INVALID);
+        }
+
+        if (this.status == QuestStatus.COMPLETED || this.status == QuestStatus.REWARDED) {
+            return;
+        }
+
+        this.progress = progress;
+
+        if (this.progress > 0 && this.status == QuestStatus.NOT_STARTED) {
+            this.status = QuestStatus.IN_PROGRESS;
+            this.startedAt = OffsetDateTime.now();
+        }
+    }
+
     private void complete() {
 
         if (this.status == QuestStatus.COMPLETED || this.status == QuestStatus.REWARDED) {
