@@ -53,7 +53,7 @@ public class TaggingService {
             return;
         }
 
-        // 종목 마스터 스냅샷을 markProcessing 전에 로드한다.
+        // 종목 마스터 스냅샷을 markProcessing 전에 로드한다 (배치 1회 로드, 배치 종료 시 GC).
         Map<String, String> stockMap = stockCodeValidator.loadStockMap();
         log.debug("종목 마스터 스냅샷 로드 완료 - 코드 수: {}", stockMap.size());
 
