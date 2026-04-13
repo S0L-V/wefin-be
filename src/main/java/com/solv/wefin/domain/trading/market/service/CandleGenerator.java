@@ -111,7 +111,7 @@ public class CandleGenerator {
     public void flushAll() {
         log.info("장 마감 분봉 flush 시작");
         currentCandles.forEach((mapKey, data) -> {
-            // mapKey: "005930:5:1125" → stockCode 추출
+            // mapKey: "005930:5" → stockCode 추출
             String stockCode = mapKey.substring(0, mapKey.indexOf(':'));
             pushCandle(stockCode, data);
         });
