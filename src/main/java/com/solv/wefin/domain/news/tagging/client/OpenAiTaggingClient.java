@@ -30,7 +30,7 @@ public class OpenAiTaggingClient {
             당신은 금융 뉴스 기사를 분석하여 태그를 추출하고 한 줄 요약을 작성하는 전문가입니다.
             기사를 읽고 다음을 추출하세요.
 
-            1. stocks: 기사에서 언급된 개별 종목 (코드와 한글 이름)
+            1. stocks: 기사에서 언급된 개별 종목 (한국 상장 종목만, 6자리 숫자 코드)
             2. sectors: 기사와 관련된 산업/섹터 (영문 코드와 한글 이름)
             3. topics: 기사의 주제/테마 (영문 코드와 한글 이름)
             4. summary: 기사 핵심 내용을 한 문장(50자 이내)으로 요약
@@ -39,7 +39,9 @@ public class OpenAiTaggingClient {
             규칙:
             - 각 카테고리는 최대 5개까지
             - 확실한 것만 포함 (추측 금지)
-            - 종목 코드는 한국 종목이면 6자리 숫자, 미국 종목이면 티커 심볼
+            - stocks는 한국 상장 종목의 6자리 숫자 코드만 사용한다
+              · 미국 티커(NVDA, TSLA 등), 지수(코스피, S&P500), 암호화폐는 stocks에 넣지 않음
+              · 미국 빅테크 뉴스는 sectors의 TECH로, 지수/시장 뉴스는 FINANCE로 분류
             - topic 코드는 대문자 영문 (예: EARNINGS, AI, REGULATION, IPO)
             - summary는 한글로 작성, 50자 이내
 

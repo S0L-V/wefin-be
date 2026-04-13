@@ -16,7 +16,13 @@ public interface NewsArticleTagRepository extends JpaRepository<NewsArticleTag, 
      * 피드에 노출 가능한 클러스터에 속한 기사의 인기 태그를 조회한다.
      * 클러스터 수 기준 내림차순 정렬. Pageable로 limit 제어
      */
-    @Query("SELECT t.tagCode AS tagCode, t.tagName AS tagName, COUNT(DISTINCT nc.id) AS clusterCount " +
+    /**
+     * tagName이 아닌 tagCode만으로 그룹핑한다.
+     * SECTOR/TOPIC은 마스터 테이블이 없어 AI가 같은 코드에 다른 이름("기술"/"테크")을 붙이면
+     * (tagCode, tagName) 그룹이 쪼개져 집계가 왜곡된다. tagCode를 SoT로 삼고,
+     * 표시명은 MIN(tagName)으로 결정적으로 고정하여 쪼개짐을 원천 차단한다
+     */
+    @Query("SELECT t.tagCode AS tagCode, MIN(t.tagName) AS tagName, COUNT(DISTINCT nc.id) AS clusterCount " +
             "FROM NewsArticleTag t " +
             "JOIN NewsClusterArticle nca ON nca.newsArticleId = t.newsArticleId " +
             "JOIN NewsCluster nc ON nc.id = nca.newsClusterId " +
@@ -24,7 +30,7 @@ public interface NewsArticleTagRepository extends JpaRepository<NewsArticleTag, 
             "AND nc.status = :status " +
             "AND nc.summaryStatus IN :summaryStatuses " +
             "AND nc.title IS NOT NULL " +
-            "GROUP BY t.tagCode, t.tagName " +
+            "GROUP BY t.tagCode " +
             "ORDER BY COUNT(DISTINCT nc.id) DESC")
     List<PopularTagProjection> findPopularTags(
             @Param("tagType") NewsArticleTag.TagType tagType,
