@@ -32,6 +32,8 @@ import com.solv.wefin.domain.trading.stock.entity.Stock;
 import com.solv.wefin.domain.trading.stock.service.StockService;
 import com.solv.wefin.global.common.ApiResponse;
 import com.solv.wefin.global.common.CursorResponse;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.trading.order.dto.request.OrderBuyRequest;
 import com.solv.wefin.web.trading.order.dto.request.OrderModifyRequest;
 import com.solv.wefin.web.trading.order.dto.request.OrderSellRequest;
@@ -118,10 +120,14 @@ public class OrderController {
 			@RequestParam(required = false) Long cursor,
 			@RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
 
+		if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+			throw new BusinessException(ErrorCode.MARKET_INVALID_DATE);
+		}
+
 		VirtualAccount account = accountService.getAccountByUserId(userId);
 
 		Long stockId = null;
-		if (stockCode != null) {
+		if (stockCode != null && !stockCode.isBlank()) {
 			Stock stock = stockService.findByStockCode(stockCode).orElse(null);
 			if (stock == null) {
 				return ApiResponse.success(CursorResponse.empty());
@@ -132,9 +138,7 @@ public class OrderController {
 		OrderSearchCondition condition = new OrderSearchCondition(status, stockId, startDate, endDate);
 		List<Order> orders = orderService.searchOrders(account.getVirtualAccountId(), condition, cursor, size);
 
-		List<Long> stockIds = orders.stream().map(Order::getStockId).distinct().toList();
-		Map<Long, Stock> stockMap = stockService.findAllByIdIn(stockIds).stream()
-			.collect(Collectors.toMap(Stock::getId, Function.identity()));
+		Map<Long, Stock> stockMap = buildStockMap(orders);
 
 		return ApiResponse.success(CursorResponse.from(
 			orders, size,
@@ -149,13 +153,7 @@ public class OrderController {
 	}
 
 	private List<OrderHistoryResponse> toOrderHistoryResponse(List<Order> orders) {
-		List<Long> stockIds = orders.stream()
-			.map(Order::getStockId)
-			.distinct()
-			.toList();
-
-		Map<Long, Stock> stockMap = stockService.findAllByIdIn(stockIds).stream()
-			.collect(Collectors.toMap(Stock::getId, Function.identity()));
+		Map<Long, Stock> stockMap = buildStockMap(orders);
 
 		return orders.stream()
 			.map(order -> {
@@ -165,5 +163,15 @@ public class OrderController {
 					stock != null ? stock.getStockName() : null);
 			})
 			.toList();
+	}
+
+	private Map<Long, Stock> buildStockMap(List<Order> orders) {
+		List<Long> stockIds = orders.stream()
+			.map(Order::getStockId)
+			.distinct()
+			.toList();
+
+		return stockService.findAllByIdIn(stockIds).stream()
+			.collect(Collectors.toMap(Stock::getId, Function.identity()));
 	}
 }

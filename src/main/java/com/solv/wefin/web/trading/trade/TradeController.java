@@ -25,6 +25,8 @@ import com.solv.wefin.domain.trading.trade.entity.Trade;
 import com.solv.wefin.domain.trading.trade.service.TradeService;
 import com.solv.wefin.global.common.ApiResponse;
 import com.solv.wefin.global.common.CursorResponse;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.trading.trade.dto.TradeHistoryResponse;
 
 import jakarta.validation.constraints.Max;
@@ -51,10 +53,14 @@ public class TradeController {
 			@RequestParam(required = false) Long cursor,
 			@RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
 
+		if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+			throw new BusinessException(ErrorCode.MARKET_INVALID_DATE);
+		}
+
 		VirtualAccount account = accountService.getAccountByUserId(userId);
 
 		Long stockId = null;
-		if (stockCode != null) {
+		if (stockCode != null && !stockCode.isBlank()) {
 			Stock stock = stockService.findByStockCode(stockCode).orElse(null);
 			if (stock == null) {
 				return ApiResponse.success(CursorResponse.empty());
