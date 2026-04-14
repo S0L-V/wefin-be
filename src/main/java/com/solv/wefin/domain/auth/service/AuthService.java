@@ -158,8 +158,19 @@ public class AuthService {
 
     @Transactional
     public String refresh(String refreshToken) {
+        RefreshToken savedToken = getValidRefreshToken(refreshToken);
 
-        // 토큰 유효성 검증
+        return jwtProvider.generateAccessToken(savedToken.getUserId());
+    }
+
+    @Transactional
+    public void logout(String refreshToken) {
+        RefreshToken savedToken = getValidRefreshToken(refreshToken);
+
+        savedToken.revoke();
+    }
+
+    private RefreshToken getValidRefreshToken(String refreshToken) {
         if (!jwtProvider.isValid(refreshToken) || !"refresh".equals(jwtProvider.getTokenType(refreshToken))) {
             throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
         }
@@ -176,18 +187,15 @@ public class AuthService {
         RefreshToken savedToken = refreshTokenRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_INVALID_TOKEN));
 
-        // 토큰 일치 여부 확인
         if (!savedToken.getToken().equals(refreshToken) || savedToken.isRevoked()) {
             throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
         }
 
-        // 만료 체크
         if (!savedToken.getExpiresAt().isAfter(OffsetDateTime.now())) {
             throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
         }
 
-        // 새 access token 발급
-        return jwtProvider.generateAccessToken(userId);
+        return savedToken;
     }
 
     private BusinessException mapConstraintViolation(DataIntegrityViolationException e) {
