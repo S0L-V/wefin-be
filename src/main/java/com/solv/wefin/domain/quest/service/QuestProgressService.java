@@ -6,6 +6,7 @@ import com.solv.wefin.domain.quest.entity.UserQuest;
 import com.solv.wefin.domain.quest.repository.UserQuestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -20,6 +21,7 @@ public class QuestProgressService {
 
     private final UserQuestRepository userQuestRepository;
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleEvent(UUID userId, QuestEventType eventType) {
         List<UserQuest> todayUserQuests =
                 userQuestRepository.findTodayUserQuestsForUpdate(userId, LocalDate.now());
@@ -33,6 +35,7 @@ public class QuestProgressService {
                 );
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleProfitRate(UUID userId, BigDecimal profitRate) {
         List<UserQuest> todayUserQuests =
                 userQuestRepository.findTodayUserQuests(userId, LocalDate.now());
@@ -50,6 +53,7 @@ public class QuestProgressService {
                 });
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleGameRank(UUID userId, int rank) {
         List<UserQuest> todayUserQuests =
                 userQuestRepository.findTodayUserQuests(userId, LocalDate.now());
