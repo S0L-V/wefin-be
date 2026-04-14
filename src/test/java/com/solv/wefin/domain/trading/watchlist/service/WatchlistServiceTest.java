@@ -35,6 +35,7 @@ class WatchlistServiceTest {
     @Mock private UserInterestRepository userInterestRepository;
     @Mock private StockRepository stockRepository;
     @Mock private MarketService marketService;
+    @Mock private com.solv.wefin.domain.interest.service.ManualInterestLockService manualInterestLockService;
     @InjectMocks private WatchlistService watchlistService;
 
     private final UUID userId = UUID.randomUUID();
@@ -69,10 +70,10 @@ class WatchlistServiceTest {
         void success() {
             // given
             when(stockRepository.existsByStockCode("005930")).thenReturn(true);
-            when(userInterestRepository.existsByUserIdAndInterestTypeAndInterestValue(
+            when(userInterestRepository.existsByUserIdAndInterestTypeAndInterestValueAndManualRegisteredTrue(
                     userId, InterestType.STOCK.name(), "005930"))
                     .thenReturn(false);
-            when(userInterestRepository.countByUserIdAndInterestType(
+            when(userInterestRepository.countByUserIdAndInterestTypeAndManualRegisteredTrue(
                     userId, InterestType.STOCK.name()))
                     .thenReturn(0L);
 
@@ -94,7 +95,7 @@ class WatchlistServiceTest {
         void alreadyExists() {
             // given
             when(stockRepository.existsByStockCode("005930")).thenReturn(true);
-            when(userInterestRepository.existsByUserIdAndInterestTypeAndInterestValue(
+            when(userInterestRepository.existsByUserIdAndInterestTypeAndInterestValueAndManualRegisteredTrue(
                     userId, InterestType.STOCK.name(), "005930"))
                     .thenReturn(true);
 
@@ -110,10 +111,10 @@ class WatchlistServiceTest {
         void limitExceeded() {
             // given
             when(stockRepository.existsByStockCode("005930")).thenReturn(true);
-            when(userInterestRepository.existsByUserIdAndInterestTypeAndInterestValue(
+            when(userInterestRepository.existsByUserIdAndInterestTypeAndInterestValueAndManualRegisteredTrue(
                     userId, InterestType.STOCK.name(), "005930"))
                     .thenReturn(false);
-            when(userInterestRepository.countByUserIdAndInterestType(
+            when(userInterestRepository.countByUserIdAndInterestTypeAndManualRegisteredTrue(
                     userId, InterestType.STOCK.name()))
                     .thenReturn(10L);
 
@@ -130,17 +131,15 @@ class WatchlistServiceTest {
     class DeleteUserInterest {
 
         @Test
-        @DisplayName("정상 삭제 — 가중치 차감 후 row 삭제")
+        @DisplayName("정상 삭제 — 수동 등록 row만 삭제, 피드백 가중치 row는 유지")
         void success() {
             // when
             watchlistService.deleteUserInterest(userId, "005930");
 
-            // then — upsertWeight가 delete보다 먼저 호출되는지 순서 검증
-            InOrder inOrder = inOrder(userInterestRepository);
-            inOrder.verify(userInterestRepository).upsertWeight(
-                    userId, InterestType.STOCK.name(), "005930", WatchlistService.DELETE_WATCHLIST_WEIGHT);
-            inOrder.verify(userInterestRepository).deleteByUserIdAndInterestTypeAndInterestValue(
+            // then
+            verify(userInterestRepository).deleteByUserIdAndInterestTypeAndInterestValueAndManualRegisteredTrue(
                     userId, InterestType.STOCK.name(), "005930");
+            verify(userInterestRepository, never()).upsertWeight(any(), anyString(), anyString(), any());
         }
     }
 
@@ -155,7 +154,7 @@ class WatchlistServiceTest {
             UserInterest interest = mock(UserInterest.class);
             when(interest.getInterestValue()).thenReturn("005930");
 
-            when(userInterestRepository.findByUserIdAndInterestType(userId, InterestType.STOCK.name()))
+            when(userInterestRepository.findByUserIdAndInterestTypeAndManualRegisteredTrue(userId, InterestType.STOCK.name()))
                     .thenReturn(List.of(interest));
 
             Stock stock = mockStock();
