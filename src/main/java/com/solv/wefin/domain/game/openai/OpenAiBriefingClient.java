@@ -1,6 +1,9 @@
 package com.solv.wefin.domain.game.openai;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -17,12 +20,15 @@ public class OpenAiBriefingClient {
 
     private final RestClient restClient;
     private final OpenAiProperties properties;
+    private final ObjectMapper objectMapper;
 
     public OpenAiBriefingClient(
             @Qualifier("openAiRestClient") RestClient restClient,
-            OpenAiProperties properties) {
+            OpenAiProperties properties,
+            ObjectMapper objectMapper) {
         this.restClient = restClient;
         this.properties = properties;
+        this.objectMapper = objectMapper;
 
         if (properties.getApiKey() == null || properties.getApiKey().isBlank()) {
             log.warn("[OpenAI] API 키가 설정되지 않았습니다. 브리핑 생성이 실패합니다.");
@@ -34,9 +40,9 @@ public class OpenAiBriefingClient {
      * 뉴스 Entity에 의존하지 않고 제목/요약/URL/카테고리만 받는다.
      *
      * @return 생성된 브리핑 텍스트, 실패 시 빈 Optional 대신 예외를 던진다.
-     *         (폴백 처리는 호출하는 Service에서 담당)
+     *         (폴백 처리는 호출하는 Service에서 ��당)
      */
-    public String generateBriefing(LocalDate date, List<ArticleSummary> articles) {
+    public BriefingParts generateBriefing(LocalDate date, List<ArticleSummary> articles) {
         String newsContext = buildNewsContext(articles);
         String userPrompt = buildPrompt(date, newsContext);
 
@@ -49,7 +55,8 @@ public class OpenAiBriefingClient {
                         new ChatRequest.Message("user", userPrompt)
                 ),
                 properties.getMaxTokens(),
-                properties.getTemperature()
+                properties.getTemperature(),
+                new ChatRequest.ResponseFormat("json_object")
         );
 
         ChatResponse response = restClient.post()
@@ -64,7 +71,24 @@ public class OpenAiBriefingClient {
 
         String content = response.choices().get(0).message().content();
         log.info("[브리핑] OpenAI 호출 완료: date={}", date);
-        return content;
+        return parseBriefingJson(content);
+    }
+
+    private BriefingParts parseBriefingJson(String json) {
+        try {
+            JsonNode node = objectMapper.readTree(json);
+            String marketOverview = node.path("marketOverview").asText("");
+            String keyIssues = node.path("keyIssues").asText("");
+            String investmentHint = node.path("investmentHint").asText("");
+
+            if (marketOverview.isBlank() || keyIssues.isBlank() || investmentHint.isBlank()) {
+                throw new IllegalStateException("OpenAI JSON 응답에 필수 필드가 비어 있습니다: " + json);
+            }
+
+            return new BriefingParts(marketOverview, keyIssues, investmentHint);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("OpenAI JSON 파싱 실패: " + json, e);
+        }
     }
 
     // ── 내부 메서드 ──────────────────────────────────────────
@@ -79,7 +103,6 @@ public class OpenAiBriefingClient {
                             && !a.summary().isBlank()
                             && !a.summary().equals(a.title());
                     return "[" + a.category() + "] 제목: " + a.title()
-                            + "\n    URL: " + a.url()
                             + (hasSummary ? "\n    내용: " + a.summary() : "");
                 })
                 .collect(Collectors.joining("\n"));
@@ -87,7 +110,7 @@ public class OpenAiBriefingClient {
 
     private String buildPrompt(LocalDate date, String newsContext) {
         return String.format("""
-                아래는 %s 날짜의 금융 뉴스 기사들입니다.
+                아래는 특정 날짜의 금융 뉴스 기사들입니다.
 
                 [뉴스 기사]
                 %s
@@ -96,22 +119,20 @@ public class OpenAiBriefingClient {
                 - 위 기사들의 내용만 근거로 분석하세요.
                 - 기사에 없는 내용을 추측하거나 덧붙이지 마세요.
                 - 당신이 알고 있는 사전 지식은 절대 사용하지 마세요.
-                - 각 주요 이슈 끝에 해당 기사의 URL을 괄호 안에 넣으세요.
+                - URL이나 링크를 응답에 절대 포함하지 마세요.
+                - 날짜, 연도, 월, 일을 응답에 절대 포함하지 마세요. ("2021년", "올해", "1월" 등 금지)
                 - 번호 표기("기사 1" 등)는 절대 사용하지 마세요.
                 - 이모티콘을 사용하지 마세요.
 
-                반드시 아래 형식으로 응답하세요:
-
-                [시장 개요] (4~5문장, 전체 시장 동향을 구체적 수치와 함께 상세히 요약)
-                [주요 이슈]
-                - 가장 영향력 있는 섹터/이슈 (https://...)
-                - 두 번째 영향력 있는 섹터/이슈 (https://...)
-                - 세 번째 영향력 있는 섹터/이슈 (https://...)
-                [투자 힌트] (1~2문장, 특정 종목명 언급 금지)
+                반드시 아래 JSON 형식으로 응답하세요:
+                {
+                  "marketOverview": "5~7문장, 그 날 가장 중요한 섹터 2~3개를 중심으로 구체적 수치와 함께 상세히 분석",
+                  "keyIssues": "- 가장 영향력 있는 섹터/이슈\\n- 두 번째 영향력 있는 섹터/이슈\\n- 세 번째 영향력 있는 섹터/이슈",
+                  "investmentHint": "1~2문장, 특정 종목명 언급 금지"
+                }
 
                 주요 이슈는 기사들을 종합 분석하여 시장에 가장 영향력이 큰 3개만 선별하세요.
                 """,
-                date.toString(),
                 newsContext
         );
     }
@@ -137,13 +158,22 @@ public class OpenAiBriefingClient {
             String category
     ) {}
 
+    /** OpenAI JSON 응답을 파싱한 3파트 브리핑 결과. */
+    public record BriefingParts(
+            String marketOverview,
+            String keyIssues,
+            String investmentHint
+    ) {}
+
     record ChatRequest(
             String model,
             List<Message> messages,
             @JsonProperty("max_tokens") int maxTokens,
-            double temperature
+            double temperature,
+            @JsonProperty("response_format") ResponseFormat responseFormat
     ) {
         record Message(String role, String content) {}
+        record ResponseFormat(String type) {}
     }
 
     record ChatResponse(
