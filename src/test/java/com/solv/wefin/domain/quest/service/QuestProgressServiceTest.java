@@ -66,7 +66,7 @@ class QuestProgressServiceTest {
         UserQuest profitRateQuest = createUserQuest(userId, QuestEventType.CHECK_PROFIT_RATE, QuestCompleteType.PERCENT, 5, 0);
         UserQuest countQuest = createUserQuest(userId, QuestEventType.CHECK_PROFIT_RATE, QuestCompleteType.COUNT, 3, 0);
 
-        when(userQuestRepository.findTodayUserQuests(eq(userId), any(LocalDate.class)))
+        when(userQuestRepository.findTodayUserQuestsForUpdate(eq(userId), any(LocalDate.class)))
                 .thenReturn(List.of(profitRateQuest, countQuest));
 
         // when
@@ -77,7 +77,7 @@ class QuestProgressServiceTest {
         assertEquals(QuestStatus.COMPLETED, profitRateQuest.getStatus());
         assertEquals(0, countQuest.getProgress());
         assertEquals(QuestStatus.NOT_STARTED, countQuest.getStatus());
-        verify(userQuestRepository).findTodayUserQuests(eq(userId), any(LocalDate.class));
+        verify(userQuestRepository).findTodayUserQuestsForUpdate(eq(userId), any(LocalDate.class));
     }
 
     @Test
@@ -87,7 +87,7 @@ class QuestProgressServiceTest {
         UUID userId = UUID.randomUUID();
         UserQuest rankQuest = createUserQuest(userId, QuestEventType.CHECK_GAME_RANK, QuestCompleteType.COUNT, 3, 0);
 
-        when(userQuestRepository.findTodayUserQuests(eq(userId), any(LocalDate.class)))
+        when(userQuestRepository.findTodayUserQuestsForUpdate(eq(userId), any(LocalDate.class)))
                 .thenReturn(List.of(rankQuest));
 
         // when
@@ -96,7 +96,7 @@ class QuestProgressServiceTest {
         // then
         assertEquals(2, rankQuest.getProgress());
         assertEquals(QuestStatus.COMPLETED, rankQuest.getStatus());
-        verify(userQuestRepository).findTodayUserQuests(eq(userId), any(LocalDate.class));
+        verify(userQuestRepository).findTodayUserQuestsForUpdate(eq(userId), any(LocalDate.class));
     }
 
     @Test
@@ -106,7 +106,7 @@ class QuestProgressServiceTest {
         UUID userId = UUID.randomUUID();
         UserQuest rankQuest = createUserQuest(userId, QuestEventType.CHECK_GAME_RANK, QuestCompleteType.COUNT, 3, 0);
 
-        when(userQuestRepository.findTodayUserQuests(eq(userId), any(LocalDate.class)))
+        when(userQuestRepository.findTodayUserQuestsForUpdate(eq(userId), any(LocalDate.class)))
                 .thenReturn(List.of(rankQuest));
 
         // when
@@ -115,7 +115,7 @@ class QuestProgressServiceTest {
         // then
         assertEquals(5, rankQuest.getProgress());
         assertEquals(QuestStatus.IN_PROGRESS, rankQuest.getStatus());
-        verify(userQuestRepository).findTodayUserQuests(eq(userId), any(LocalDate.class));
+        verify(userQuestRepository).findTodayUserQuestsForUpdate(eq(userId), any(LocalDate.class));
     }
 
     private UserQuest createUserQuest(
