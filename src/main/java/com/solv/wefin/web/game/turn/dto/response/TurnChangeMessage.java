@@ -40,7 +40,9 @@ public record TurnChangeMessage(
         AtomicInteger rankCounter = new AtomicInteger(1);
 
         List<RankingEntry> rankings = snapshots.stream()
-                .sorted(Comparator.comparing(SnapshotData::totalAsset).reversed())
+                .sorted(Comparator.comparing(SnapshotData::totalAsset).reversed()
+                        .thenComparing(Comparator.comparing(SnapshotData::profitRate).reversed())
+                        .thenComparing(SnapshotData::userId))
                 .map(s -> new RankingEntry(
                         rankCounter.getAndIncrement(),
                         s.userId(),
