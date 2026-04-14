@@ -90,9 +90,8 @@ class PaymentConfirmServiceTest {
         OffsetDateTime startedAt = OffsetDateTime.now();
         OffsetDateTime expiredAt = startedAt.plusMonths(1);
 
-        given(paymentRepository.findByOrderId(orderId))
+        given(paymentRepository.findByOrderIdAndUserUserId(orderId, userId))
                 .willReturn(Optional.of(payment));
-        given(payment.isOwnedBy(userId)).willReturn(true);
         given(payment.isReady()).willReturn(true);
         given(payment.getAmount()).willReturn(amount);
 
@@ -113,7 +112,6 @@ class PaymentConfirmServiceTest {
         given(payment.getOrderId()).willReturn(orderId);
         given(confirmPlan.getPlanId()).willReturn(1L);
         given(confirmPlan.getPlanName()).willReturn("월간 이용권");
-        given(payment.getAmount()).willReturn(amount);
         given(payment.getProvider()).willReturn(PaymentProvider.TOSS);
         given(payment.getStatus()).willReturn(PaymentStatus.PAID);
         given(payment.getProviderPaymentKey()).willReturn(paymentKey);
@@ -154,7 +152,7 @@ class PaymentConfirmServiceTest {
         String orderId = "ORDER-NOT-FOUND";
         BigDecimal amount = new BigDecimal("9900");
 
-        given(paymentRepository.findByOrderId(orderId))
+        given(paymentRepository.findByOrderIdAndUserUserId(orderId, userId))
                 .willReturn(Optional.empty());
 
         assertThatThrownBy(() -> paymentService.confirmPayment(userId, paymentKey, orderId, amount))
@@ -166,25 +164,21 @@ class PaymentConfirmServiceTest {
     }
 
     @Test
-    @DisplayName("본인 결제가 아니면 PAYMENT_OWNERSHIP_MISMATCH 예외가 발생한다")
-    void confirmPayment_fail_whenOwnershipMismatch() {
+    @DisplayName("타인의 주문번호로 요청해도 PAYMENT_NOT_FOUND 예외가 발생한다")
+    void confirmPayment_fail_whenOrderDoesNotBelongToUser() {
         String paymentKey = "pay_test_123";
-        String orderId = "ORDER-20260414-12345";
+        String orderId = "ORDER-20260414-OTHER";
         BigDecimal amount = new BigDecimal("9900");
 
-        Payment payment = mock(Payment.class);
-
-        given(paymentRepository.findByOrderId(orderId))
-                .willReturn(Optional.of(payment));
-        given(payment.isOwnedBy(userId)).willReturn(false);
+        given(paymentRepository.findByOrderIdAndUserUserId(orderId, userId))
+                .willReturn(Optional.empty());
 
         assertThatThrownBy(() -> paymentService.confirmPayment(userId, paymentKey, orderId, amount))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
-                .isEqualTo(ErrorCode.PAYMENT_OWNERSHIP_MISMATCH);
+                .isEqualTo(ErrorCode.PAYMENT_NOT_FOUND);
 
-        verify(subscriptionRepository, never()).existsByUserUserIdAndStatus(any(), any());
-        verifyNoInteractions(tossPaymentClient, paymentConfirmWriter);
+        verifyNoInteractions(subscriptionRepository, tossPaymentClient, paymentConfirmWriter);
     }
 
     @Test
@@ -196,9 +190,8 @@ class PaymentConfirmServiceTest {
 
         Payment payment = mock(Payment.class);
 
-        given(paymentRepository.findByOrderId(orderId))
+        given(paymentRepository.findByOrderIdAndUserUserId(orderId, userId))
                 .willReturn(Optional.of(payment));
-        given(payment.isOwnedBy(userId)).willReturn(true);
         given(payment.isReady()).willReturn(false);
 
         assertThatThrownBy(() -> paymentService.confirmPayment(userId, paymentKey, orderId, amount))
@@ -218,9 +211,8 @@ class PaymentConfirmServiceTest {
 
         Payment payment = mock(Payment.class);
 
-        given(paymentRepository.findByOrderId(orderId))
+        given(paymentRepository.findByOrderIdAndUserUserId(orderId, userId))
                 .willReturn(Optional.of(payment));
-        given(payment.isOwnedBy(userId)).willReturn(true);
         given(payment.isReady()).willReturn(true);
         given(payment.getAmount()).willReturn(new BigDecimal("9900"));
 
@@ -247,9 +239,8 @@ class PaymentConfirmServiceTest {
 
         Payment payment = mock(Payment.class);
 
-        given(paymentRepository.findByOrderId(orderId))
+        given(paymentRepository.findByOrderIdAndUserUserId(orderId, userId))
                 .willReturn(Optional.of(payment));
-        given(payment.isOwnedBy(userId)).willReturn(true);
         given(payment.isReady()).willReturn(true);
         given(payment.getAmount()).willReturn(amount);
         given(subscriptionRepository.existsByUserUserIdAndStatus(userId, SubscriptionStatus.ACTIVE))
@@ -273,9 +264,8 @@ class PaymentConfirmServiceTest {
 
         Payment payment = mock(Payment.class);
 
-        given(paymentRepository.findByOrderId(orderId))
+        given(paymentRepository.findByOrderIdAndUserUserId(orderId, userId))
                 .willReturn(Optional.of(payment));
-        given(payment.isOwnedBy(userId)).willReturn(true);
         given(payment.isReady()).willReturn(true);
         given(payment.getAmount()).willReturn(amount);
         given(subscriptionRepository.existsByUserUserIdAndStatus(userId, SubscriptionStatus.ACTIVE))

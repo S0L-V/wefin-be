@@ -86,12 +86,8 @@ public class PaymentService {
             String orderId,
             BigDecimal amount
     ) {
-        Payment payment = paymentRepository.findByOrderId(orderId)
+        Payment payment = paymentRepository.findByOrderIdAndUserUserId(orderId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
-
-        if (!payment.isOwnedBy(userId)) {
-            throw new BusinessException(ErrorCode.PAYMENT_OWNERSHIP_MISMATCH);
-        }
 
         if (!payment.isReady()) {
             throw new BusinessException(ErrorCode.PAYMENT_NOT_READY);
