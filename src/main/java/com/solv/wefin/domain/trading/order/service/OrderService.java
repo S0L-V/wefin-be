@@ -4,8 +4,14 @@ import static com.solv.wefin.domain.trading.common.TradingConstants.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.List;
 import java.util.UUID;
 
+import com.solv.wefin.domain.quest.entity.QuestEventType;
+import com.solv.wefin.domain.quest.service.QuestProgressService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +23,7 @@ import com.solv.wefin.domain.trading.common.StockInfoProvider;
 import com.solv.wefin.domain.trading.matching.event.OrderMatchedEvent;
 import com.solv.wefin.domain.trading.order.dto.OrderCancelInfo;
 import com.solv.wefin.domain.trading.order.dto.OrderInfo;
+import com.solv.wefin.domain.trading.order.dto.OrderSearchCondition;
 import com.solv.wefin.domain.trading.order.entity.Order;
 import com.solv.wefin.domain.trading.order.entity.OrderSide;
 import com.solv.wefin.domain.trading.order.entity.OrderType;
@@ -34,6 +41,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@Slf4j
 public class OrderService {
 
 	private final OrderRepository orderRepository;
@@ -43,6 +51,7 @@ public class OrderService {
 	private final StockInfoProvider stockInfoProvider;
 	private final TradeService tradeService;
 	private final ApplicationEventPublisher eventPublisher;
+	private final QuestProgressService questProgressService;
 
 	@Transactional
 	public OrderInfo buyMarket(Long virtualAccountId, Long stockId, Integer quantity) {
@@ -82,6 +91,8 @@ public class OrderService {
 			order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
 			quantity, currentPrice, fee, account.getBalance()
 		));
+
+		questProgressService.handleEvent(account.getUserId(), QuestEventType.BUY_STOCK);
 
 		return new OrderInfo(order, stock.getStockCode(), stock.getStockName(), currentPrice,
 			totalAmount, BigDecimal.ZERO, BigDecimal.ZERO, account.getBalance());
@@ -149,6 +160,12 @@ public class OrderService {
 			order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
 			quantity, currentPrice, fee, tax, realizedAmount, account.getBalance()
 		));
+
+		try {
+			questProgressService.handleEvent(account.getUserId(), QuestEventType.SELL_STOCK);
+		} catch (RuntimeException e) {
+			log.warn("퀘스트 진행도 반영 실패 userId={}", account.getUserId(), e);
+		}
 
 		return new OrderInfo(order, stock.getStockCode(), stock.getStockName(), currentPrice,
 			totalAmount, tax, realizedAmount, account.getBalance());
@@ -238,6 +255,20 @@ public class OrderService {
 
 		return new OrderInfo(order, stock.getStockCode(), stock.getStockName(),
 			newPrice, totalAmount, order.getTax(), BigDecimal.ZERO, account.getBalance());
+	}
+
+	public List<Order> searchOrders(Long virtualAccountId, OrderSearchCondition condition,
+									Long cursor, int size) {
+		return orderRepository.searchOrders(virtualAccountId, condition, cursor, size);
+	}
+
+	public List<Order> findPendingOrders(Long virtualAccountId) {
+		return orderRepository.findPendingOrders(virtualAccountId);
+	}
+
+	public List<Order> findTodayFilledOrders(Long virtualAccountId) {
+		LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+		return orderRepository.findTodayFilledOrders(virtualAccountId, today);
 	}
 
 	private static void validateQuantity(Integer quantity) {

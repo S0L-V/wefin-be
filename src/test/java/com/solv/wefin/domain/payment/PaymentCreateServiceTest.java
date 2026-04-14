@@ -13,8 +13,10 @@ import com.solv.wefin.domain.payment.entity.SubscriptionStatus;
 import com.solv.wefin.domain.payment.repository.PaymentRepository;
 import com.solv.wefin.domain.payment.repository.SubscriptionPlanRepository;
 import com.solv.wefin.domain.payment.repository.SubscriptionRepository;
+import com.solv.wefin.domain.payment.service.PaymentConfirmWriter;
 import com.solv.wefin.domain.payment.service.PaymentService;
 import com.solv.wefin.domain.payment.service.PaymentWriter;
+import com.solv.wefin.domain.payment.service.TossPaymentClient;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,11 +35,12 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class PaymentServiceTest {
+class PaymentCreateServiceTest {
 
     @Mock
     private PaymentRepository paymentRepository;
@@ -54,6 +57,12 @@ class PaymentServiceTest {
     @Mock
     private PaymentWriter paymentWriter;
 
+    @Mock
+    private PaymentConfirmWriter paymentConfirmWriter;
+
+    @Mock
+    private TossPaymentClient tossPaymentClient;
+
     @InjectMocks
     private PaymentService paymentService;
 
@@ -66,7 +75,6 @@ class PaymentServiceTest {
     void setUp() {
         userId = UUID.randomUUID();
         command = new CreatePaymentCommand(1L, "TOSS");
-
         plan = mock(SubscriptionPlan.class);
         user = mock(User.class);
     }
@@ -83,7 +91,7 @@ class PaymentServiceTest {
                 .isEqualTo(ErrorCode.PLAN_NOT_FOUND);
 
         verify(subscriptionPlanRepository).findById(command.planId());
-        verifyNoInteractions(subscriptionRepository, userRepository, paymentWriter, paymentRepository);
+        verifyNoInteractions(subscriptionRepository, userRepository, paymentWriter, paymentRepository, tossPaymentClient, paymentConfirmWriter);
     }
 
     @Test
@@ -100,7 +108,7 @@ class PaymentServiceTest {
 
         verify(subscriptionPlanRepository).findById(command.planId());
         verify(plan).isAvailable();
-        verifyNoInteractions(subscriptionRepository, userRepository, paymentWriter, paymentRepository);
+        verifyNoInteractions(subscriptionRepository, userRepository, paymentWriter, paymentRepository, tossPaymentClient, paymentConfirmWriter);
     }
 
     @Test
@@ -118,7 +126,7 @@ class PaymentServiceTest {
                 .isEqualTo(ErrorCode.ACTIVE_SUBSCRIPTION_ALREADY_EXISTS);
 
         verify(subscriptionRepository).existsByUserUserIdAndStatus(userId, SubscriptionStatus.ACTIVE);
-        verifyNoInteractions(userRepository, paymentWriter);
+        verifyNoInteractions(userRepository, paymentWriter, tossPaymentClient, paymentConfirmWriter);
         verify(paymentRepository, never())
                 .findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(any(), any(), any(), any());
     }
@@ -163,7 +171,7 @@ class PaymentServiceTest {
         assertThat(result.requestedAt()).isEqualTo(requestedAt);
 
         verify(userRepository, never()).findById(any());
-        verifyNoInteractions(paymentWriter);
+        verifyNoInteractions(paymentWriter, tossPaymentClient, paymentConfirmWriter);
     }
 
     @Test
@@ -210,6 +218,7 @@ class PaymentServiceTest {
         assertThat(result.requestedAt()).isEqualTo(requestedAt);
 
         verify(paymentWriter).saveReadyPayment(plan, user, PaymentProvider.TOSS);
+        verifyNoInteractions(tossPaymentClient, paymentConfirmWriter);
     }
 
     @Test
@@ -256,6 +265,7 @@ class PaymentServiceTest {
         verify(paymentRepository, times(2))
                 .findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(
                         userId, 1L, PaymentProvider.TOSS, PaymentStatus.READY);
+        verifyNoInteractions(tossPaymentClient, paymentConfirmWriter);
     }
 
     @Test
@@ -287,5 +297,6 @@ class PaymentServiceTest {
         verify(paymentRepository, times(4))
                 .findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(
                         userId, 1L, PaymentProvider.TOSS, PaymentStatus.READY);
+        verifyNoInteractions(tossPaymentClient, paymentConfirmWriter);
     }
 }

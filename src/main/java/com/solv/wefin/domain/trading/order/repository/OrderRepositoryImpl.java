@@ -1,0 +1,103 @@
+package com.solv.wefin.domain.trading.order.repository;
+
+import static com.solv.wefin.domain.trading.order.entity.QOrder.order;
+
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.List;
+
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.solv.wefin.domain.trading.order.dto.OrderSearchCondition;
+import com.solv.wefin.domain.trading.order.entity.Order;
+import com.solv.wefin.domain.trading.order.entity.OrderStatus;
+
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor
+public class OrderRepositoryImpl implements OrderRepositoryCustom {
+
+	private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+
+	private final JPAQueryFactory queryFactory;
+
+	@Override
+	public List<Order> searchOrders(Long virtualAccountId, OrderSearchCondition condition,
+									Long cursor, int size) {
+		return queryFactory
+			.selectFrom(order)
+			.where(
+				accountEq(virtualAccountId),
+				statusEq(condition.status()),
+				stockIdEq(condition.stockId()),
+				createdAtGoe(condition.startDate()),
+				createdAtLt(condition.endDate()),
+				cursorLt(cursor)
+			)
+			.orderBy(order.orderId.desc())
+			.limit(size + 1)
+			.fetch();
+	}
+
+	@Override
+	public List<Order> findPendingOrders(Long virtualAccountId) {
+		return queryFactory
+			.selectFrom(order)
+			.where(
+				accountEq(virtualAccountId),
+				order.status.eq(OrderStatus.PENDING)
+			)
+			.orderBy(order.orderId.desc())
+			.fetch();
+	}
+
+	@Override
+	public List<Order> findTodayFilledOrders(Long virtualAccountId, LocalDate today) {
+		OffsetDateTime startOfDay = today.atStartOfDay(KST).toOffsetDateTime();
+		OffsetDateTime startOfNextDay = today.plusDays(1)
+			.atStartOfDay(KST).toOffsetDateTime();
+
+		return queryFactory
+			.selectFrom(order)
+			.where(
+				accountEq(virtualAccountId),
+				order.status.eq(OrderStatus.FILLED),
+				order.createdAt.goe(startOfDay),
+				order.createdAt.lt(startOfNextDay)
+			)
+			.orderBy(order.orderId.desc())
+			.fetch();
+	}
+
+	private BooleanExpression accountEq(Long virtualAccountId) {
+		return order.virtualAccountId.eq(virtualAccountId);
+	}
+
+	private BooleanExpression statusEq(OrderStatus status) {
+		return status != null ? order.status.eq(status) : null;
+	}
+
+	private BooleanExpression stockIdEq(Long stockId) {
+		return stockId != null ? order.stockId.eq(stockId) : null;
+	}
+
+	private BooleanExpression createdAtGoe(LocalDate startDate) {
+		if (startDate == null)
+			return null;
+		OffsetDateTime start = startDate.atStartOfDay(KST).toOffsetDateTime();
+		return order.createdAt.goe(start);
+	}
+
+	private BooleanExpression createdAtLt(LocalDate endDate) {
+		if (endDate == null)
+			return null;
+		OffsetDateTime end = endDate.plusDays(1)
+			.atStartOfDay(KST).toOffsetDateTime();
+		return order.createdAt.lt(end);
+	}
+
+	private BooleanExpression cursorLt(Long cursor) {
+		return cursor != null ? order.orderId.lt(cursor) : null;
+	}
+}

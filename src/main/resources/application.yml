@@ -66,6 +66,10 @@ summary:
   collect:
     cron: "0 */30 * * * *"
 
+market:
+  trend:
+    cron: "0 */30 * * * *"
+
 websocket:
   allowed-origins:
     - http://localhost:5173
@@ -73,6 +77,10 @@ websocket:
 
 jwt:
   secret: ${JWT_SECRET:wefin-test-jwt-secret-key-1234567890}
+
+toss:
+  secret-key: ${TOSS_SECRET_KEY:}
+  base-url: ${TOSS_BASE_URL:https://api.tosspayments.com}
 
 hantu:
   api:

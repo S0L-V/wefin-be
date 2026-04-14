@@ -45,6 +45,7 @@ public enum ErrorCode {
     QUEST_REWARD_NOT_ALLOWED(400, "완료된 퀘스트만 보상 처리할 수 있습니다."),
     QUEST_TARGET_VALUE_INVALID(400, "퀘스트 목표치는 1 이상이어야 합니다."),
     QUEST_REWARD_INVALID(400, "퀘스트 보상은 0 이상이어야 합니다."),
+    USER_QUEST_NOT_FOUND(404, "사용자 퀘스트를 찾을 수 없습니다."),
 
     // Common
     INVALID_INPUT(400, "잘못된 입력입니다."),
@@ -67,6 +68,11 @@ public enum ErrorCode {
     PLAN_INACTIVE(400, "비활성화된 구독 상품입니다."),
     ACTIVE_SUBSCRIPTION_ALREADY_EXISTS(409, "이미 활성 구독이 존재합니다."),
     INVALID_PROVIDER(400, "지원하지 않는 결제사입니다."),
+    PAYMENT_NOT_FOUND(404, "결제 정보를 찾을 수 없습니다."),
+    PAYMENT_OWNERSHIP_MISMATCH(403, "본인의 결제만 처리할 수 있습니다."),
+    PAYMENT_NOT_READY(400, "승인 가능한 결제 상태가 아닙니다."),
+    PAYMENT_AMOUNT_MISMATCH(400, "결제 금액이 일치하지 않습니다."),
+    PAYMENT_CONFIRM_FAILED(502, "토스 결제 승인에 실패했습니다."),
 
     // Order - BUY
     ORDER_INSUFFICIENT_BALANCE(400, "예수금이 부족합니다."),
@@ -159,7 +165,9 @@ public enum ErrorCode {
     // Vote
     VOTE_ALREADY_CAST(409, "이미 투표하였습니다."),
     VOTE_NOT_IN_PROGRESS(400, "진행 중인 투표가 없습니다."),
-    VOTE_ALREADY_IN_PROGRESS(409, "이미 투표가 진행 중입니다.");
+    VOTE_ALREADY_IN_PROGRESS(409, "이미 투표가 진행 중입니다."),
+    // MarketTrend
+    MARKET_TREND_ALREADY_RUNNING(409, "금융 동향 생성이 이미 실행 중입니다.");
 
     private final int status;
     private final String message;

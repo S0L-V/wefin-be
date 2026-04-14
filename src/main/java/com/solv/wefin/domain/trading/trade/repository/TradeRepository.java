@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 import com.solv.wefin.domain.trading.trade.entity.Trade;
 
 @Repository
-public interface TradeRepository extends JpaRepository<Trade, Long> {
+public interface TradeRepository extends JpaRepository<Trade, Long>, TradeRepositoryCustom {
 
 	Optional<Trade> findByTradeNo(UUID tradeNo);
 

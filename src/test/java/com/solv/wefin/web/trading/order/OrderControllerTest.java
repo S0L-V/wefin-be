@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.UUID;
 
 import com.solv.wefin.domain.trading.order.dto.OrderCancelInfo;
+import com.solv.wefin.domain.trading.stock.entity.Stock;
+import com.solv.wefin.domain.trading.stock.service.StockService;
 import com.solv.wefin.global.config.security.JwtProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +45,8 @@ class OrderControllerTest {
 	private VirtualAccountService accountService;
 	@MockitoBean
 	private JwtProvider jwtProvider;
+	@MockitoBean
+	private StockService stockService;
 
 	private VirtualAccount mockAccount;
 	private UUID testUserId;
@@ -152,6 +156,79 @@ class OrderControllerTest {
 			.andExpect(jsonPath("$.data.status").value("CANCELLED"));
 	}
 
+	@Test
+	void 미체결_조회_성공() throws Exception {
+		// given
+		Order mockOrder = createMockOrder(OrderSide.BUY, OrderType.LIMIT, OrderStatus.PENDING);
+		given(mockOrder.getOrderId()).willReturn(1L);
+		given(mockOrder.getStockId()).willReturn(100L);
+		given(mockOrder.getRequestPrice()).willReturn(new BigDecimal("50000"));
+
+		Stock stock = mockStock(100L, "005930", "삼성전자");
+
+		given(orderService.findPendingOrders(anyLong())).willReturn(List.of(mockOrder));
+		given(stockService.findAllByIdIn(anyList())).willReturn(List.of(stock));
+
+		// when & then
+		mockMvc.perform(get("/api/order/pending")
+				.with(authentication(
+					new UsernamePasswordAuthenticationToken(testUserId, null, List.of())
+				)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data[0].status").value("PENDING"))
+			.andExpect(jsonPath("$.data[0].stockCode").value("005930"));
+	}
+
+	@Test
+	void 주문내역_커서_조회_성공() throws Exception {
+		// given
+		Order mockOrder = createMockOrder(OrderSide.BUY, OrderType.MARKET, OrderStatus.FILLED);
+		given(mockOrder.getOrderId()).willReturn(1L);
+		given(mockOrder.getStockId()).willReturn(100L);
+		given(mockOrder.getRequestPrice()).willReturn(null);
+
+		Stock stock = mockStock(100L, "005930", "삼성전자");
+
+		given(orderService.searchOrders(anyLong(), any(), any(), anyInt()))
+			.willReturn(List.of(mockOrder));
+		given(stockService.findAllByIdIn(anyList())).willReturn(List.of(stock));
+
+		// when & then
+		mockMvc.perform(get("/api/order/history")
+				.param("size", "20")
+				.with(authentication(
+					new UsernamePasswordAuthenticationToken(testUserId, null, List.of())
+				)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.content").isArray())
+			.andExpect(jsonPath("$.data.content[0].stockCode").value("005930"))
+			.andExpect(jsonPath("$.data.hasNext").value(false));
+	}
+
+	@Test
+	void 오늘_체결_조회_성공() throws Exception {
+		// given
+		Order mockOrder = createMockOrder(OrderSide.BUY, OrderType.MARKET, OrderStatus.FILLED);
+		given(mockOrder.getOrderId()).willReturn(1L);
+		given(mockOrder.getStockId()).willReturn(100L);
+		given(mockOrder.getRequestPrice()).willReturn(null);
+
+		Stock stock = mockStock(100L, "005930", "삼성전자");
+
+		given(orderService.findTodayFilledOrders(anyLong())).willReturn(List.of(mockOrder));
+		given(stockService.findAllByIdIn(anyList())).willReturn(List.of(stock));
+
+		// when & then
+		mockMvc.perform(get("/api/order/today")
+				.with(authentication(
+					new UsernamePasswordAuthenticationToken(testUserId, null, List.of())
+				)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data[0].status").value("FILLED"))
+			.andExpect(jsonPath("$.data[0].stockCode").value("005930"));
+
+	}
+
 	private Order createMockOrder(OrderSide side, OrderType type, OrderStatus status) {
 		Order mockOrder = mock(Order.class);
 		given(mockOrder.getOrderNo()).willReturn(UUID.randomUUID());
@@ -160,7 +237,16 @@ class OrderControllerTest {
 		given(mockOrder.getQuantity()).willReturn(10);
 		given(mockOrder.getStatus()).willReturn(status);
 		given(mockOrder.getFee()).willReturn(new BigDecimal("146"));
+		given(mockOrder.getTax()).willReturn(BigDecimal.ZERO);
 		given(mockOrder.getCreatedAt()).willReturn(OffsetDateTime.now());
 		return mockOrder;
+	}
+
+	private Stock mockStock(Long stockId, String stockCode, String stockName) {
+		Stock mockStock = mock(Stock.class);
+		given(mockStock.getId()).willReturn(stockId);
+		given(mockStock.getStockCode()).willReturn(stockCode);
+		given(mockStock.getStockName()).willReturn(stockName);
+		return mockStock;
 	}
 }

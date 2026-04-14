@@ -15,7 +15,7 @@ import com.solv.wefin.domain.trading.order.entity.Order;
 import jakarta.persistence.LockModeType;
 
 @Repository
-public interface OrderRepository extends JpaRepository<Order, Long> {
+public interface OrderRepository extends JpaRepository<Order, Long>, OrderRepositoryCustom {
 
 	Optional<Order> findByOrderNo(UUID orderNo);
 

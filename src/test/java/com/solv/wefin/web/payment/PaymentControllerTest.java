@@ -1,6 +1,6 @@
 package com.solv.wefin.web.payment;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.solv.wefin.domain.payment.dto.PaymentConfirmInfo;
 import com.solv.wefin.domain.payment.dto.PaymentReadyInfo;
 import com.solv.wefin.domain.payment.service.PaymentService;
 import com.solv.wefin.global.config.SecurityConfig;
@@ -26,7 +26,8 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(PaymentController.class)
 @Import({
@@ -38,9 +39,6 @@ class PaymentControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     @MockitoBean
     private PaymentService paymentService;
@@ -134,6 +132,86 @@ class PaymentControllerTest {
                 """;
 
         mockMvc.perform(post("/api/payments")
+                        .with(authentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        userId,
+                                        null,
+                                        java.util.List.of()
+                                )
+                        ))
+                        .contentType(APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("결제 승인 요청에 성공한다")
+    void confirmPayment_success() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        PaymentConfirmInfo info = new PaymentConfirmInfo(
+                1L,
+                "ORDER-20260414-12345",
+                1L,
+                "프리미엄 월간 이용권",
+                "MONTHLY",
+                new BigDecimal("9900"),
+                "TOSS",
+                "PAID",
+                "pay_test_123",
+                now,
+                now,
+                now.plusMonths(1)
+        );
+
+        given(paymentService.confirmPayment(
+                eq(userId),
+                eq("pay_test_123"),
+                eq("ORDER-20260414-12345"),
+                eq(new BigDecimal("9900"))
+        )).willReturn(info);
+
+        String requestBody = """
+                {
+                  "paymentKey": "pay_test_123",
+                  "orderId": "ORDER-20260414-12345",
+                  "amount": 9900
+                }
+                """;
+
+        mockMvc.perform(post("/api/payments/confirm")
+                        .with(authentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        userId,
+                                        null,
+                                        java.util.List.of()
+                                )
+                        ))
+                        .contentType(APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.paymentId").value(1))
+                .andExpect(jsonPath("$.data.orderId").value("ORDER-20260414-12345"))
+                .andExpect(jsonPath("$.data.status").value("PAID"))
+                .andExpect(jsonPath("$.data.providerPaymentKey").value("pay_test_123"));
+    }
+
+    @Test
+    @DisplayName("paymentKey가 없으면 400을 반환한다")
+    void confirmPayment_fail_whenPaymentKeyIsBlank() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        String requestBody = """
+                {
+                  "paymentKey": "",
+                  "orderId": "ORDER-20260414-12345",
+                  "amount": 9900
+                }
+                """;
+
+        mockMvc.perform(post("/api/payments/confirm")
                         .with(authentication(
                                 new UsernamePasswordAuthenticationToken(
                                         userId,

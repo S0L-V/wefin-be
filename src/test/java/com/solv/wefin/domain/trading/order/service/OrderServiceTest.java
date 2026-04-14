@@ -15,6 +15,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
+import com.solv.wefin.domain.quest.entity.QuestEventType;
+import com.solv.wefin.domain.quest.service.QuestProgressService;
 import com.solv.wefin.domain.trading.account.entity.VirtualAccount;
 import com.solv.wefin.domain.trading.account.service.VirtualAccountService;
 import com.solv.wefin.domain.trading.common.MarketPriceProvider;
@@ -50,6 +52,8 @@ class OrderServiceTest {
 	private StockInfoProvider stockInfoProvider;
 	@Mock
 	private ApplicationEventPublisher eventPublisher;
+	@Mock
+	private QuestProgressService questProgressService;
 
 	@InjectMocks
 	private OrderService orderService;
@@ -76,6 +80,7 @@ class OrderServiceTest {
 		verify(tradeService).createBuyTrade(any(), eq(1L), eq(1L), eq(20), any(), any(), any(), any(), any());
 		verify(portfolioService).addHolding(eq(1L), eq(1L), eq(20), any(), any());
 		verify(eventPublisher).publishEvent(any(OrderMatchedEvent.class));
+		verify(questProgressService).handleEvent(any(UUID.class), eq(QuestEventType.BUY_STOCK));
 	}
 
 	@Test
@@ -114,6 +119,7 @@ class OrderServiceTest {
 		given(virtualAccountService.getAccountWithLock(1L))
 			.willReturn(mockAccount);
 		given(mockAccount.getBalance()).willReturn(new BigDecimal("9000000"));
+		given(mockAccount.getUserId()).willReturn(UUID.randomUUID());
 
 		Portfolio mockPortfolio = mock(Portfolio.class);
 		given(mockPortfolio.getAvgPrice()).willReturn(new BigDecimal("170000"));
@@ -132,6 +138,7 @@ class OrderServiceTest {
 			any(), any(), any(), any(), any(), any(), any());
 		verify(portfolioService).deductQuantity(eq(1L), eq(1L), eq(10));
 		verify(eventPublisher).publishEvent(any(OrderMatchedEvent.class));
+		verify(questProgressService).handleEvent(any(UUID.class), eq(QuestEventType.SELL_STOCK));
 	}
 
 	@Test

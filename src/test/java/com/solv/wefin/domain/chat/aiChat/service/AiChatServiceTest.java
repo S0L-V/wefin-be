@@ -7,6 +7,8 @@ import com.solv.wefin.domain.chat.aiChat.dto.command.AiChatCommand;
 import com.solv.wefin.domain.chat.aiChat.dto.info.AiChatInfo;
 import com.solv.wefin.domain.chat.aiChat.dto.info.AiChatMessagesInfo;
 import com.solv.wefin.domain.chat.aiChat.entity.AiChatMessage;
+import com.solv.wefin.domain.quest.entity.QuestEventType;
+import com.solv.wefin.domain.quest.service.QuestProgressService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +35,7 @@ class AiChatServiceTest {
     private AiChatMessagePersistenceService aiChatMessagePersistenceService;
     private UserRepository userRepository;
     private OpenAiChatClient openAiChatClient;
+    private QuestProgressService questProgressService;
     private AiChatService aiChatService;
 
     @BeforeEach
@@ -40,11 +43,13 @@ class AiChatServiceTest {
         aiChatMessagePersistenceService = mock(AiChatMessagePersistenceService.class);
         userRepository = mock(UserRepository.class);
         openAiChatClient = mock(OpenAiChatClient.class);
+        questProgressService = mock(QuestProgressService.class);
 
         aiChatService = new AiChatService(
                 openAiChatClient,
                 aiChatMessagePersistenceService,
-                userRepository
+                userRepository,
+                questProgressService
         );
     }
 
@@ -118,6 +123,7 @@ class AiChatServiceTest {
         verify(aiChatMessagePersistenceService).saveUserMessage(user, command.message());
         verify(aiChatMessagePersistenceService).saveAiMessage(user, "최근 실적 기준으로 설명드릴게요.");
         verify(openAiChatClient).ask(historyCaptor.capture(), eq(command.message()));
+        verify(questProgressService).handleEvent(userId, QuestEventType.USE_AI_CHAT);
 
         List<AiChatMessage> history = historyCaptor.getValue();
         assertEquals(1, history.size());
