@@ -9,7 +9,9 @@ import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 @Service
@@ -41,6 +43,14 @@ public class StockService implements StockInfoProvider {
         return stockRepository.search(keyword, market).stream()
                 .map(StockSearchResponse::from)
                 .toList();
+    }
+
+    public Optional<Stock> findByStockCode(String stockCode) {
+        return stockRepository.findByStockCode(stockCode);
+    }
+
+    public List<Stock> findAllByIdIn(Collection<Long> stockIds) {
+        return stockRepository.findAllById(stockIds);
     }
 
     private Stock findByCodeOrThrow(String stockCode) {

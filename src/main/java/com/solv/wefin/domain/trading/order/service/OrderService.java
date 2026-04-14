@@ -4,6 +4,9 @@ import static com.solv.wefin.domain.trading.common.TradingConstants.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.List;
 import java.util.UUID;
 
 import com.solv.wefin.domain.quest.entity.QuestEventType;
@@ -20,6 +23,7 @@ import com.solv.wefin.domain.trading.common.StockInfoProvider;
 import com.solv.wefin.domain.trading.matching.event.OrderMatchedEvent;
 import com.solv.wefin.domain.trading.order.dto.OrderCancelInfo;
 import com.solv.wefin.domain.trading.order.dto.OrderInfo;
+import com.solv.wefin.domain.trading.order.dto.OrderSearchCondition;
 import com.solv.wefin.domain.trading.order.entity.Order;
 import com.solv.wefin.domain.trading.order.entity.OrderSide;
 import com.solv.wefin.domain.trading.order.entity.OrderType;
@@ -251,6 +255,20 @@ public class OrderService {
 
 		return new OrderInfo(order, stock.getStockCode(), stock.getStockName(),
 			newPrice, totalAmount, order.getTax(), BigDecimal.ZERO, account.getBalance());
+	}
+
+	public List<Order> searchOrders(Long virtualAccountId, OrderSearchCondition condition,
+									Long cursor, int size) {
+		return orderRepository.searchOrders(virtualAccountId, condition, cursor, size);
+	}
+
+	public List<Order> findPendingOrders(Long virtualAccountId) {
+		return orderRepository.findPendingOrders(virtualAccountId);
+	}
+
+	public List<Order> findTodayFilledOrders(Long virtualAccountId) {
+		LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+		return orderRepository.findTodayFilledOrders(virtualAccountId, today);
 	}
 
 	private static void validateQuantity(Integer quantity) {
