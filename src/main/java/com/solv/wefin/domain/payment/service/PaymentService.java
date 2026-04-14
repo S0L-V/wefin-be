@@ -30,7 +30,6 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
@@ -38,8 +37,10 @@ public class PaymentService {
     private final SubscriptionRepository subscriptionRepository;
     private final UserRepository userRepository;
     private final PaymentWriter paymentWriter;
+    private final PaymentConfirmWriter paymentConfirmWriter;
     private final TossPaymentClient tossPaymentClient;
 
+    @Transactional
     public PaymentReadyInfo createPayment(UUID userId, CreatePaymentCommand command) {
         PaymentProvider provider = PaymentProvider.from(command.provider());
 
@@ -134,7 +135,8 @@ public class PaymentService {
                 expiredAt
         );
 
-        Subscription savedSubscription = subscriptionRepository.save(subscription);
+        Subscription savedSubscription =
+                paymentConfirmWriter.savePaidPaymentAndSubscription(payment, subscription);
 
         return PaymentConfirmInfo.from(payment, savedSubscription);
     }
