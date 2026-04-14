@@ -24,6 +24,7 @@ import com.solv.wefin.domain.quest.service.QuestProgressService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -40,6 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class ChatMessageService {
 
     private final ChatMessageRepository chatMessageRepository;
@@ -123,7 +125,11 @@ public class ChatMessageService {
 
         eventPublisher.publishEvent(new ChatMessageCreatedEvent(group.getId(), info));
 
-        questProgressService.handleEvent(userId, QuestEventType.SHARE_NEWS);
+        try {
+            questProgressService.handleEvent(userId, QuestEventType.SHARE_NEWS);
+        } catch (RuntimeException e) {
+            log.warn("퀘스트 진행도 반영 실패 userId={}", userId, e);
+        }
 
         return info;
     }

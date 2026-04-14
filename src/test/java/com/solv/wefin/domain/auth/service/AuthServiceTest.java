@@ -38,7 +38,10 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -276,6 +279,42 @@ class AuthServiceTest {
         }
 
         @Test
+        @DisplayName("퀘스트 반영이 실패해도 로그인은 정상적으로 성공한다")
+        void login_success_even_when_quest_progress_update_fails() {
+            UUID userId = UUID.randomUUID();
+            OffsetDateTime expiresAt = OffsetDateTime.now().plusDays(14);
+
+            User user = User.builder()
+                    .email("test@example.com")
+                    .nickname("testuser")
+                    .password("encoded-password")
+                    .build();
+
+            ReflectionTestUtils.setField(user, "userId", userId);
+            ReflectionTestUtils.setField(user, "status", UserStatus.ACTIVE);
+
+            when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+            when(passwordEncoder.matches("pass1234", "encoded-password")).thenReturn(true);
+            when(jwtProvider.generateAccessToken(userId)).thenReturn("access-token");
+            when(jwtProvider.generateRefreshToken(userId)).thenReturn("refresh-token");
+            when(jwtProvider.getExpiration("refresh-token")).thenReturn(expiresAt);
+            when(refreshTokenRepository.findById(userId)).thenReturn(Optional.empty());
+            doThrow(new RuntimeException("quest failed"))
+                    .when(questProgressService).handleEvent(userId, QuestEventType.LOGIN);
+
+            LoginInfo result = authService.login("test@example.com", "pass1234");
+
+            verify(refreshTokenRepository).save(any(RefreshToken.class));
+            verify(questProgressService).handleEvent(userId, QuestEventType.LOGIN);
+            assertAll(
+                    () -> assertThat(result.userId()).isEqualTo(userId),
+                    () -> assertThat(result.nickname()).isEqualTo("testuser"),
+                    () -> assertThat(result.accessToken()).isEqualTo("access-token"),
+                    () -> assertThat(result.refreshToken()).isEqualTo("refresh-token")
+            );
+        }
+
+        @Test
         @DisplayName("이메일이 존재하지 않으면 로그인 실패 예외가 발생한다")
         void login_fail_when_user_not_found() {
             when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
@@ -416,7 +455,7 @@ class AuthServiceTest {
         }
 
         @Test
-        @DisplayName("refresh 타입 토큰이 아니면 AUTH_INVALID_TOKEN 예외가 발생한다")
+        @DisplayName("refresh 토큰 타입이 아니면 AUTH_INVALID_TOKEN 예외가 발생한다")
         void refresh_fail_when_token_type_is_not_refresh() {
             when(jwtProvider.isValid("access-token")).thenReturn(true);
             when(jwtProvider.getTokenType("access-token")).thenReturn("access");

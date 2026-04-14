@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import com.solv.wefin.domain.quest.entity.QuestEventType;
 import com.solv.wefin.domain.quest.service.QuestProgressService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +37,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@Slf4j
 public class OrderService {
 
 	private final OrderRepository orderRepository;
@@ -155,7 +157,11 @@ public class OrderService {
 			quantity, currentPrice, fee, tax, realizedAmount, account.getBalance()
 		));
 
-		questProgressService.handleEvent(account.getUserId(), QuestEventType.SELL_STOCK);
+		try {
+			questProgressService.handleEvent(account.getUserId(), QuestEventType.SELL_STOCK);
+		} catch (RuntimeException e) {
+			log.warn("퀘스트 진행도 반영 실패 userId={}", account.getUserId(), e);
+		}
 
 		return new OrderInfo(order, stock.getStockCode(), stock.getStockName(), currentPrice,
 			totalAmount, tax, realizedAmount, account.getBalance());

@@ -102,7 +102,8 @@ public class UserQuest extends BaseEntity {
         }
 
         Integer targetValue = this.dailyQuest.getTargetValue();
-        this.progress = targetValue != null ? Math.min(progress, targetValue) : progress;
+        int nextProgress = targetValue != null ? Math.min(progress, targetValue) : progress;
+        this.progress = Math.max(this.progress, nextProgress);
 
         if (progress > 0 && this.status == QuestStatus.NOT_STARTED) {
             this.status = QuestStatus.IN_PROGRESS;
