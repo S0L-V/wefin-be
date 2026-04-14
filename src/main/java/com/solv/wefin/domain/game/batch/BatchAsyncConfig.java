@@ -24,4 +24,18 @@ public class BatchAsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    @Bean("newsBatchExecutor")
+    public Executor newsBatchExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(1);
+        executor.setQueueCapacity(1);
+        executor.setThreadNamePrefix("batch-news-");
+        executor.setRejectedExecutionHandler((r, e) -> {
+            throw new RuntimeException("뉴스 배치가 이미 실행 중입니다");
+        });
+        executor.initialize();
+        return executor;
+    }
 }

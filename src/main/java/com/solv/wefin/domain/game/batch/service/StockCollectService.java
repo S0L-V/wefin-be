@@ -180,9 +180,6 @@ public class StockCollectService {
     }
 
     private String resolveMarketCode(String market) {
-        if ("KOSDAQ".equalsIgnoreCase(market)) {
-            return "Q";
-        }
         return "J";
     }
 

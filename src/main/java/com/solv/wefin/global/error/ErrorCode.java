@@ -154,7 +154,12 @@ public enum ErrorCode {
 
     // GameStock
     GAME_STOCK_NOT_FOUND(404, "해당 종목을 찾을 수 없습니다."),
-    GAME_STOCK_PRICE_NOT_FOUND(404, "해당 날짜의 주가 데이터가 없습니다.");
+    GAME_STOCK_PRICE_NOT_FOUND(404, "해당 날짜의 주가 데이터가 없습니다."),
+
+    // Vote
+    VOTE_ALREADY_CAST(409, "이미 투표하였습니다."),
+    VOTE_NOT_IN_PROGRESS(400, "진행 중인 투표가 없습니다."),
+    VOTE_ALREADY_IN_PROGRESS(409, "이미 투표가 진행 중입니다.");
 
     private final int status;
     private final String message;

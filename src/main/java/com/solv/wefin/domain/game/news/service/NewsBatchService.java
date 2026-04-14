@@ -31,7 +31,7 @@ public class NewsBatchService {
     /**
      * 비동기로 배치를 실행한다. Controller에서 즉시 응답 반환용.
      */
-    @Async("batchExecutor")
+    @Async("newsBatchExecutor")
     public void collectBatchAsync(int days) {
         collectBatch(days);
     }
