@@ -21,8 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -339,6 +338,75 @@ class AuthControllerTest {
             String requestBody = refreshRequest("invalid-refresh-token");
 
             mockMvc.perform(post("/api/auth/refresh")
+                            .with(csrf())
+                            .with(user("test"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.status").value(401))
+                    .andExpect(jsonPath("$.code").value("AUTH_INVALID_TOKEN"))
+                    .andExpect(jsonPath("$.message").value("유효하지 않은 인증 토큰입니다."));
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/auth/logout")
+    class LogoutTest {
+
+        private String logoutRequest(String refreshToken) {
+            return """
+        {
+          "refreshToken": "%s"
+        }
+        """.formatted(refreshToken);
+        }
+
+        @Test
+        @DisplayName("로그아웃 성공 시 200을 반환한다")
+        void logout_success() throws Exception {
+            String requestBody = logoutRequest("refresh-token");
+
+            mockMvc.perform(post("/api/auth/logout")
+                            .with(csrf())
+                            .with(user("test"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value(200))
+                    .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.nullValue()));
+
+            verify(authService).logout("refresh-token");
+        }
+
+        @Test
+        @DisplayName("refreshToken이 비어 있으면 validation 에러를 반환한다")
+        void logout_fail_when_refresh_token_blank() throws Exception {
+            String requestBody = """
+                {
+                  "refreshToken": ""
+                }
+                """;
+
+            mockMvc.perform(post("/api/auth/logout")
+                            .with(csrf())
+                            .with(user("test"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.code").value("AUTH_VALIDATION_FAILED"))
+                    .andExpect(jsonPath("$.data.refreshToken").value("리프레시 토큰은 필수입니다."));
+        }
+
+        @Test
+        @DisplayName("유효하지 않은 refresh token이면 401 에러를 반환한다")
+        void logout_fail_when_token_invalid() throws Exception {
+            doThrow(new BusinessException(ErrorCode.AUTH_INVALID_TOKEN))
+                    .when(authService).logout("invalid-refresh-token");
+
+            String requestBody = logoutRequest("invalid-refresh-token");
+
+            mockMvc.perform(post("/api/auth/logout")
                             .with(csrf())
                             .with(user("test"))
                             .contentType(MediaType.APPLICATION_JSON)
