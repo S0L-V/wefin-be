@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.solv.wefin.common.IntegrationTestBase;
+import com.solv.wefin.domain.quest.service.QuestProgressService;
 import com.solv.wefin.domain.trading.account.entity.VirtualAccount;
 import com.solv.wefin.domain.trading.account.service.VirtualAccountService;
 import com.solv.wefin.domain.trading.market.client.HantuMarketClient;
@@ -49,10 +50,13 @@ public class OrderConcurrencyTest extends IntegrationTestBase {
 	private HantuMarketClient hantuMarketClient;
 	@MockitoBean
 	private HantuTokenManager hantuTokenManager;
+	@MockitoBean
+	private QuestProgressService questProgressService;
 
 	private UUID userId;
 	private Long stockId;
 	private Long accountId;
+	private String email;
 
 	@BeforeEach
 	void setUp() {
@@ -68,10 +72,11 @@ public class OrderConcurrencyTest extends IntegrationTestBase {
 		given(hantuMarketClient.fetchCurrentPrice(anyString())).willReturn(mockResponse);
 
 		userId = UUID.randomUUID();
+		email = "test-" + userId + "@test.com";
 
 		jdbcTemplate.execute(
 			"INSERT INTO users (user_id, email, nickname, password, created_at, updated_at) " +
-				"VALUES ('" + userId + "', 'test@test.com', 'tester', 'password', NOW(), NOW())"
+				"VALUES ('" + userId + "', '" + email + "', 'tester', 'password', NOW(), NOW())"
 		);
 
 		stockId = jdbcTemplate.queryForObject(
@@ -88,7 +93,7 @@ public class OrderConcurrencyTest extends IntegrationTestBase {
 		jdbcTemplate.execute("DELETE FROM orders");
 		jdbcTemplate.execute("DELETE FROM portfolio");
 		jdbcTemplate.execute("DELETE FROM virtual_account");
-		jdbcTemplate.execute("DELETE FROM users WHERE email = 'test@test.com'");
+		jdbcTemplate.execute("DELETE FROM users WHERE email = '" + email + "'");
 	}
 
 	@Test
