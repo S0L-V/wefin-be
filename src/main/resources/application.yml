@@ -66,6 +66,10 @@ summary:
   collect:
     cron: "0 */30 * * * *"
 
+market:
+  trend:
+    cron: "0 */30 * * * *"
+
 websocket:
   allowed-origins:
     - http://localhost:5173

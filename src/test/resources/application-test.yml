@@ -32,6 +32,8 @@ market:
     base-url: https://ecos.bok.or.kr/api
   collect:
     cron: "-"
+  trend:
+    cron: "-"
 
 openai:
   api-key: test-openai-key
