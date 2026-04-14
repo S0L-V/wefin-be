@@ -1,8 +1,10 @@
 package com.solv.wefin.domain.payment.dto;
 
+import com.solv.wefin.domain.payment.entity.TossPaymentStatus;
+
 public record TossPaymentConfirmResult(
         String paymentKey,
         String orderId,
-        String status
+        TossPaymentStatus status
 ) {
 }

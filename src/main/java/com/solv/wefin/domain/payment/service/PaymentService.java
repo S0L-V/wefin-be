@@ -6,13 +6,7 @@ import com.solv.wefin.domain.payment.dto.CreatePaymentCommand;
 import com.solv.wefin.domain.payment.dto.PaymentConfirmInfo;
 import com.solv.wefin.domain.payment.dto.PaymentReadyInfo;
 import com.solv.wefin.domain.payment.dto.TossPaymentConfirmResult;
-import com.solv.wefin.domain.payment.entity.BillingCycle;
-import com.solv.wefin.domain.payment.entity.Payment;
-import com.solv.wefin.domain.payment.entity.PaymentProvider;
-import com.solv.wefin.domain.payment.entity.PaymentStatus;
-import com.solv.wefin.domain.payment.entity.Subscription;
-import com.solv.wefin.domain.payment.entity.SubscriptionPlan;
-import com.solv.wefin.domain.payment.entity.SubscriptionStatus;
+import com.solv.wefin.domain.payment.entity.*;
 import com.solv.wefin.domain.payment.repository.PaymentRepository;
 import com.solv.wefin.domain.payment.repository.SubscriptionPlanRepository;
 import com.solv.wefin.domain.payment.repository.SubscriptionRepository;
@@ -112,7 +106,7 @@ public class PaymentService {
                 amount
         );
 
-        if (!"DONE".equals(result.status())) {
+        if (result.status() != TossPaymentStatus.DONE) {
             throw new BusinessException(ErrorCode.PAYMENT_CONFIRM_FAILED);
         }
 

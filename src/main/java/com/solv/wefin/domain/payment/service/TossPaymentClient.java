@@ -1,6 +1,7 @@
 package com.solv.wefin.domain.payment.service;
 
 import com.solv.wefin.domain.payment.dto.TossPaymentConfirmResult;
+import com.solv.wefin.domain.payment.entity.TossPaymentStatus;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -77,7 +78,7 @@ public class TossPaymentClient {
             return new TossPaymentConfirmResult(
                     responseBody.paymentKey(),
                     responseBody.orderId(),
-                    responseBody.status()
+                    TossPaymentStatus.valueOf(responseBody.status())
             );
         } catch (RestClientException e) {
             log.warn("Toss confirm failed. orderId={}, message={}", orderId, e.getMessage());

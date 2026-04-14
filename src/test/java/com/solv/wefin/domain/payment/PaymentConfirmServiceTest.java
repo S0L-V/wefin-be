@@ -4,13 +4,7 @@ import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.payment.dto.PaymentConfirmInfo;
 import com.solv.wefin.domain.payment.dto.TossPaymentConfirmResult;
-import com.solv.wefin.domain.payment.entity.BillingCycle;
-import com.solv.wefin.domain.payment.entity.Payment;
-import com.solv.wefin.domain.payment.entity.PaymentProvider;
-import com.solv.wefin.domain.payment.entity.PaymentStatus;
-import com.solv.wefin.domain.payment.entity.Subscription;
-import com.solv.wefin.domain.payment.entity.SubscriptionPlan;
-import com.solv.wefin.domain.payment.entity.SubscriptionStatus;
+import com.solv.wefin.domain.payment.entity.*;
 import com.solv.wefin.domain.payment.repository.PaymentRepository;
 import com.solv.wefin.domain.payment.repository.SubscriptionPlanRepository;
 import com.solv.wefin.domain.payment.repository.SubscriptionRepository;
@@ -99,7 +93,7 @@ class PaymentConfirmServiceTest {
                 .willReturn(false);
 
         given(tossPaymentClient.confirm(paymentKey, orderId, amount))
-                .willReturn(new TossPaymentConfirmResult(paymentKey, orderId, "DONE"));
+                .willReturn(new TossPaymentConfirmResult(paymentKey, orderId, TossPaymentStatus.DONE));
 
         given(payment.getPlan()).willReturn(confirmPlan);
         given(payment.getUser()).willReturn(confirmUser);
