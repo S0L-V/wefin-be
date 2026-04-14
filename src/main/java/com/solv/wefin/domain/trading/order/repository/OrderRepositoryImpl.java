@@ -29,7 +29,7 @@ public class OrderRepositoryImpl implements OrderRepositoryCustom {
 			.selectFrom(order)
 			.where(
 				accountEq(virtualAccountId),
-				statusEq(condition.status()),
+				statusIn(condition.statuses()),
 				stockIdEq(condition.stockId()),
 				createdAtGoe(condition.startDate()),
 				createdAtLt(condition.endDate()),
@@ -74,8 +74,8 @@ public class OrderRepositoryImpl implements OrderRepositoryCustom {
 		return order.virtualAccountId.eq(virtualAccountId);
 	}
 
-	private BooleanExpression statusEq(OrderStatus status) {
-		return status != null ? order.status.eq(status) : null;
+	private BooleanExpression statusIn(List<OrderStatus> statuses) {
+		return (statuses != null && !statuses.isEmpty()) ? order.status.in(statuses) : null;
 	}
 
 	private BooleanExpression stockIdEq(Long stockId) {
