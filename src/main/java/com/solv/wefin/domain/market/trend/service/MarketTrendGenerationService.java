@@ -212,7 +212,8 @@ public class MarketTrendGenerationService {
         List<InsightCard> result = new ArrayList<>();
         for (ParsedCard p : parsed) {
             if (p == null || !p.isValid()) continue;
-            List<Long> ids = new ArrayList<>();
+            // AI가 동일 index를 복수 반환하는 경우가 있어 카드 단위에서 중복 제거 (LinkedHashSet로 순서 유지)
+            java.util.LinkedHashSet<Long> ids = new java.util.LinkedHashSet<>();
             for (Integer idx : p.relatedClusterIndices()) {
                 if (idx == null) continue;
                 if (idx < 1 || idx > clusterSummaries.size()) continue;
