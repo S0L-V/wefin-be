@@ -38,7 +38,7 @@ public class QuestProgressService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleProfitRate(UUID userId, BigDecimal profitRate) {
         List<UserQuest> todayUserQuests =
-                userQuestRepository.findTodayUserQuests(userId, LocalDate.now());
+                userQuestRepository.findTodayUserQuestsForUpdate(userId, LocalDate.now());
 
         todayUserQuests.stream()
                 .filter(userQuest -> userQuest.getDailyQuest()
@@ -56,7 +56,7 @@ public class QuestProgressService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleGameRank(UUID userId, int rank) {
         List<UserQuest> todayUserQuests =
-                userQuestRepository.findTodayUserQuests(userId, LocalDate.now());
+                userQuestRepository.findTodayUserQuestsForUpdate(userId, LocalDate.now());
 
         todayUserQuests.stream()
                 .filter(userQuest -> userQuest.getDailyQuest()

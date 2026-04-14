@@ -74,9 +74,10 @@ public class OrderConcurrencyTest extends IntegrationTestBase {
 		userId = UUID.randomUUID();
 		email = "test-" + userId + "@test.com";
 
-		jdbcTemplate.execute(
-			"INSERT INTO users (user_id, email, nickname, password, created_at, updated_at) " +
-				"VALUES ('" + userId + "', '" + email + "', 'tester', 'password', NOW(), NOW())"
+		jdbcTemplate.update(
+				"INSERT INTO users (user_id, email, nickname, password, created_at, updated_at) " +
+						"VALUES (?, ?, 'tester', 'password', NOW(), NOW())",
+				userId, email
 		);
 
 		stockId = jdbcTemplate.queryForObject(
@@ -93,7 +94,7 @@ public class OrderConcurrencyTest extends IntegrationTestBase {
 		jdbcTemplate.execute("DELETE FROM orders");
 		jdbcTemplate.execute("DELETE FROM portfolio");
 		jdbcTemplate.execute("DELETE FROM virtual_account");
-		jdbcTemplate.execute("DELETE FROM users WHERE email = '" + email + "'");
+		jdbcTemplate.update("DELETE FROM users WHERE email = ?", email);
 	}
 
 	@Test
