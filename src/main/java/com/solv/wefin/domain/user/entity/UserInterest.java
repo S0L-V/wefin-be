@@ -17,8 +17,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "user_interest",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_user_interest_user_type_value",
-                columnNames = {"user_id", "interest_type", "interest_value"}))
+                name = "uk_user_interest_user_type_value_manual",
+                columnNames = {"user_id", "interest_type", "interest_value", "manual_registered"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserInterest {
