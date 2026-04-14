@@ -1,11 +1,13 @@
 package com.solv.wefin.domain.trading.trade.service;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.solv.wefin.domain.trading.portfolio.entity.Currency;
+import com.solv.wefin.domain.trading.trade.dto.TradeSearchCondition;
 import com.solv.wefin.domain.trading.trade.entity.Trade;
 import com.solv.wefin.domain.trading.trade.repository.TradeRepository;
 
@@ -33,5 +35,10 @@ public class TradeService {
 								 Currency currency, BigDecimal exchangeRate) {
 		return tradeRepository.save(Trade.createSellTrade(orderId, virtualAccountId, stockId, quantity,
 			price, totalAmount, fee, tax, realizedProfit, currency, exchangeRate));
+	}
+
+	public List<Trade> searchTrades(Long virtualAccountId, TradeSearchCondition condition,
+									Long cursor, int size) {
+		return tradeRepository.searchTrades(virtualAccountId, condition, cursor, size);
 	}
 }
