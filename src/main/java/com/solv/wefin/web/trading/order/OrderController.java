@@ -106,7 +106,7 @@ public class OrderController {
 	@GetMapping("/today")
 	public ApiResponse<List<OrderHistoryResponse>> getTodayOrders(@AuthenticationPrincipal UUID userId) {
 		VirtualAccount account = accountService.getAccountByUserId(userId);
-		List<Order> orders = orderService.findTodayOrders(account.getVirtualAccountId());
+		List<Order> orders = orderService.findTodayFilledOrders(account.getVirtualAccountId());
 		return ApiResponse.success(toOrderHistoryResponse(orders));
 	}
 
@@ -128,7 +128,7 @@ public class OrderController {
 
 		Long stockId = null;
 		if (stockCode != null && !stockCode.isBlank()) {
-			Stock stock = stockService.findByStockCode(stockCode).orElse(null);
+			Stock stock = stockService.findByStockCode(stockCode.strip()).orElse(null);
 			if (stock == null) {
 				return ApiResponse.success(CursorResponse.empty());
 			}

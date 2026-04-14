@@ -61,7 +61,7 @@ public class TradeController {
 
 		Long stockId = null;
 		if (stockCode != null && !stockCode.isBlank()) {
-			Stock stock = stockService.findByStockCode(stockCode).orElse(null);
+			Stock stock = stockService.findByStockCode(stockCode.strip()).orElse(null);
 			if (stock == null) {
 				return ApiResponse.success(CursorResponse.empty());
 			}

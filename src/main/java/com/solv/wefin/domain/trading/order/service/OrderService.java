@@ -253,7 +253,7 @@ public class OrderService {
 		return orderRepository.findPendingOrders(virtualAccountId);
 	}
 
-	public List<Order> findTodayOrders(Long virtualAccountId) {
+	public List<Order> findTodayFilledOrders(Long virtualAccountId) {
 		LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
 		return orderRepository.findTodayFilledOrders(virtualAccountId, today);
 	}

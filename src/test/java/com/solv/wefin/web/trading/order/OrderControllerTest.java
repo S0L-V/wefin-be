@@ -215,7 +215,7 @@ class OrderControllerTest {
 
 		Stock stock = mockStock(100L, "005930", "삼성전자");
 
-		given(orderService.findTodayOrders(anyLong())).willReturn(List.of(mockOrder));
+		given(orderService.findTodayFilledOrders(anyLong())).willReturn(List.of(mockOrder));
 		given(stockService.findAllByIdIn(anyList())).willReturn(List.of(stock));
 
 		// when & then
