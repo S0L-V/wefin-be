@@ -6,6 +6,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.UUID;
 
+import com.solv.wefin.domain.quest.entity.QuestEventType;
+import com.solv.wefin.domain.quest.service.QuestProgressService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +37,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@Slf4j
 public class OrderService {
 
 	private final OrderRepository orderRepository;
@@ -43,6 +47,7 @@ public class OrderService {
 	private final StockInfoProvider stockInfoProvider;
 	private final TradeService tradeService;
 	private final ApplicationEventPublisher eventPublisher;
+	private final QuestProgressService questProgressService;
 
 	@Transactional
 	public OrderInfo buyMarket(Long virtualAccountId, Long stockId, Integer quantity) {
@@ -82,6 +87,8 @@ public class OrderService {
 			order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
 			quantity, currentPrice, fee, account.getBalance()
 		));
+
+		questProgressService.handleEvent(account.getUserId(), QuestEventType.BUY_STOCK);
 
 		return new OrderInfo(order, stock.getStockCode(), stock.getStockName(), currentPrice,
 			totalAmount, BigDecimal.ZERO, BigDecimal.ZERO, account.getBalance());
@@ -149,6 +156,12 @@ public class OrderService {
 			order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
 			quantity, currentPrice, fee, tax, realizedAmount, account.getBalance()
 		));
+
+		try {
+			questProgressService.handleEvent(account.getUserId(), QuestEventType.SELL_STOCK);
+		} catch (RuntimeException e) {
+			log.warn("퀘스트 진행도 반영 실패 userId={}", account.getUserId(), e);
+		}
 
 		return new OrderInfo(order, stock.getStockCode(), stock.getStockName(), currentPrice,
 			totalAmount, tax, realizedAmount, account.getBalance());

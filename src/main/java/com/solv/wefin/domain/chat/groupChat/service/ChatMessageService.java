@@ -19,9 +19,12 @@ import com.solv.wefin.domain.group.entity.GroupMember;
 import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
+import com.solv.wefin.domain.quest.entity.QuestEventType;
+import com.solv.wefin.domain.quest.service.QuestProgressService;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -38,6 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class ChatMessageService {
 
     private final ChatMessageRepository chatMessageRepository;
@@ -45,6 +49,7 @@ public class ChatMessageService {
     private final ApplicationEventPublisher eventPublisher;
     private final GroupMemberRepository groupMemberRepository;
     private final ChatSpamGuard chatSpamGuard;
+    private final QuestProgressService questProgressService;
 
     private static final long SPAM_WINDOW_SECONDS = 3L;
     private static final String SYSTEM = "시스템";
@@ -91,6 +96,8 @@ public class ChatMessageService {
 
             eventPublisher.publishEvent(toEvent(savedMessage));
         }
+
+        questProgressService.handleEvent(userId, QuestEventType.SEND_GROUP_CHAT);
     }
 
     @Transactional
@@ -117,6 +124,12 @@ public class ChatMessageService {
         ChatMessageInfo info = toInfo(chatMessage);
 
         eventPublisher.publishEvent(new ChatMessageCreatedEvent(group.getId(), info));
+
+        try {
+            questProgressService.handleEvent(userId, QuestEventType.SHARE_NEWS);
+        } catch (RuntimeException e) {
+            log.warn("퀘스트 진행도 반영 실패 userId={}", userId, e);
+        }
 
         return info;
     }
