@@ -32,7 +32,7 @@ public class MarketTrendPersistenceService {
                 content.title(), content.summary(),
                 insightCardsJson, relatedKeywordsJson,
                 sourceClusterIdsJson, sourceArticleCount);
-        log.info("[MarketTrend] 오늘 동향 upsert 완료 — trendDate: {}, sourceClusters: {}, sourceArticles: {}",
+        log.info("[MarketTrend] 오늘 동향 upsert 완료 — trendDate: {}, insightCards: {}, sourceArticles: {}",
                 trendDate, content.insightCards().size(), sourceArticleCount);
     }
 }
