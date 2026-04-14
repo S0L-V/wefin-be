@@ -88,7 +88,7 @@ public class OrderService {
 
 		// 9. 이벤트 발행
 		eventPublisher.publishEvent(OrderMatchedEvent.ofBuy(
-			order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
+			OrderType.MARKET, order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
 			quantity, currentPrice, fee, account.getBalance()
 		));
 
@@ -157,7 +157,7 @@ public class OrderService {
 
 		// 15. 이벤트 발행
 		eventPublisher.publishEvent(OrderMatchedEvent.ofSell(
-			order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
+			OrderType.MARKET, order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
 			quantity, currentPrice, fee, tax, realizedAmount, account.getBalance()
 		));
 
