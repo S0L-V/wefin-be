@@ -11,6 +11,7 @@ import com.solv.wefin.domain.game.vote.VoteBroadcaster;
 import com.solv.wefin.domain.game.vote.VoteSession;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -60,6 +61,11 @@ class GameVoteServiceTest {
         gameVoteService = new GameVoteService(
                 gameRoomRepository, gameParticipantRepository,
                 turnAdvanceService, voteBroadcaster, voteScheduler);
+    }
+
+    @AfterEach
+    void tearDown() {
+        voteScheduler.shutdownNow();
     }
 
     private GameRoom createRoom(RoomStatus status) {

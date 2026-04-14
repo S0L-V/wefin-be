@@ -62,6 +62,11 @@ public class VoteWebSocketBroadcaster implements VoteBroadcaster {
     }
 
     private void send(UUID roomId, Map<String, Object> payload) {
-        messagingTemplate.convertAndSend("/topic/rooms/" + roomId + "/vote", payload);
+        try {
+            messagingTemplate.convertAndSend("/topic/rooms/" + roomId + "/vote", payload);
+        } catch (Exception e) {
+            log.error("[투표 WS] 전송 실패: roomId={}, type={}, error={}",
+                    roomId, payload.get("type"), e.getMessage(), e);
+        }
     }
 }

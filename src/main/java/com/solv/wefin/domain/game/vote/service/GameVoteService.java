@@ -185,20 +185,21 @@ public class GameVoteService {
         log.info("[투표] 결과: roomId={}, passed={}, 찬성={}, 반대={}",
                 roomId, passed, session.getAgreeCount(), session.getDisagreeCount());
 
-        // 브로드캐스트: 투표 결과
-        voteBroadcaster.broadcastResult(
-                roomId, passed, session.getAgreeCount(), session.getDisagreeCount());
-
-        // 세션 제거
-        activeSessions.remove(roomId);
-
-        // 통과 시 턴 전환
+        // 통과 시 턴 전환을 먼저 시도 — 실패하면 부결로 전환
         if (passed) {
             try {
                 turnAdvanceService.advanceTurn(roomId, session.getInitiatorId());
             } catch (Exception e) {
                 log.error("[투표] 턴 전환 실패: roomId={}, error={}", roomId, e.getMessage(), e);
+                passed = false;
             }
         }
+
+        // 브로드캐스트: 투표 결과 (턴 전환 성공 여부 반영)
+        voteBroadcaster.broadcastResult(
+                roomId, passed, session.getAgreeCount(), session.getDisagreeCount());
+
+        // 세션 제거
+        activeSessions.remove(roomId);
     }
 }
