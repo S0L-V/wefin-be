@@ -68,6 +68,11 @@ public enum ErrorCode {
     PLAN_INACTIVE(400, "비활성화된 구독 상품입니다."),
     ACTIVE_SUBSCRIPTION_ALREADY_EXISTS(409, "이미 활성 구독이 존재합니다."),
     INVALID_PROVIDER(400, "지원하지 않는 결제사입니다."),
+    PAYMENT_NOT_FOUND(404, "결제 정보를 찾을 수 없습니다."),
+    PAYMENT_OWNERSHIP_MISMATCH(403, "본인의 결제만 처리할 수 있습니다."),
+    PAYMENT_NOT_READY(400, "승인 가능한 결제 상태가 아닙니다."),
+    PAYMENT_AMOUNT_MISMATCH(400, "결제 금액이 일치하지 않습니다."),
+    PAYMENT_CONFIRM_FAILED(502, "토스 결제 승인에 실패했습니다."),
 
     // Order - BUY
     ORDER_INSUFFICIENT_BALANCE(400, "예수금이 부족합니다."),

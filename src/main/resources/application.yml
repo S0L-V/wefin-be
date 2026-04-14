@@ -78,6 +78,10 @@ websocket:
 jwt:
   secret: ${JWT_SECRET:wefin-test-jwt-secret-key-1234567890}
 
+toss:
+  secret-key: ${TOSS_SECRET_KEY:}
+  base-url: ${TOSS_BASE_URL:https://api.tosspayments.com}
+
 hantu:
   api:
     baseUrl: https://openapi.koreainvestment.com:9443

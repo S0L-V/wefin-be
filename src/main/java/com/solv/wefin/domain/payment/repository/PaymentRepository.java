@@ -14,6 +14,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findByOrderId(String orderId);
 
+    Optional<Payment> findByOrderIdAndUserUserId(String orderId, UUID userId);
+
     // 같은 사용자 / 같은 플랜의 기존 READY결제 재사용 여부 확인
     Optional<Payment> findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(
             UUID userId,

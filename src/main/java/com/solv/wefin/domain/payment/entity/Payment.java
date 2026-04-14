@@ -112,6 +112,8 @@ public class Payment extends BaseEntity {
         return this.status == PaymentStatus.READY;
     }
 
+    public boolean isPaid() {return this.status == PaymentStatus.PAID;}
+
     public boolean isOwnedBy(java.util.UUID userId) {
         return this.user.getUserId().equals(userId);
     }
