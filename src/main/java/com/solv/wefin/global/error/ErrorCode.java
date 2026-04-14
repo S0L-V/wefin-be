@@ -155,7 +155,10 @@ public enum ErrorCode {
 
     // GameStock
     GAME_STOCK_NOT_FOUND(404, "해당 종목을 찾을 수 없습니다."),
-    GAME_STOCK_PRICE_NOT_FOUND(404, "해당 날짜의 주가 데이터가 없습니다.");
+    GAME_STOCK_PRICE_NOT_FOUND(404, "해당 날짜의 주가 데이터가 없습니다."),
+
+    // MarketTrend
+    MARKET_TREND_ALREADY_RUNNING(409, "금융 동향 생성이 이미 실행 중입니다.");
 
     private final int status;
     private final String message;

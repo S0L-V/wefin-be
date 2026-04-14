@@ -380,9 +380,9 @@ public class OpenAiSummaryClient {
      * 다건 클러스터는 요약 프롬프트에서 질문을 함께 생성하지만,
      * 단독 클러스터는 요약 흐름이 다르므로 별도 AI 호출이 필요하다.
      *
-     * 에러 분류 (CLAUDE.md 10번 규정):
+     * 에러 분류
      * - 재시도 가능 (HTTP 429/5xx, 네트워크 오류): OpenAiClientException 전파 →
-     *   호출자가 이번 틱 클러스터를 skip하거나 markFailed하여 다음 배치에서 재시도
+     *   호출자가 이번 실행 주기 클러스터를 skip하거나 markFailed하여 다음 배치에서 재시도
      * - 재시도 불가 (응답 비어있음, JSON 파싱 실패): 빈 리스트 반환. 요약은 정상 저장
      *
      * @param title 클러스터 제목
