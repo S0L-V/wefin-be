@@ -7,6 +7,7 @@ import com.solv.wefin.domain.trading.market.dto.TradeResponse;
 import com.solv.wefin.domain.trading.market.dto.WebSocketMessageType;
 import com.solv.wefin.domain.trading.market.service.CandleGenerator;
 import com.solv.wefin.domain.trading.market.service.MarketService;
+import com.solv.wefin.domain.trading.matching.service.LimitOrderMatchingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,6 +51,7 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
     private final MarketService marketService;
     private final Set<String> subscribedStocks = ConcurrentHashMap.newKeySet();
     private final CandleGenerator candleGenerator;
+    private final LimitOrderMatchingService limitOrderMatchingService;
 
     // 한투 WS에 연결
     @EventListener(ApplicationReadyEvent.class)
@@ -204,6 +206,13 @@ public class HantuWebSocketClient extends TextWebSocketHandler {
                         new BigDecimal(fields[offset + 9])
                 );
                 marketService.updatePriceCache(fields[offset], priceResponse);
+
+                // 지정가 주문 매칭
+                try {
+                    limitOrderMatchingService.matchLimitOrders(response.stockCode(), response.currentPrice());
+                } catch (Exception e) {
+                    log.error("지정가 매칭 실패: stockCode={}", response.stockCode(), e);
+                }
             } catch (Exception e) {
                 log.warn("체결 레코드 파싱 스킵: index={}, offset={}", i, offset, e);
             }

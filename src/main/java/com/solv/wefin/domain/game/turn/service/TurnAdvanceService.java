@@ -75,21 +75,26 @@ public class TurnAdvanceService {
         GameTurn currentTurn = gameTurnRepository.findByGameRoomAndStatus(gameRoom, TurnStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GAME_NOT_STARTED));
 
-        // 4. 모든 활성 참가자의 보유종목 평가 + 스냅샷 저장
+        // 4. 다음 거래일 계산
+        LocalDate nextDate = calculateNextTradeDate(currentTurn.getTurnDate(), gameRoom.getMoveDays());
+        boolean isGameOver = nextDate.isAfter(gameRoom.getEndDate());
+
+        // 5. 모든 활성 참가자의 보유종목 평가 + 스냅샷 저장
+        //    게임 종료 시: 현재 턴 종가 기준 (마지막 턴의 최종 자산)
+        //    계속 진행 시: 다음 턴 종가 기준 (다음 턴 시작 시점 총자산)
+        LocalDate evaluationDate = isGameOver ? currentTurn.getTurnDate() : nextDate;
+
         List<GameParticipant> activeParticipants =
                 gameParticipantRepository.findByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
 
         List<GamePortfolioSnapshot> snapshots =
-                saveSnapshotsForAll(currentTurn, activeParticipants, gameRoom.getSeed());
+                saveSnapshotsForAll(currentTurn, activeParticipants, gameRoom.getSeed(), evaluationDate);
 
-        // 5. 현재 턴 완료 처리
+        // 6. 현재 턴 완료 처리
         currentTurn.complete();
 
-        // 6. 다음 거래일 계산
-        LocalDate nextDate = calculateNextTradeDate(currentTurn.getTurnDate(), gameRoom.getMoveDays());
-
-        // 7. 종료 판단: 다음 날짜가 endDate 초과 시 게임 종료
-        if (nextDate.isAfter(gameRoom.getEndDate())) {
+        // 7. 종료 판단
+        if (isGameOver) {
             gameRoom.finish();
             log.info("[턴 전환] 게임 종료: roomId={}, 마지막 턴={}", roomId, currentTurn.getTurnNumber());
             return null;
@@ -127,15 +132,15 @@ public class TurnAdvanceService {
      */
     private List<GamePortfolioSnapshot> saveSnapshotsForAll(GameTurn turn,
                                                              List<GameParticipant> participants,
-                                                             BigDecimal seedMoney) {
-        LocalDate turnDate = turn.getTurnDate();
+                                                             BigDecimal seedMoney,
+                                                             LocalDate evaluationDate) {
         List<GamePortfolioSnapshot> savedSnapshots = new ArrayList<>();
 
         for (GameParticipant participant : participants) {
             List<GameHolding> holdings =
                     gameHoldingRepository.findAllByParticipantAndQuantityGreaterThan(participant, 0);
 
-            BigDecimal stockValue = evaluateHoldings(holdings, turnDate);
+            BigDecimal stockValue = evaluateHoldings(holdings, evaluationDate);
 
             GamePortfolioSnapshot snapshot = GamePortfolioSnapshot.create(
                     turn, participant, participant.getSeed(), stockValue, seedMoney);

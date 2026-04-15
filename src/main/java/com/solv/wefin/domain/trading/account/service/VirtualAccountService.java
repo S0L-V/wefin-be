@@ -130,4 +130,12 @@ public class VirtualAccountService {
 	public VirtualAccount getAccountWithLock(Long virtualAccountId) {
 		return getAccountForUpdate(virtualAccountId);
 	}
+
+	/**
+	 * 단건 조회 (락 없음)
+	 */
+	public VirtualAccount getAccount(Long virtualAccountId) {
+		return accountRepository.findById(virtualAccountId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.ACCOUNT_NOT_FOUND));
+	}
 }

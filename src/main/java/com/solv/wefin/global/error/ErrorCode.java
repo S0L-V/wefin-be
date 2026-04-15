@@ -90,6 +90,7 @@ public enum ErrorCode {
     ORDER_NOT_FOUND(404, "주문을 찾을 수 없습니다."),
     ORDER_ALREADY_CANCELLED(400, "이미 취소된 주문입니다."),
     ORDER_NOT_MODIFIABLE(400, "수정 가능한 상태가 아닙니다."),
+    ORDER_PARTIAL_NOT_MODIFIABLE(400, "부분 체결된 주문은 수정할 수 없습니다. 취소 후 재주문해주세요."),
     ORDER_OWNERSHIP_MISMATCH(403, "소유권이 일치하지 않습니다."),
     ORDER_NOT_CANCELLABLE(400, "주문을 취소할 수 없습니다."),
 

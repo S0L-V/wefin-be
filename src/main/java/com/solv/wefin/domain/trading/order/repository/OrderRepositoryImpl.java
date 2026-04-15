@@ -52,6 +52,16 @@ public class OrderRepositoryImpl implements OrderRepositoryCustom {
 			.fetch();
 	}
 
+	/*
+	 * 오늘 최종 체결된 주문을 조회한다.
+	 *
+	 * FILLED 상태의 주문은 validatePending()이 모든 변경(fill, fillPartially,
+	 * cancel, modify)을 차단하므로, 최종 체결 이후에는 엔티티 mutation이 발생하지 않는다.
+	 * 따라서 FILLED 주문에 한해 updatedAt이 사실상 체결 시각과 동일하다.
+	 *
+	 * 주의: "FILLED 주문 불변" 가정이 깨지면 이 쿼리도 깨진다. 향후 FILLED 주문을
+	 * 변경하는 로직이 도입되면 별도 filledAt 컬럼 도입을 검토해야 한다.
+	 */
 	@Override
 	public List<Order> findTodayFilledOrders(Long virtualAccountId, LocalDate today) {
 		OffsetDateTime startOfDay = today.atStartOfDay(KST).toOffsetDateTime();
@@ -61,10 +71,10 @@ public class OrderRepositoryImpl implements OrderRepositoryCustom {
 		return queryFactory
 			.selectFrom(order)
 			.where(
-				accountEq(virtualAccountId),
-				order.status.eq(OrderStatus.FILLED),
-				order.createdAt.goe(startOfDay),
-				order.createdAt.lt(startOfNextDay)
+					accountEq(virtualAccountId),
+					order.status.eq(OrderStatus.FILLED),
+					order.updatedAt.goe(startOfDay),
+					order.updatedAt.lt(startOfNextDay)
 			)
 			.orderBy(order.orderId.desc())
 			.fetch();
