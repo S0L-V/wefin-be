@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service
@@ -106,11 +105,10 @@ public class GameRankingService {
         Map<UUID, String> nicknameMap = buildNicknameMap(userIds);
 
         BigDecimal seedMoney = gameRoom.getSeed();
-        AtomicInteger rankCounter = new AtomicInteger(1);
 
         return participants.stream()
                 .map(p -> new RankingInfo(
-                        rankCounter.getAndIncrement(),
+                        1,
                         p.getUserId(),
                         nicknameMap.getOrDefault(p.getUserId(), "알 수 없음"),
                         seedMoney,
