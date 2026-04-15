@@ -7,6 +7,8 @@ import com.solv.wefin.global.config.SecurityConfig;
 import com.solv.wefin.global.config.security.JwtAuthenticationEntryPoint;
 import com.solv.wefin.global.config.security.JwtAuthenticationFilter;
 import com.solv.wefin.global.config.security.JwtProvider;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -196,6 +198,40 @@ class PaymentControllerTest {
                 .andExpect(jsonPath("$.data.orderId").value("ORDER-20260414-12345"))
                 .andExpect(jsonPath("$.data.status").value("PAID"))
                 .andExpect(jsonPath("$.data.providerPaymentKey").value("pay_test_123"));
+    }
+
+    @Test
+    @DisplayName("결제 승인 실패 시 에러 응답을 반환한다")
+    void confirmPayment_fail_whenServiceThrowsException() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        given(paymentService.confirmPayment(
+                eq(userId),
+                eq("pay_test_123"),
+                eq("ORDER-123"),
+                eq(new BigDecimal("9900"))
+        )).willThrow(new BusinessException(ErrorCode.PAYMENT_CONFIRM_FAILED));
+
+        String requestBody = """
+            {
+              "paymentKey": "pay_test_123",
+              "orderId": "ORDER-123",
+              "amount": 9900
+            }
+            """;
+
+        mockMvc.perform(post("/api/payments/confirm")
+                        .with(authentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        userId,
+                                        null,
+                                        java.util.List.of()
+                                )
+                        ))
+                        .contentType(APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.code").value("PAYMENT_CONFIRM_FAILED"));
     }
 
     @Test

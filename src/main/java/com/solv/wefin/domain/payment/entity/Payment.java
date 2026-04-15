@@ -90,10 +90,10 @@ public class Payment extends BaseEntity {
         return new Payment(plan, user, orderId, provider, amount);
     }
 
-    public void markPaid(String providerPaymentKey) {
+    public void markPaid(String providerPaymentKey, OffsetDateTime approvedAt) {
         this.providerPaymentKey = providerPaymentKey;
         this.status = PaymentStatus.PAID;
-        this.approvedAt = OffsetDateTime.now();
+        this.approvedAt = approvedAt;
         this.failedAt = null;
         this.failureReason = null;
     }
@@ -106,13 +106,16 @@ public class Payment extends BaseEntity {
 
     public void markCanceled() {
         this.status = PaymentStatus.CANCELED;
+        this.failedAt = OffsetDateTime.now();
     }
 
     public boolean isReady() {
         return this.status == PaymentStatus.READY;
     }
 
-    public boolean isPaid() {return this.status == PaymentStatus.PAID;}
+    public boolean isPaid() {
+        return this.status == PaymentStatus.PAID;
+    }
 
     public boolean isOwnedBy(java.util.UUID userId) {
         return this.user.getUserId().equals(userId);

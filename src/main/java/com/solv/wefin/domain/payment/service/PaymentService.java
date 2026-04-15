@@ -6,19 +6,14 @@ import com.solv.wefin.domain.payment.dto.CreatePaymentCommand;
 import com.solv.wefin.domain.payment.dto.PaymentConfirmInfo;
 import com.solv.wefin.domain.payment.dto.PaymentReadyInfo;
 import com.solv.wefin.domain.payment.dto.TossPaymentConfirmResult;
-import com.solv.wefin.domain.payment.entity.BillingCycle;
-import com.solv.wefin.domain.payment.entity.Payment;
-import com.solv.wefin.domain.payment.entity.PaymentProvider;
-import com.solv.wefin.domain.payment.entity.PaymentStatus;
-import com.solv.wefin.domain.payment.entity.Subscription;
-import com.solv.wefin.domain.payment.entity.SubscriptionPlan;
-import com.solv.wefin.domain.payment.entity.SubscriptionStatus;
+import com.solv.wefin.domain.payment.entity.*;
 import com.solv.wefin.domain.payment.repository.PaymentRepository;
 import com.solv.wefin.domain.payment.repository.SubscriptionPlanRepository;
 import com.solv.wefin.domain.payment.repository.SubscriptionRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +23,7 @@ import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
@@ -39,6 +35,7 @@ public class PaymentService {
     private final PaymentWriter paymentWriter;
     private final PaymentConfirmWriter paymentConfirmWriter;
     private final TossPaymentClient tossPaymentClient;
+    private final PaymentFailureLogWriter paymentFailureLogWriter;
 
     @Transactional
     public PaymentReadyInfo createPayment(UUID userId, CreatePaymentCommand command) {
@@ -86,10 +83,23 @@ public class PaymentService {
             String orderId,
             BigDecimal amount
     ) {
-        Payment payment = paymentRepository.findByOrderIdAndUserUserId(orderId, userId)
+        Payment payment = paymentRepository.findWithLockByOrderIdAndUserUserId(orderId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
+        if (payment.isPaid()) {
+            throw new BusinessException(ErrorCode.PAYMENT_ALREADY_CONFIRMED);
+        }
+
         if (!payment.isReady()) {
+            paymentFailureLogWriter.save(
+                    payment,
+                    payment.getUser(),
+                    orderId,
+                    paymentKey,
+                    "PRE_CONFIRM_VALIDATION",
+                    ErrorCode.PAYMENT_NOT_READY.name(),
+                    ErrorCode.PAYMENT_NOT_READY.getMessage()
+            );
             throw new BusinessException(ErrorCode.PAYMENT_NOT_READY);
         }
 
@@ -106,17 +116,60 @@ public class PaymentService {
             throw new BusinessException(ErrorCode.ACTIVE_SUBSCRIPTION_ALREADY_EXISTS);
         }
 
-        TossPaymentConfirmResult result = tossPaymentClient.confirm(
-                paymentKey,
-                orderId,
-                amount
-        );
+        TossPaymentConfirmResult result;
 
-        if (!"DONE".equals(result.status())) {
+        try {
+            result = tossPaymentClient.confirm(
+                    paymentKey,
+                    orderId,
+                    amount
+            );
+        } catch (BusinessException e) {
+            payment.markFailed("TOSS_API_ERROR");
+            paymentConfirmWriter.savePaidPaymentAndSubscription(payment, null);
+            paymentFailureLogWriter.save(
+                    payment,
+                    payment.getUser(),
+                    orderId,
+                    paymentKey,
+                    "CONFIRM_API",
+                    e.getErrorCode().name(),
+                    e.getMessage()
+            );
+            throw e;
+        }
+
+        if (result.status() == TossPaymentStatus.FAILED) {
+            payment.markFailed("TOSS_FAILED");
+            paymentConfirmWriter.savePaidPaymentAndSubscription(payment, null);
+            paymentFailureLogWriter.save(
+                    payment,
+                    payment.getUser(),
+                    orderId,
+                    paymentKey,
+                    "CONFIRM_RESULT",
+                    ErrorCode.PAYMENT_CONFIRM_FAILED.name(),
+                    "Toss payment status is FAILED"
+            );
             throw new BusinessException(ErrorCode.PAYMENT_CONFIRM_FAILED);
         }
 
-        payment.markPaid(result.paymentKey());
+        if (result.status() == TossPaymentStatus.CANCELED) {
+            payment.markCanceled();
+            paymentConfirmWriter.savePaidPaymentAndSubscription(payment, null);
+            paymentFailureLogWriter.save(
+                    payment,
+                    payment.getUser(),
+                    orderId,
+                    paymentKey,
+                    "CONFIRM_RESULT",
+                    ErrorCode.PAYMENT_CANCELED.name(),
+                    "Toss payment status is CANCELED"
+            );
+            throw new BusinessException(ErrorCode.PAYMENT_CANCELED);
+        }
+
+        payment.markPaid(result.paymentKey(), result.approvedAt());
 
         OffsetDateTime startedAt = OffsetDateTime.now();
         OffsetDateTime expiredAt = calculateExpiredAt(
@@ -131,8 +184,38 @@ public class PaymentService {
                 expiredAt
         );
 
-        Subscription savedSubscription =
-                paymentConfirmWriter.savePaidPaymentAndSubscription(payment, subscription);
+        Subscription savedSubscription;
+        try {
+            savedSubscription =
+                    paymentConfirmWriter.savePaidPaymentAndSubscription(payment, subscription);
+        } catch (Exception e) {
+            paymentFailureLogWriter.save(
+                    payment,
+                    payment.getUser(),
+                    orderId,
+                    paymentKey,
+                    "SAVE_AFTER_CONFIRM",
+                    ErrorCode.INTERNAL_SERVER_ERROR.name(),
+                    e.getMessage()
+            );
+
+            try {
+                tossPaymentClient.cancel(result.paymentKey(), "INTERNAL_ERROR");
+            } catch (Exception cancelException) {
+                log.error("Payment cancel failed after confirm success. paymentKey={}", result.paymentKey(), cancelException);
+
+                paymentFailureLogWriter.save(
+                        payment,
+                        payment.getUser(),
+                        orderId,
+                        paymentKey,
+                        "CANCEL_AFTER_CONFIRM",
+                        ErrorCode.PAYMENT_CANCEL_FAILED.name(),
+                        cancelException.getMessage()
+                );
+            }
+            throw e;
+        }
 
         return PaymentConfirmInfo.from(payment, savedSubscription);
     }

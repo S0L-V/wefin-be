@@ -11,7 +11,9 @@ import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.domain.quest.entity.QuestEventType;
+import com.solv.wefin.domain.quest.entity.UserQuest;
 import com.solv.wefin.domain.quest.service.QuestProgressService;
+import com.solv.wefin.domain.quest.service.UserQuestService;
 import com.solv.wefin.domain.trading.account.service.VirtualAccountService;
 import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
@@ -44,6 +46,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final QuestProgressService questProgressService;
     private final VirtualAccountService virtualAccountService;
+    private final UserQuestService userQuestService;
 
     @Transactional
     public SignupInfo signup(SignupCommand command) {
@@ -145,6 +148,8 @@ public class AuthService {
                         .build());
 
         refreshTokenRepository.save(refreshToken);
+
+        userQuestService.getOrIssueTodayUserQuests(user.getUserId());
 
         try {
             questProgressService.handleEvent(user.getUserId(), QuestEventType.LOGIN);

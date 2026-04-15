@@ -73,6 +73,13 @@ public enum ErrorCode {
     PAYMENT_NOT_READY(400, "승인 가능한 결제 상태가 아닙니다."),
     PAYMENT_AMOUNT_MISMATCH(400, "결제 금액이 일치하지 않습니다."),
     PAYMENT_CONFIRM_FAILED(502, "토스 결제 승인에 실패했습니다."),
+    PAYMENT_ALREADY_CONFIRMED(409, "이미 승인된 결제입니다."),
+    PAYMENT_CANCELED(400, "사용자가 결제를 취소했습니다."),
+    PAYMENT_CANCEL_FAILED(502, "토스 결제 취소에 실패했습니다."),
+    PAYMENT_CONFIRM_TIMEOUT(504, "토스 결제 승인 요청 시간이 초과되었습니다."),
+    PAYMENT_CONFIRM_BAD_REQUEST(400, "토스 결제 승인 요청이 올바르지 않습니다."),
+    PAYMENT_CONFIRM_UNAUTHORIZED(502, "토스 결제 승인 인증에 실패했습니다."),
+    PAYMENT_CANCEL_TIMEOUT(504, "토스 결제 취소 요청 시간이 초과되었습니다."),
 
     // Order - BUY
     ORDER_INSUFFICIENT_BALANCE(400, "예수금이 부족합니다."),

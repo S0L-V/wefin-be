@@ -1,23 +1,12 @@
 package com.solv.wefin.domain.payment;
 
 import com.solv.wefin.domain.auth.entity.User;
-import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.payment.dto.PaymentConfirmInfo;
 import com.solv.wefin.domain.payment.dto.TossPaymentConfirmResult;
-import com.solv.wefin.domain.payment.entity.BillingCycle;
-import com.solv.wefin.domain.payment.entity.Payment;
-import com.solv.wefin.domain.payment.entity.PaymentProvider;
-import com.solv.wefin.domain.payment.entity.PaymentStatus;
-import com.solv.wefin.domain.payment.entity.Subscription;
-import com.solv.wefin.domain.payment.entity.SubscriptionPlan;
-import com.solv.wefin.domain.payment.entity.SubscriptionStatus;
+import com.solv.wefin.domain.payment.entity.*;
 import com.solv.wefin.domain.payment.repository.PaymentRepository;
-import com.solv.wefin.domain.payment.repository.SubscriptionPlanRepository;
 import com.solv.wefin.domain.payment.repository.SubscriptionRepository;
-import com.solv.wefin.domain.payment.service.PaymentConfirmWriter;
-import com.solv.wefin.domain.payment.service.PaymentService;
-import com.solv.wefin.domain.payment.service.PaymentWriter;
-import com.solv.wefin.domain.payment.service.TossPaymentClient;
+import com.solv.wefin.domain.payment.service.*;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,19 +36,13 @@ class PaymentConfirmServiceTest {
     private PaymentRepository paymentRepository;
 
     @Mock
-    private SubscriptionPlanRepository subscriptionPlanRepository;
-
-    @Mock
     private SubscriptionRepository subscriptionRepository;
 
     @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private PaymentWriter paymentWriter;
-
-    @Mock
     private PaymentConfirmWriter paymentConfirmWriter;
+
+    @Mock
+    private PaymentFailureLogWriter paymentFailureLogWriter;
 
     @Mock
     private TossPaymentClient tossPaymentClient;
@@ -90,7 +73,7 @@ class PaymentConfirmServiceTest {
         OffsetDateTime startedAt = OffsetDateTime.now();
         OffsetDateTime expiredAt = startedAt.plusMonths(1);
 
-        given(paymentRepository.findByOrderIdAndUserUserId(orderId, userId))
+        given(paymentRepository.findWithLockByOrderIdAndUserUserId(orderId, userId))
                 .willReturn(Optional.of(payment));
         given(payment.isReady()).willReturn(true);
         given(payment.getAmount()).willReturn(amount);
@@ -99,7 +82,12 @@ class PaymentConfirmServiceTest {
                 .willReturn(false);
 
         given(tossPaymentClient.confirm(paymentKey, orderId, amount))
-                .willReturn(new TossPaymentConfirmResult(paymentKey, orderId, "DONE"));
+                .willReturn(new TossPaymentConfirmResult(
+                        paymentKey,
+                        orderId,
+                        TossPaymentStatus.DONE,
+                        approvedAt
+                ));
 
         given(payment.getPlan()).willReturn(confirmPlan);
         given(payment.getUser()).willReturn(confirmUser);
@@ -141,8 +129,9 @@ class PaymentConfirmServiceTest {
         assertThat(result.subscriptionExpiredAt()).isEqualTo(expiredAt);
 
         verify(tossPaymentClient).confirm(paymentKey, orderId, amount);
-        verify(payment).markPaid(paymentKey);
+        verify(payment).markPaid(eq(paymentKey), eq(approvedAt));
         verify(paymentConfirmWriter).savePaidPaymentAndSubscription(eq(payment), any(Subscription.class));
+        verifyNoInteractions(paymentFailureLogWriter);
     }
 
     @Test
@@ -152,7 +141,7 @@ class PaymentConfirmServiceTest {
         String orderId = "ORDER-NOT-FOUND";
         BigDecimal amount = new BigDecimal("9900");
 
-        given(paymentRepository.findByOrderIdAndUserUserId(orderId, userId))
+        given(paymentRepository.findWithLockByOrderIdAndUserUserId(orderId, userId))
                 .willReturn(Optional.empty());
 
         assertThatThrownBy(() -> paymentService.confirmPayment(userId, paymentKey, orderId, amount))
@@ -170,7 +159,7 @@ class PaymentConfirmServiceTest {
         String orderId = "ORDER-20260414-OTHER";
         BigDecimal amount = new BigDecimal("9900");
 
-        given(paymentRepository.findByOrderIdAndUserUserId(orderId, userId))
+        given(paymentRepository.findWithLockByOrderIdAndUserUserId(orderId, userId))
                 .willReturn(Optional.empty());
 
         assertThatThrownBy(() -> paymentService.confirmPayment(userId, paymentKey, orderId, amount))
@@ -190,7 +179,7 @@ class PaymentConfirmServiceTest {
 
         Payment payment = mock(Payment.class);
 
-        given(paymentRepository.findByOrderIdAndUserUserId(orderId, userId))
+        given(paymentRepository.findWithLockByOrderIdAndUserUserId(orderId, userId))
                 .willReturn(Optional.of(payment));
         given(payment.isReady()).willReturn(false);
 
@@ -201,6 +190,15 @@ class PaymentConfirmServiceTest {
 
         verifyNoInteractions(tossPaymentClient, paymentConfirmWriter);
         verify(subscriptionRepository, never()).existsByUserUserIdAndStatus(any(), any());
+        verify(paymentFailureLogWriter).save(
+                eq(payment),
+                any(),
+                eq(orderId),
+                eq(paymentKey),
+                eq("PRE_CONFIRM_VALIDATION"),
+                eq(ErrorCode.PAYMENT_NOT_READY.name()),
+                eq(ErrorCode.PAYMENT_NOT_READY.getMessage())
+        );
     }
 
     @Test
@@ -211,7 +209,7 @@ class PaymentConfirmServiceTest {
 
         Payment payment = mock(Payment.class);
 
-        given(paymentRepository.findByOrderIdAndUserUserId(orderId, userId))
+        given(paymentRepository.findWithLockByOrderIdAndUserUserId(orderId, userId))
                 .willReturn(Optional.of(payment));
         given(payment.isReady()).willReturn(true);
         given(payment.getAmount()).willReturn(new BigDecimal("9900"));
@@ -239,7 +237,7 @@ class PaymentConfirmServiceTest {
 
         Payment payment = mock(Payment.class);
 
-        given(paymentRepository.findByOrderIdAndUserUserId(orderId, userId))
+        given(paymentRepository.findWithLockByOrderIdAndUserUserId(orderId, userId))
                 .willReturn(Optional.of(payment));
         given(payment.isReady()).willReturn(true);
         given(payment.getAmount()).willReturn(amount);
@@ -252,7 +250,7 @@ class PaymentConfirmServiceTest {
                 .isEqualTo(ErrorCode.ACTIVE_SUBSCRIPTION_ALREADY_EXISTS);
 
         verifyNoInteractions(tossPaymentClient, paymentConfirmWriter);
-        verify(payment, never()).markPaid(any());
+        verify(payment, never()).markPaid(any(), any());
     }
 
     @Test
@@ -264,7 +262,7 @@ class PaymentConfirmServiceTest {
 
         Payment payment = mock(Payment.class);
 
-        given(paymentRepository.findByOrderIdAndUserUserId(orderId, userId))
+        given(paymentRepository.findWithLockByOrderIdAndUserUserId(orderId, userId))
                 .willReturn(Optional.of(payment));
         given(payment.isReady()).willReturn(true);
         given(payment.getAmount()).willReturn(amount);
@@ -280,7 +278,246 @@ class PaymentConfirmServiceTest {
                 .isEqualTo(ErrorCode.PAYMENT_CONFIRM_FAILED);
 
         verify(tossPaymentClient).confirm(paymentKey, orderId, amount);
-        verify(payment, never()).markPaid(any());
-        verify(paymentConfirmWriter, never()).savePaidPaymentAndSubscription(any(), any());
+        verify(payment, never()).markPaid(any(), any());
+        verify(paymentConfirmWriter).savePaidPaymentAndSubscription(eq(payment), isNull());
+        verify(payment).markFailed(any());
+        verify(paymentFailureLogWriter).save(
+                eq(payment),
+                any(),
+                eq(orderId),
+                eq(paymentKey),
+                eq("CONFIRM_API"),
+                eq(ErrorCode.PAYMENT_CONFIRM_FAILED.name()),
+                any()
+        );
+    }
+
+    @Test
+    @DisplayName("이미 PAID 상태면 PAYMENT_ALREADY_CONFIRMED 예외가 발생한다")
+    void confirmPayment_fail_whenAlreadyPaid() {
+        String paymentKey = "pay_test_123";
+        String orderId = "ORDER-123";
+        BigDecimal amount = new BigDecimal("9900");
+
+        Payment payment = mock(Payment.class);
+
+        given(paymentRepository.findWithLockByOrderIdAndUserUserId(orderId, userId))
+                .willReturn(Optional.of(payment));
+        given(payment.isPaid()).willReturn(true);
+
+        assertThatThrownBy(() -> paymentService.confirmPayment(userId, paymentKey, orderId, amount))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.PAYMENT_ALREADY_CONFIRMED);
+
+        verifyNoInteractions(tossPaymentClient, paymentConfirmWriter);
+    }
+
+    @Test
+    @DisplayName("토스 상태가 FAILED면 PAYMENT_CONFIRM_FAILED 예외가 발생하고 결제를 실패 처리한다")
+    void confirmPayment_fail_whenTossStatusFailed() {
+        String paymentKey = "pay_test_123";
+        String orderId = "ORDER-123";
+        BigDecimal amount = new BigDecimal("9900");
+        OffsetDateTime approvedAt = OffsetDateTime.now();
+
+        Payment payment = mock(Payment.class);
+
+        given(paymentRepository.findWithLockByOrderIdAndUserUserId(orderId, userId))
+                .willReturn(Optional.of(payment));
+        given(payment.isPaid()).willReturn(false);
+        given(payment.isReady()).willReturn(true);
+        given(payment.getAmount()).willReturn(amount);
+        given(subscriptionRepository.existsByUserUserIdAndStatus(userId, SubscriptionStatus.ACTIVE))
+                .willReturn(false);
+
+        given(tossPaymentClient.confirm(paymentKey, orderId, amount))
+                .willReturn(new TossPaymentConfirmResult(
+                        paymentKey,
+                        orderId,
+                        TossPaymentStatus.FAILED,
+                        approvedAt
+                ));
+
+        assertThatThrownBy(() -> paymentService.confirmPayment(userId, paymentKey, orderId, amount))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.PAYMENT_CONFIRM_FAILED);
+
+        verify(payment).markFailed("TOSS_FAILED");
+        verify(paymentConfirmWriter).savePaidPaymentAndSubscription(eq(payment), isNull());
+        verify(paymentFailureLogWriter).save(
+                eq(payment),
+                any(),
+                eq(orderId),
+                eq(paymentKey),
+                eq("CONFIRM_RESULT"),
+                eq(ErrorCode.PAYMENT_CONFIRM_FAILED.name()),
+                eq("Toss payment status is FAILED")
+        );
+    }
+
+    @Test
+    @DisplayName("토스 상태가 CANCELED면 PAYMENT_CANCELED 예외가 발생하고 결제를 취소 처리한다")
+    void confirmPayment_fail_whenTossCanceled() {
+        String paymentKey = "pay_test_123";
+        String orderId = "ORDER-123";
+        BigDecimal amount = new BigDecimal("9900");
+        OffsetDateTime approvedAt = OffsetDateTime.now();
+
+        Payment payment = mock(Payment.class);
+
+        given(paymentRepository.findWithLockByOrderIdAndUserUserId(orderId, userId))
+                .willReturn(Optional.of(payment));
+        given(payment.isPaid()).willReturn(false);
+        given(payment.isReady()).willReturn(true);
+        given(payment.getAmount()).willReturn(amount);
+        given(subscriptionRepository.existsByUserUserIdAndStatus(userId, SubscriptionStatus.ACTIVE))
+                .willReturn(false);
+
+        given(tossPaymentClient.confirm(paymentKey, orderId, amount))
+                .willReturn(new TossPaymentConfirmResult(
+                        paymentKey,
+                        orderId,
+                        TossPaymentStatus.CANCELED,
+                        approvedAt
+                ));
+
+        assertThatThrownBy(() -> paymentService.confirmPayment(userId, paymentKey, orderId, amount))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.PAYMENT_CANCELED);
+
+        verify(payment).markCanceled();
+        verify(paymentConfirmWriter).savePaidPaymentAndSubscription(eq(payment), isNull());
+        verify(paymentFailureLogWriter).save(
+                eq(payment),
+                any(),
+                eq(orderId),
+                eq(paymentKey),
+                eq("CONFIRM_RESULT"),
+                eq(ErrorCode.PAYMENT_CANCELED.name()),
+                eq("Toss payment status is CANCELED")
+        );
+    }
+
+    @Test
+    @DisplayName("토스 승인 성공 후 저장에 실패하면 결제를 취소하고 예외를 다시 던진다")
+    void confirmPayment_cancelWhenSaveFailsAfterConfirm() {
+        String paymentKey = "pay_test_123";
+        String orderId = "ORDER-20260414-12345";
+        BigDecimal amount = new BigDecimal("9900");
+        OffsetDateTime approvedAt = OffsetDateTime.now();
+
+        Payment payment = mock(Payment.class);
+        SubscriptionPlan confirmPlan = mock(SubscriptionPlan.class);
+        User confirmUser = mock(User.class);
+
+        given(paymentRepository.findWithLockByOrderIdAndUserUserId(orderId, userId))
+                .willReturn(Optional.of(payment));
+        given(payment.isPaid()).willReturn(false);
+        given(payment.isReady()).willReturn(true);
+        given(payment.getAmount()).willReturn(amount);
+
+        given(subscriptionRepository.existsByUserUserIdAndStatus(userId, SubscriptionStatus.ACTIVE))
+                .willReturn(false);
+
+        given(tossPaymentClient.confirm(paymentKey, orderId, amount))
+                .willReturn(new TossPaymentConfirmResult(
+                        paymentKey,
+                        orderId,
+                        TossPaymentStatus.DONE,
+                        approvedAt
+                ));
+
+        given(payment.getPlan()).willReturn(confirmPlan);
+        given(payment.getUser()).willReturn(confirmUser);
+        given(confirmPlan.getBillingCycle()).willReturn(BillingCycle.MONTHLY);
+
+        given(paymentConfirmWriter.savePaidPaymentAndSubscription(eq(payment), any(Subscription.class)))
+                .willThrow(new RuntimeException("save failed"));
+
+        assertThatThrownBy(() -> paymentService.confirmPayment(userId, paymentKey, orderId, amount))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("save failed");
+
+        verify(payment).markPaid(eq(paymentKey), eq(approvedAt));
+        verify(paymentConfirmWriter).savePaidPaymentAndSubscription(eq(payment), any(Subscription.class));
+        verify(tossPaymentClient).cancel(paymentKey, "INTERNAL_ERROR");
+        verify(paymentFailureLogWriter).save(
+                eq(payment),
+                any(),
+                eq(orderId),
+                eq(paymentKey),
+                eq("SAVE_AFTER_CONFIRM"),
+                eq(ErrorCode.INTERNAL_SERVER_ERROR.name()),
+                eq("save failed")
+        );
+    }
+
+    @Test
+    @DisplayName("저장 실패 후 결제 취소도 실패하면 원래 저장 실패 예외를 유지한다")
+    void confirmPayment_keepOriginalException_whenCancelAlsoFails() {
+        String paymentKey = "pay_test_123";
+        String orderId = "ORDER-20260414-12345";
+        BigDecimal amount = new BigDecimal("9900");
+        OffsetDateTime approvedAt = OffsetDateTime.now();
+
+        Payment payment = mock(Payment.class);
+        SubscriptionPlan confirmPlan = mock(SubscriptionPlan.class);
+        User confirmUser = mock(User.class);
+
+        given(paymentRepository.findWithLockByOrderIdAndUserUserId(orderId, userId))
+                .willReturn(Optional.of(payment));
+        given(payment.isPaid()).willReturn(false);
+        given(payment.isReady()).willReturn(true);
+        given(payment.getAmount()).willReturn(amount);
+
+        given(subscriptionRepository.existsByUserUserIdAndStatus(userId, SubscriptionStatus.ACTIVE))
+                .willReturn(false);
+
+        given(tossPaymentClient.confirm(paymentKey, orderId, amount))
+                .willReturn(new TossPaymentConfirmResult(
+                        paymentKey,
+                        orderId,
+                        TossPaymentStatus.DONE,
+                        approvedAt
+                ));
+
+        given(payment.getPlan()).willReturn(confirmPlan);
+        given(payment.getUser()).willReturn(confirmUser);
+        given(confirmPlan.getBillingCycle()).willReturn(BillingCycle.MONTHLY);
+
+        given(paymentConfirmWriter.savePaidPaymentAndSubscription(eq(payment), any(Subscription.class)))
+                .willThrow(new RuntimeException("save failed"));
+        doThrow(new BusinessException(ErrorCode.PAYMENT_CANCEL_FAILED))
+                .when(tossPaymentClient).cancel(paymentKey, "INTERNAL_ERROR");
+
+        assertThatThrownBy(() -> paymentService.confirmPayment(userId, paymentKey, orderId, amount))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("save failed");
+
+        verify(payment).markPaid(eq(paymentKey), eq(approvedAt));
+        verify(paymentConfirmWriter).savePaidPaymentAndSubscription(eq(payment), any(Subscription.class));
+        verify(tossPaymentClient).cancel(paymentKey, "INTERNAL_ERROR");
+        verify(paymentFailureLogWriter).save(
+                eq(payment),
+                any(),
+                eq(orderId),
+                eq(paymentKey),
+                eq("SAVE_AFTER_CONFIRM"),
+                eq(ErrorCode.INTERNAL_SERVER_ERROR.name()),
+                eq("save failed")
+        );
+
+        verify(paymentFailureLogWriter).save(
+                eq(payment),
+                any(),
+                eq(orderId),
+                eq(paymentKey),
+                eq("CANCEL_AFTER_CONFIRM"),
+                eq(ErrorCode.PAYMENT_CANCEL_FAILED.name()),
+                any()
+        );
     }
 }
