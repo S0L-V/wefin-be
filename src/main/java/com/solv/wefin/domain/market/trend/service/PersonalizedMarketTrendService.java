@@ -93,20 +93,55 @@ public class PersonalizedMarketTrendService {
     private static final TypeReference<List<Long>> CLUSTER_IDS_TYPE = new TypeReference<>() {
     };
 
-    public MarketTrendOverview getForUser(UUID userId) {
-        // 0) 캐시 lookup — TTL(30분) 안이면 AI 호출 없이 즉시 반환
+    /**
+     * TTL(30분) 내 캐시 row만 반환하고 AI 호출은 수행하지 않는다.
+     *
+     * 페이지 진입 시 "이전 분석 결과가 fresh면 자동 노출, stale/미생성이면 버튼 클릭 유도" 흐름에서 사용한다.
+     * 캐시 miss/stale은 모두 {@link Optional#empty()}로 반환되어 호출 측이 204 등으로 처리할 수 있다
+     *
+     * @param userId 조회 대상 사용자 ID
+     * @return fresh 캐시가 있으면 화면 DTO, 아니면 empty
+     */
+    public Optional<MarketTrendOverview> getCachedForUser(UUID userId) {
+        return readFreshCache(userId).map(this::assembleFromCache);
+    }
+
+    /**
+     * TTL + invalidate CAS를 동시에 검사해 재사용 가능한 캐시 row를 반환한다.
+     *
+     * TTL 안이더라도 invalidate가 row의 updatedAt 이후에 발생했다면 afterCommit DELETE 이전의
+     * short window에서 stale row가 노출될 수 있으므로 miss로 취급한다.
+     * {@link #getCachedForUser(UUID)} 와 {@link #getForUser(UUID)} 가 공유하는 단일 게이트
+     */
+    private Optional<UserMarketTrend> readFreshCache(UUID userId) {
         Optional<UserMarketTrend> cached = userMarketTrendRepository
                 .findByUserIdAndTrendDate(userId, LocalDate.now(UserMarketTrendCacheService.TREND_ZONE));
-        if (cached.isPresent()) {
-            OffsetDateTime cacheUpdatedAt = cached.get().getUpdatedAt();
-            boolean fresh = cacheUpdatedAt != null
-                    && cacheUpdatedAt.isAfter(OffsetDateTime.now().minus(CACHE_TTL));
-            if (fresh) {
-                log.info("[PersonalizedMarketTrend] 캐시 hit (fresh) — userId={}", userId);
-                return assembleFromCache(cached.get());
-            }
-            log.info("[PersonalizedMarketTrend] 캐시 stale — TTL 경과로 재생성 (userId={}, cacheUpdatedAt={})",
+        if (cached.isEmpty()) return Optional.empty();
+
+        OffsetDateTime cacheUpdatedAt = cached.get().getUpdatedAt();
+        boolean fresh = cacheUpdatedAt != null
+                && cacheUpdatedAt.isAfter(OffsetDateTime.now().minus(CACHE_TTL));
+        if (!fresh) {
+            log.info("[PersonalizedMarketTrend] 캐시 stale (TTL 경과) — userId={}, cacheUpdatedAt={}",
                     userId, cacheUpdatedAt);
+            return Optional.empty();
+        }
+
+        Instant invalidatedAt = userMarketTrendCacheService.getLastInvalidatedAt(userId);
+        if (invalidatedAt != null && invalidatedAt.isAfter(cacheUpdatedAt.toInstant())) {
+            log.info("[PersonalizedMarketTrend] 캐시 stale (invalidate window) — userId={}, cacheUpdatedAt={}, invalidatedAt={}",
+                    userId, cacheUpdatedAt, invalidatedAt);
+            return Optional.empty();
+        }
+        return cached;
+    }
+
+    public MarketTrendOverview getForUser(UUID userId) {
+        // 0) 캐시 lookup — TTL(30분) 안 + invalidate 이후가 아니면 AI 호출 없이 즉시 반환
+        Optional<UserMarketTrend> cached = readFreshCache(userId);
+        if (cached.isPresent()) {
+            log.info("[PersonalizedMarketTrend] 캐시 hit (fresh) — userId={}", userId);
+            return assembleFromCache(cached.get());
         }
 
         // AI 호출 시작 시점 기록 — 캐시 저장 직전 invalidate가 있었는지 비교하여 stale 스냅샷 저장 방지
