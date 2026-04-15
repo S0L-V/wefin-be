@@ -11,6 +11,7 @@ import java.util.UUID;
 
 import com.solv.wefin.domain.quest.entity.QuestEventType;
 import com.solv.wefin.domain.quest.service.QuestProgressService;
+import com.solv.wefin.domain.trading.common.TradingConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -189,16 +190,18 @@ public class OrderService {
 
 		BigDecimal refundedAmount = BigDecimal.ZERO;
 		if (order.getSide() == OrderSide.BUY) {
-			refundedAmount = order.getRequestPrice()
-				.multiply(BigDecimal.valueOf(order.getQuantity()))
-				.add(order.getFee());
+			int remainingQuantity = order.getQuantity() - order.getFilledQuantity();
+			BigDecimal remainingCost = order.getRequestPrice()
+					.multiply(BigDecimal.valueOf(remainingQuantity));
+			BigDecimal remainingFee = remainingCost
+					.multiply(TradingConstants.FEE_RATE)
+					.setScale(0, RoundingMode.DOWN);
+			refundedAmount = remainingCost.add(remainingFee);
 			account.deposit(refundedAmount);
 		} else if (order.getSide() == OrderSide.SELL) {
-			// TODO: addHolding은 avgPrice를 재계산함
-			// 취소 시 원래 avgPrice를 유지하는 returnHolding 메서드가 필요
-			// 지정가 매도 구현 후 팀원 협의 필요
-			portfolioService.addHolding(virtualAccountId, order.getStockId(), order.getQuantity(),
-				order.getRequestPrice(), order.getCurrency());
+			int remainingQuantity = order.getQuantity() - order.getFilledQuantity();
+			portfolioService.addHolding(virtualAccountId, order.getStockId(), remainingQuantity,
+				order.getReservedAvgPrice(), order.getCurrency());
 		}
 
 		order.cancel();
@@ -217,6 +220,9 @@ public class OrderService {
 			.orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
 		if (order.getOrderType() == OrderType.MARKET) {
 			throw new BusinessException(ErrorCode.ORDER_NOT_MODIFIABLE);
+		}
+		if (order.getFilledQuantity() > 0) {
+			throw new BusinessException(ErrorCode.ORDER_PARTIAL_NOT_MODIFIABLE);
 		}
 
 		order.validateOwnership(virtualAccountId);
@@ -239,15 +245,12 @@ public class OrderService {
 				account.deposit(diff.abs());
 			}
 		} else if (order.getSide() == OrderSide.SELL) {
-			// TODO: addHolding은 avgPrice를 재계산함
-			// 취소 시 원래 avgPrice를 유지하는 returnHolding 메서드가 필요
-			// 지정가 매도 구현 후 팀원 협의 필요
 			int diffQuantity = Math.abs(newQuantity - oldQuantity);
 			if (newQuantity > oldQuantity) {
 				portfolioService.deductQuantity(virtualAccountId, order.getStockId(), diffQuantity);
 			} else if (newQuantity < oldQuantity) {
 				portfolioService.addHolding(virtualAccountId, order.getStockId(), diffQuantity,
-					order.getRequestPrice(), order.getCurrency());
+					order.getReservedAvgPrice(), order.getCurrency());
 			}
 		}
 		Stock stock = stockInfoProvider.getStock(order.getStockId());
