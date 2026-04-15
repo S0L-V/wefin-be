@@ -105,8 +105,9 @@ public enum ErrorCode {
     MARKET_SUBSCRIPTION_LIMIT_EXCEEDED(400, "실시간 구독 종목은 최대 20개까지 가능합니다."),
 
     // Interest
-    INTEREST_ALREADY_EXISTS(400, "이미 등록된 관심종목입니다."),
-    INTEREST_LIMIT_EXCEEDED(400, "관심종목은 최대 10개까지 등록할 수 있습니다."),
+    INTEREST_ALREADY_EXISTS(400, "이미 등록된 관심사입니다."),
+    INTEREST_LIMIT_EXCEEDED(400, "관심사는 타입별로 최대 10개까지 등록할 수 있습니다."),
+    INTEREST_TAG_NOT_FOUND(404, "등록할 수 없는 관심사입니다."),
 
     // Embedding
     EMBEDDING_ARTICLE_NOT_FOUND(500, "임베딩 대상 기사를 찾을 수 없습니다."),
