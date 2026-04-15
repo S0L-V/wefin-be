@@ -74,6 +74,8 @@ public class Order extends BaseEntity {
 	@Column(nullable = false)
 	private BigDecimal tax;
 
+	private BigDecimal reservedAvgPrice;
+
 	private OffsetDateTime cancelledAt;
 
 	public Order(Long virtualAccountId, Long stockId, OrderType orderType, OrderSide side, Integer quantity,
@@ -92,6 +94,15 @@ public class Order extends BaseEntity {
 		this.tax = tax;
 	}
 
+	public Order(Long virtualAccountId, Long stockId, OrderType orderType, OrderSide side, Integer quantity,
+				 BigDecimal requestPrice, Currency currency,
+				 BigDecimal exchangeRate, BigDecimal fee, BigDecimal tax,
+				 BigDecimal reservedAvgPrice) {
+		this(virtualAccountId, stockId, orderType, side, quantity, requestPrice, currency,
+				exchangeRate, fee, tax);
+		this.reservedAvgPrice = reservedAvgPrice;
+	}
+
 	// == 비즈니스 메서드 ==
 	public void fill(Integer filledQuantity) {
 		validatePending();
@@ -100,6 +111,21 @@ public class Order extends BaseEntity {
 		}
 		this.status = OrderStatus.FILLED;
 		this.filledQuantity = filledQuantity;
+	}
+
+	public void fillPartially(Integer matchedQuantity) {
+		validatePending();
+
+		if (matchedQuantity == null || matchedQuantity > this.quantity - this.filledQuantity || matchedQuantity <= 0) {
+			throw new BusinessException(ErrorCode.ORDER_INVALID_QUANTITY);
+		}
+		this.filledQuantity = this.filledQuantity + matchedQuantity;
+
+		if (this.filledQuantity.equals(this.quantity)) {
+			this.status = OrderStatus.FILLED;
+		} else {
+			this.status = OrderStatus.PARTIAL;
+		}
 	}
 
 	public void cancel() {
