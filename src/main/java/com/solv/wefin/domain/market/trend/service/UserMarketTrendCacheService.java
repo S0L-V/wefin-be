@@ -100,18 +100,22 @@ public class UserMarketTrendCacheService {
      *   캐시 삭제 실패가 관심사 저장 트랜잭션을 말아먹지 않음 (best-effort)
      *   self-invocation 문제 없이 Spring Data의 기본 @Transactional이 적용됨
      *
-     * 타임스탬프({@code lastInvalidatedAt})는 호출 즉시 기록하여 진행 중인 compute가 stale 스냅샷을 저장하지 못하게 한다
+     * 타임스탬프({@code lastInvalidatedAt})는 트랜잭션 활성 시 afterCommit에서 기록한다.
+     * 커밋 전에 먼저 기록하면, 아직 커밋되지 않은 관심사 변경을 다른 경로의 compute가 구 데이터로 읽은 뒤
+     * {@code invalidatedAt < computeStartedAt}으로 판정되어 stale 스냅샷을 캐시에 저장할 수 있기 때문이다.
+     * 비트랜잭션 경로에서는 즉시 기록한다.
      */
     public void invalidateToday(UUID userId) {
-        lastInvalidatedAt.put(userId, Instant.now());
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
+                    lastInvalidatedAt.put(userId, Instant.now());
                     deleteQuietly(userId);
                 }
             });
         } else {
+            lastInvalidatedAt.put(userId, Instant.now());
             deleteQuietly(userId);
         }
     }
