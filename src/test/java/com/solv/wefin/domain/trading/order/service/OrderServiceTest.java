@@ -204,9 +204,10 @@ class OrderServiceTest {
 		@Test
 		void 취소_성공_매도주문() {
 			// given
+			BigDecimal reservedAvgPrice = BigDecimal.valueOf(4500);  // 포트폴리오 avgPrice 스냅샷
 			Order order = new Order(1L, 1L, OrderType.LIMIT, OrderSide.SELL, 10,
 				BigDecimal.valueOf(5000), Currency.KRW, null,
-				BigDecimal.valueOf(75), BigDecimal.ZERO);
+				BigDecimal.valueOf(75), BigDecimal.ZERO, reservedAvgPrice);
 			VirtualAccount mockAccount = mock(VirtualAccount.class);
 			given(orderRepository.findByOrderNoForUpdate(order.getOrderNo())).willReturn(Optional.of(order));
 			given(virtualAccountService.getAccountWithLock(1L)).willReturn(mockAccount);
@@ -215,7 +216,53 @@ class OrderServiceTest {
 			orderService.cancelOrder(1L, order.getOrderNo());
 
 			// then
-			verify(portfolioService).addHolding(1L, 1L, 10, BigDecimal.valueOf(5000), Currency.KRW);
+			verify(portfolioService).addHolding(1L, 1L, 10, reservedAvgPrice, Currency.KRW);
+			assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+		}
+
+		@Test
+		void 취소_성공_매수주문_부분체결() {
+			// given
+			Order order = new Order(1L, 1L, OrderType.LIMIT, OrderSide.BUY, 10,
+					BigDecimal.valueOf(50000), Currency.KRW, null,
+					BigDecimal.valueOf(75), BigDecimal.ZERO);
+			order.fillPartially(3);  // 3주 체결된 상태 → remainingQty = 7
+
+			VirtualAccount mockAccount = mock(VirtualAccount.class);
+			given(orderRepository.findByOrderNoForUpdate(any())).willReturn(Optional.of(order));
+			given(virtualAccountService.getAccountWithLock(1L)).willReturn(mockAccount);
+
+			// when
+			orderService.cancelOrder(1L, order.getOrderNo());
+
+			// then
+			// remainingCost = 50000 × 7 = 350000
+			// remainingFee = 350000 × 0.00015 = 52.5 → 52 (DOWN)
+			// refund = 350052
+			verify(mockAccount).deposit(BigDecimal.valueOf(350052));
+			assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+		}
+
+		@Test
+		void 취소_성공_매도주문_부분체결() {
+			// given
+			BigDecimal reservedAvgPrice = BigDecimal.valueOf(45000);
+			Order order = new Order(1L, 1L, OrderType.LIMIT, OrderSide.SELL, 10,
+					BigDecimal.valueOf(50000), Currency.KRW, null,
+					BigDecimal.valueOf(75), BigDecimal.valueOf(900),
+					reservedAvgPrice);
+			order.fillPartially(4);  // 4주 체결 → remainingQty = 6
+
+			VirtualAccount mockAccount = mock(VirtualAccount.class);
+			given(orderRepository.findByOrderNoForUpdate(any())).willReturn(Optional.of(order));
+			given(virtualAccountService.getAccountWithLock(1L)).willReturn(mockAccount);
+
+			// when
+			orderService.cancelOrder(1L, order.getOrderNo());
+
+			// then
+			// 남은 6주를 reservedAvgPrice(45000) 기준으로 복원
+			verify(portfolioService).addHolding(1L, 1L, 6, reservedAvgPrice, Currency.KRW);
 			assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
 		}
 
@@ -283,6 +330,24 @@ class OrderServiceTest {
 			assertThatThrownBy(() -> orderService.modifyOrder(1L, order.getOrderNo(), BigDecimal.valueOf(60000), 10))
 				.isInstanceOf(BusinessException.class)
 				.hasMessage(ErrorCode.ORDER_NOT_MODIFIABLE.getMessage());
+		}
+
+		@Test
+		void 정정_실패_부분체결된_주문() {
+			// given
+			Order order = new Order(1L, 1L, OrderType.LIMIT, OrderSide.BUY, 10,
+					BigDecimal.valueOf(50000), Currency.KRW, null,
+					BigDecimal.valueOf(75), BigDecimal.ZERO);
+			order.fillPartially(2);  // 부분체결 상태
+
+			given(orderRepository.findByOrderNoForUpdate(order.getOrderNo()))
+					.willReturn(Optional.of(order));
+
+			// when & then
+			assertThatThrownBy(() ->
+					orderService.modifyOrder(1L, order.getOrderNo(), BigDecimal.valueOf(60000), 10))
+					.isInstanceOf(BusinessException.class)
+					.hasMessage(ErrorCode.ORDER_PARTIAL_NOT_MODIFIABLE.getMessage());
 		}
 
 		@Test
