@@ -19,6 +19,11 @@ public class StockService implements StockInfoProvider {
     private final StockRepository stockRepository;
 
     @Override
+    public Stock getStockByCode(String stockCode) {
+        return findByCodeOrThrow(stockCode);
+    }
+
+    @Override
     public boolean existsByCode(String stockCode) {
         return stockRepository.existsByStockCode(stockCode);
     }

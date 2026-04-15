@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.solv.wefin.domain.trading.order.entity.OrderStatus;
+import com.solv.wefin.domain.trading.order.entity.OrderType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -24,4 +26,6 @@ public interface OrderRepository extends JpaRepository<Order, Long>, OrderReposi
 	Optional<Order> findByOrderNoForUpdate(@Param("orderNo") UUID orderNo);
 
 	List<Order> findAllByVirtualAccountIdOrderByCreatedAtDesc(Long virtualAccountId);
+
+	List<Order> findAllByStatusInAndOrderTypeAndStockId(List<OrderStatus> statuses, OrderType orderType, Long stockId);
 }
