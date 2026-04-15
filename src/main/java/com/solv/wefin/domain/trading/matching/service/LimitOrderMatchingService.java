@@ -122,6 +122,7 @@ public class LimitOrderMatchingService {
         VirtualAccount account = virtualAccountService.getAccountWithLock(
                 order.getVirtualAccountId());
         account.deposit(netDeposit);
+        account.addProfit(realizedProfit);
 
         // 포트폴리오는 건드리지 않음 (생성 시점에 이미 deductQuantity 완료)
 
