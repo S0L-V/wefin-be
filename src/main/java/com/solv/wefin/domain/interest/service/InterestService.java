@@ -1,6 +1,7 @@
 package com.solv.wefin.domain.interest.service;
 
 import com.solv.wefin.domain.interest.dto.InterestInfo;
+import com.solv.wefin.domain.market.trend.service.UserMarketTrendCacheService;
 import com.solv.wefin.domain.news.article.entity.NewsArticleTag;
 import com.solv.wefin.domain.news.article.repository.NewsArticleTagRepository;
 import com.solv.wefin.domain.trading.watchlist.entity.InterestType;
@@ -39,7 +40,9 @@ public class InterestService {
     private final UserInterestRepository userInterestRepository;
     private final NewsArticleTagRepository newsArticleTagRepository;
     private final ManualInterestLockService manualInterestLockService;
+    private final UserMarketTrendCacheService userMarketTrendCacheService;
 
+    @Transactional(readOnly = true)
     public List<InterestInfo> list(UUID userId, InterestType type) {
         assertSectorOrTopic(type);
 
@@ -87,6 +90,8 @@ public class InterestService {
         }
 
         userInterestRepository.save(UserInterest.createManual(userId, type.name(), code, ADD_WEIGHT));
+        // 관심사 변경 시 맞춤 동향 캐시 무효화 → 다음 personalized 호출이 새 관심사로 AI 재호출
+        userMarketTrendCacheService.invalidateToday(userId);
     }
 
     @Transactional
@@ -97,6 +102,7 @@ public class InterestService {
         userInterestRepository
                 .deleteByUserIdAndInterestTypeAndInterestValueAndManualRegisteredTrue(
                         userId, type.name(), code);
+        userMarketTrendCacheService.invalidateToday(userId);
     }
 
     private void assertSectorOrTopic(InterestType type) {

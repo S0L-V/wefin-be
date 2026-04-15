@@ -1,6 +1,7 @@
 package com.solv.wefin.domain.trading.watchlist.service;
 
 import com.solv.wefin.domain.interest.service.ManualInterestLockService;
+import com.solv.wefin.domain.market.trend.service.UserMarketTrendCacheService;
 import com.solv.wefin.domain.trading.market.dto.PriceResponse;
 import com.solv.wefin.domain.trading.market.service.MarketService;
 import com.solv.wefin.domain.trading.stock.entity.Stock;
@@ -30,6 +31,7 @@ public class WatchlistService {
     private final UserInterestRepository userInterestRepository;
     private final StockRepository stockRepository;
     private final ManualInterestLockService manualInterestLockService;
+    private final UserMarketTrendCacheService userMarketTrendCacheService;
 
     public List<WatchlistInfo> getStockList(UUID userId) {
         List<UserInterest> interests = userInterestRepository
@@ -65,11 +67,14 @@ public class WatchlistService {
 
         userInterestRepository.save(UserInterest.createManual(
                 userId, InterestType.STOCK.name(), stockCode, ADD_WATCHLIST_WEIGHT));
+        // 관심사 변경 시 맞춤 동향 캐시 무효화 → 다음 personalized 호출이 새 watchlist로 AI 재호출
+        userMarketTrendCacheService.invalidateToday(userId);
     }
 
     @Transactional
     public void deleteUserInterest(UUID userId, String stockCode) {
         userInterestRepository.deleteByUserIdAndInterestTypeAndInterestValueAndManualRegisteredTrue(
                 userId, InterestType.STOCK.name(), stockCode);
+        userMarketTrendCacheService.invalidateToday(userId);
     }
 }
