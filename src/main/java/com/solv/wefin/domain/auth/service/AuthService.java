@@ -12,6 +12,7 @@ import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.domain.quest.entity.QuestEventType;
 import com.solv.wefin.domain.quest.service.QuestProgressService;
+import com.solv.wefin.domain.trading.account.service.VirtualAccountService;
 import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
@@ -42,6 +43,7 @@ public class AuthService {
     private final JwtProvider jwtProvider;
     private final RefreshTokenRepository refreshTokenRepository;
     private final QuestProgressService questProgressService;
+    private final VirtualAccountService virtualAccountService;
 
     @Transactional
     public SignupInfo signup(SignupCommand command) {
@@ -78,10 +80,12 @@ public class AuthService {
                     .password(passwordEncoder.encode(password))
                     .build();
 
-            User savedUser = userRepository.save(user);
+            User savedUser = userRepository.saveAndFlush(user);
 
             Group homeGroup = groupService.createDefaultGroup(savedUser);
             savedUser.setHomeGroup(homeGroup);
+
+            virtualAccountService.createAccount(savedUser.getUserId());
 
             return new SignupInfo(
                     savedUser.getUserId(),
@@ -158,8 +162,22 @@ public class AuthService {
 
     @Transactional
     public String refresh(String refreshToken) {
+        RefreshToken savedToken = getValidRefreshTokenForUpdate(refreshToken);
 
-        // 토큰 유효성 검증
+        return jwtProvider.generateAccessToken(savedToken.getUserId());
+    }
+
+    @Transactional
+    public void logout(UUID userId, String refreshToken) {
+        RefreshToken savedToken = getValidRefreshTokenForUpdate(refreshToken);
+
+        if (!savedToken.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
+        }
+        savedToken.revoke();
+    }
+
+    private RefreshToken getValidRefreshTokenForUpdate(String refreshToken) {
         if (!jwtProvider.isValid(refreshToken) || !"refresh".equals(jwtProvider.getTokenType(refreshToken))) {
             throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
         }
@@ -173,21 +191,18 @@ public class AuthService {
             throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
         }
 
-        RefreshToken savedToken = refreshTokenRepository.findById(userId)
+        RefreshToken savedToken = refreshTokenRepository.findByUserIdForUpdate(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_INVALID_TOKEN));
 
-        // 토큰 일치 여부 확인
         if (!savedToken.getToken().equals(refreshToken) || savedToken.isRevoked()) {
             throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
         }
 
-        // 만료 체크
         if (!savedToken.getExpiresAt().isAfter(OffsetDateTime.now())) {
             throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
         }
 
-        // 새 access token 발급
-        return jwtProvider.generateAccessToken(userId);
+        return savedToken;
     }
 
     private BusinessException mapConstraintViolation(DataIntegrityViolationException e) {
