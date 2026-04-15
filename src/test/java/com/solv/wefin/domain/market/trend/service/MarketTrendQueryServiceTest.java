@@ -59,7 +59,7 @@ class MarketTrendQueryServiceTest {
     @DisplayName("MarketTrend 없으면 generated=false로 snapshot만 반환")
     void getOverview_noTrend_returnsEmptyGenerated() {
         given(marketSnapshotRepository.findAll()).willReturn(List.of(snapshot));
-        given(marketTrendRepository.findByTrendDateAndSessionAndTitleIsNotNullAndSummaryIsNotNull(java.time.LocalDate.now(), MarketTrend.SESSION_DAILY)).willReturn(Optional.empty());
+        given(marketTrendRepository.findByTrendDateAndSessionAndTitleIsNotNullAndSummaryIsNotNull(java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")), MarketTrend.SESSION_DAILY)).willReturn(Optional.empty());
 
         MarketTrendOverview result = queryService.getOverview();
 
@@ -85,11 +85,11 @@ class MarketTrendQueryServiceTest {
         String sourceIdsJson = "[10, 20]";
 
         MarketTrend trend = MarketTrend.createDaily(
-                LocalDate.now(), "오늘 시장 요약", "상세 내용",
+                LocalDate.now(java.time.ZoneId.of("Asia/Seoul")), "오늘 시장 요약", "상세 내용",
                 insightCardsJson, keywordsJson,
                 sourceIdsJson, 56);
         ReflectionTestUtils.setField(trend, "updatedAt", OffsetDateTime.now());
-        given(marketTrendRepository.findByTrendDateAndSessionAndTitleIsNotNullAndSummaryIsNotNull(java.time.LocalDate.now(), MarketTrend.SESSION_DAILY)).willReturn(Optional.of(trend));
+        given(marketTrendRepository.findByTrendDateAndSessionAndTitleIsNotNullAndSummaryIsNotNull(java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")), MarketTrend.SESSION_DAILY)).willReturn(Optional.of(trend));
 
         // 클러스터 정보 보강 — ACTIVE + GENERATED/STALE만 노출
         NewsCluster c10 = createCluster(10L, "삼성전자 실적", OffsetDateTime.now().minusHours(1));
@@ -119,10 +119,10 @@ class MarketTrendQueryServiceTest {
         given(marketSnapshotRepository.findAll()).willReturn(List.of(snapshot));
 
         MarketTrend trend = MarketTrend.createDaily(
-                LocalDate.now(), "제목", "요약", "[]", "[]",
+                LocalDate.now(java.time.ZoneId.of("Asia/Seoul")), "제목", "요약", "[]", "[]",
                 "[10, 20, 30]", 30);
         ReflectionTestUtils.setField(trend, "updatedAt", OffsetDateTime.now());
-        given(marketTrendRepository.findByTrendDateAndSessionAndTitleIsNotNullAndSummaryIsNotNull(java.time.LocalDate.now(), MarketTrend.SESSION_DAILY)).willReturn(Optional.of(trend));
+        given(marketTrendRepository.findByTrendDateAndSessionAndTitleIsNotNullAndSummaryIsNotNull(java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")), MarketTrend.SESSION_DAILY)).willReturn(Optional.of(trend));
 
         // 20번만 ACTIVE+GENERATED 상태로 반환됨 (10, 30은 노출 대상 아님)
         NewsCluster c20 = createCluster(20L, "유일 생존", OffsetDateTime.now());
@@ -143,11 +143,11 @@ class MarketTrendQueryServiceTest {
         given(marketSnapshotRepository.findAll()).willReturn(List.of(snapshot));
 
         MarketTrend trend = MarketTrend.createDaily(
-                LocalDate.now(), "제목", "요약",
+                LocalDate.now(java.time.ZoneId.of("Asia/Seoul")), "제목", "요약",
                 "{invalid json", "[not an array",
                 "[broken", null);
         ReflectionTestUtils.setField(trend, "updatedAt", OffsetDateTime.now());
-        given(marketTrendRepository.findByTrendDateAndSessionAndTitleIsNotNullAndSummaryIsNotNull(java.time.LocalDate.now(), MarketTrend.SESSION_DAILY)).willReturn(Optional.of(trend));
+        given(marketTrendRepository.findByTrendDateAndSessionAndTitleIsNotNullAndSummaryIsNotNull(java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")), MarketTrend.SESSION_DAILY)).willReturn(Optional.of(trend));
 
         MarketTrendOverview result = queryService.getOverview();
 
