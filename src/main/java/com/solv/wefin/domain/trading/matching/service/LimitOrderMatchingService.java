@@ -159,10 +159,18 @@ public class LimitOrderMatchingService {
     }
 
     /**
-     * PENDING/PARTIAL 지정가 주문을 조회한다.
+     * PENDING/PARTIAL 지정가 주문을 비관적 쓰기 락으로 조회한다.
+     *
+     * <p>동시 WebSocket 틱에서 같은 주문을 이중 체결하는 TOCTOU 경쟁과,
+     * 매칭 도중 유저의 취소/수정 경로(findByOrderNoForUpdate)가 개입하는
+     * race condition을 차단하기 위해 FOR UPDATE 조회를 사용한다.
      */
     private List<Order> getLimitOrderList(Long stockId) {
-        return orderRepository.findAllByStatusInAndOrderTypeAndStockId(List.of(OrderStatus.PENDING, OrderStatus.PARTIAL), OrderType.LIMIT, stockId);
+        return orderRepository.findAllByStatusInAndOrderTypeAndStockIdForUpdate(
+                List.of(OrderStatus.PENDING, OrderStatus.PARTIAL),
+                OrderType.LIMIT,
+                stockId
+        );
     }
 
 
