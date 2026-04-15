@@ -12,6 +12,7 @@ import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.domain.quest.entity.QuestEventType;
 import com.solv.wefin.domain.quest.service.QuestProgressService;
+import com.solv.wefin.domain.quest.service.UserQuestService;
 import com.solv.wefin.domain.trading.account.service.VirtualAccountService;
 import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
@@ -67,6 +68,9 @@ class AuthServiceTest {
 
     @Mock
     private VirtualAccountService virtualAccountService;
+
+    @Mock
+    private UserQuestService userQuestService;
 
     @InjectMocks
     private AuthService authService;
@@ -286,6 +290,7 @@ class AuthServiceTest {
                     () -> assertThat(savedToken.isRevoked()).isFalse()
             );
             verify(questProgressService).handleEvent(userId, QuestEventType.LOGIN);
+            verify(userQuestService).getOrIssueTodayUserQuests(userId);
         }
 
         @Test
@@ -316,6 +321,8 @@ class AuthServiceTest {
 
             verify(refreshTokenRepository).save(any(RefreshToken.class));
             verify(questProgressService).handleEvent(userId, QuestEventType.LOGIN);
+            verify(userQuestService).getOrIssueTodayUserQuests(userId);
+
             assertAll(
                     () -> assertThat(result.userId()).isEqualTo(userId),
                     () -> assertThat(result.nickname()).isEqualTo("testuser"),

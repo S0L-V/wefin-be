@@ -182,7 +182,7 @@ INSERT INTO quest_template (
       ),
       (
           'GAME_RANK_DAILY',
-          '게임방 상위권 달성하기',
+          '게임방 순위 달성하기',
           '오늘 게임방 순위를 달성해 보상을 받아보세요.',
           'PERCENT',
           'CHECK_GAME_RANK',

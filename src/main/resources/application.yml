@@ -90,3 +90,7 @@ hantu:
 
   ws:
     url: ws://ops.koreainvestment.com:21000
+
+  spring:
+    flyway:
+      out-of-order: true
