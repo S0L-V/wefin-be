@@ -95,6 +95,7 @@ class GameRankingServiceTest {
             // Then
             assertThat(rankings).hasSize(2);
             assertThat(rankings).allSatisfy(r -> {
+                assertThat(r.rank()).isEqualTo(1);
                 assertThat(r.totalAsset()).isEqualByComparingTo(SEED);
                 assertThat(r.profitRate()).isEqualByComparingTo(BigDecimal.ZERO);
             });
