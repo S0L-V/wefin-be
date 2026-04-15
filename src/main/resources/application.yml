@@ -12,6 +12,7 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    out-of-order: true
 
 openai:
   api-key: ${OPENAI_API_KEY:}
