@@ -13,6 +13,7 @@ import com.solv.wefin.domain.payment.repository.SubscriptionRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
@@ -80,8 +82,12 @@ public class PaymentService {
             String orderId,
             BigDecimal amount
     ) {
-        Payment payment = paymentRepository.findByOrderIdAndUserUserId(orderId, userId)
+        Payment payment = paymentRepository.findWithLockByOrderIdAndUserUserId(orderId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
+
+        if (payment.isPaid()) {
+            throw new BusinessException(ErrorCode.PAYMENT_ALREADY_CONFIRMED);
+        }
 
         if (!payment.isReady()) {
             throw new BusinessException(ErrorCode.PAYMENT_NOT_READY);
@@ -100,17 +106,33 @@ public class PaymentService {
             throw new BusinessException(ErrorCode.ACTIVE_SUBSCRIPTION_ALREADY_EXISTS);
         }
 
-        TossPaymentConfirmResult result = tossPaymentClient.confirm(
-                paymentKey,
-                orderId,
-                amount
-        );
+        TossPaymentConfirmResult result;
 
-        if (result.status() != TossPaymentStatus.DONE) {
+        try {
+            result = tossPaymentClient.confirm(
+                    paymentKey,
+                    orderId,
+                    amount
+            );
+        } catch (BusinessException e) {
+            payment.markFailed("TOSS_API_ERROR");
+            paymentConfirmWriter.savePaidPaymentAndSubscription(payment, null);
+            throw e;
+        }
+
+        if (result.status() == TossPaymentStatus.FAILED) {
+            payment.markFailed("TOSS_FAILED");
+            paymentConfirmWriter.savePaidPaymentAndSubscription(payment, null);
             throw new BusinessException(ErrorCode.PAYMENT_CONFIRM_FAILED);
         }
 
-        payment.markPaid(result.paymentKey());
+        if (result.status() == TossPaymentStatus.CANCELED) {
+            payment.markCanceled();
+            paymentConfirmWriter.savePaidPaymentAndSubscription(payment, null);
+            throw new BusinessException(ErrorCode.PAYMENT_CANCELED);
+        }
+
+        payment.markPaid(result.paymentKey(), result.approvedAt());
 
         OffsetDateTime startedAt = OffsetDateTime.now();
         OffsetDateTime expiredAt = calculateExpiredAt(
@@ -125,8 +147,20 @@ public class PaymentService {
                 expiredAt
         );
 
-        Subscription savedSubscription =
-                paymentConfirmWriter.savePaidPaymentAndSubscription(payment, subscription);
+        Subscription savedSubscription;
+        try {
+            savedSubscription =
+                    paymentConfirmWriter.savePaidPaymentAndSubscription(payment, subscription);
+        } catch (Exception e) {
+            // 이미 승인된 결제 취소
+            try {
+                tossPaymentClient.cancel(result.paymentKey(), "INTERNAL_ERROR");
+            } catch (Exception cancelException) {
+                // 취소까지 실패하면 로그만 남기고 원 예외 유지
+                log.error("Payment cancel failed after confirm success. paymentKey={}", result.paymentKey(), cancelException);
+            }
+            throw e;
+        }
 
         return PaymentConfirmInfo.from(payment, savedSubscription);
     }
