@@ -7,7 +7,6 @@ import com.solv.wefin.domain.market.repository.MarketSnapshotRepository;
 import com.solv.wefin.domain.market.trend.client.OpenAiMarketTrendClient;
 import com.solv.wefin.domain.market.trend.client.OpenAiMarketTrendClient.ClusterSummary;
 import com.solv.wefin.domain.market.trend.client.OpenAiMarketTrendClient.MarketTrendRawResult;
-import com.solv.wefin.domain.market.trend.client.OpenAiMarketTrendClient.ParsedCard;
 import com.solv.wefin.domain.market.trend.dto.InsightCard;
 import com.solv.wefin.domain.market.trend.dto.MarketTrendContent;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
@@ -17,7 +16,6 @@ import com.solv.wefin.domain.news.cluster.entity.NewsClusterArticle;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.news.cluster.service.ClusterTagAggregator;
-import com.solv.wefin.domain.news.cluster.dto.StockInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -26,8 +24,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -63,6 +59,7 @@ public class MarketTrendGenerationService {
     private final ClusterTagAggregator tagAggregator;
     private final OpenAiMarketTrendClient openAiClient;
     private final MarketTrendPersistenceService persistenceService;
+    private final MarketTrendCardMapper cardMapper;
     private final ObjectMapper objectMapper;
 
     /**
@@ -97,10 +94,10 @@ public class MarketTrendGenerationService {
         List<Long> allArticleIds = clusterArticleMap.values().stream()
                 .flatMap(List::stream).distinct().toList();
 
-        List<String> risingStocks = collectTopStockNames(
+        List<String> risingStocks = cardMapper.collectTopStockNames(
                 allArticleIds.isEmpty() ? Map.of() : tagAggregator.aggregateStocks(clusterArticleMap, allArticleIds),
                 MAX_TAGS);
-        List<String> risingTopics = collectTopTopicNames(
+        List<String> risingTopics = cardMapper.collectTopTopicNames(
                 allArticleIds.isEmpty() ? Map.of() : tagAggregator.aggregateMarketTags(clusterArticleMap, allArticleIds),
                 MAX_TAGS);
 
@@ -124,7 +121,7 @@ public class MarketTrendGenerationService {
         }
 
         // 6) relatedClusterIndices(1-based prompt index) → 실제 clusterId 매핑
-        List<InsightCard> cards = mapCards(raw.cards(), clusterSummaries);
+        List<InsightCard> cards = cardMapper.mapOverviewCards(raw.cards(), clusterSummaries);
 
         // 7) 카드/키워드 개수 계약 검증 (프론트 레이아웃 보장)
         if (cards.size() != REQUIRED_CARDS) {
@@ -147,16 +144,9 @@ public class MarketTrendGenerationService {
         }
 
         // 8) 출처 메타 계산
-        //    - sourceClusterIds: AI가 insightCards에서 실제로 참조한 클러스터만 (중복 제거 + 입력 순서 유지).
-        //      프롬프트에 넘긴 15개 전부가 아니라 AI 동의한 것만 저장하여, 프론트의 "이 동향의 출처" 섹션이
-        //      본문과 실제로 관련된 카드만 노출하도록 보장
-        //    - sourceArticleCount: 전체 고유 기사 수. clusterArticleMap.values() 합산은 같은 기사가 복수
-        //      클러스터에 속할 때 중복 카운트되므로 allArticleIds.size()로 정확도 확보
-        java.util.LinkedHashSet<Long> referencedClusterIds = new java.util.LinkedHashSet<>();
-        for (InsightCard card : cards) {
-            referencedClusterIds.addAll(card.relatedClusterIds());
-        }
-        List<Long> sourceClusterIds = List.copyOf(referencedClusterIds);
+        //    - sourceClusterIds: AI가 insightCards에서 실제로 참조한 클러스터만 (중복 제거 + 입력 순서 유지)
+        //    - sourceArticleCount: 전체 고유 기사 수 (allArticleIds.size())
+        List<Long> sourceClusterIds = cardMapper.collectReferencedClusterIds(cards);
         int sourceArticleCount = allArticleIds.size();
 
         // 9) 저장 (upsert)
@@ -170,58 +160,6 @@ public class MarketTrendGenerationService {
         } catch (JsonProcessingException e) {
             log.warn("[MarketTrend] JSON 직렬화 실패 — 저장 스킵", e);
         }
-    }
-
-    /**
-     * 클러스터별 STOCK 태그를 flatten하여 상위 name을 반환한다.
-     */
-    private List<String> collectTopStockNames(Map<Long, List<StockInfo>> perCluster, int topN) {
-        Map<String, Integer> counts = new LinkedHashMap<>();
-        Map<String, String> codeToName = new LinkedHashMap<>();
-        perCluster.values().forEach(list -> {
-            if (list == null) return;
-            list.forEach(info -> {
-                counts.merge(info.code(), 1, Integer::sum);
-                codeToName.putIfAbsent(info.code(), info.name());
-            });
-        });
-        return counts.entrySet().stream()
-                .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
-                .limit(topN)
-                .map(e -> codeToName.get(e.getKey()))
-                .toList();
-    }
-
-    private List<String> collectTopTopicNames(Map<Long, List<String>> perCluster, int topN) {
-        Map<String, Integer> counts = new LinkedHashMap<>();
-        perCluster.values().forEach(list -> {
-            if (list == null) return;
-            list.forEach(name -> counts.merge(name, 1, Integer::sum));
-        });
-        return counts.entrySet().stream()
-                .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
-                .limit(topN)
-                .map(Map.Entry::getKey)
-                .toList();
-    }
-
-    /**
-     * AI가 반환한 relatedClusterIndices(1-based)를 실제 clusterId로 매핑한다.
-     */
-    private List<InsightCard> mapCards(List<ParsedCard> parsed, List<ClusterSummary> clusterSummaries) {
-        List<InsightCard> result = new ArrayList<>();
-        for (ParsedCard p : parsed) {
-            if (p == null || !p.isValid()) continue;
-            // AI가 동일 index를 복수 반환하는 경우가 있어 카드 단위에서 중복 제거 (LinkedHashSet로 순서 유지)
-            java.util.LinkedHashSet<Long> ids = new java.util.LinkedHashSet<>();
-            for (Integer idx : p.relatedClusterIndices()) {
-                if (idx == null) continue;
-                if (idx < 1 || idx > clusterSummaries.size()) continue;
-                ids.add(clusterSummaries.get(idx - 1).clusterId());
-            }
-            result.add(new InsightCard(p.headline(), p.body(), List.copyOf(ids)));
-        }
-        return List.copyOf(result);
     }
 
     private String toJson(Object value) throws JsonProcessingException {
