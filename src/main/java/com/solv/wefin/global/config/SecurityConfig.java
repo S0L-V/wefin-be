@@ -35,7 +35,7 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/news/**", "/api/market/**",
-                            "/api/market-trends/**",
+                            "/api/market-trends/overview",
                             "/api/stocks/**", "/api/ranking/**").permitAll()
                         .requestMatchers("/api/admin/**").permitAll() // 임시
                         .anyRequest().authenticated()
