@@ -3,6 +3,7 @@ package com.solv.wefin.web.market.trend.dto;
 import com.solv.wefin.domain.market.entity.MarketSnapshot;
 import com.solv.wefin.domain.market.trend.dto.InsightCard;
 import com.solv.wefin.domain.market.trend.dto.MarketTrendOverview;
+import com.solv.wefin.domain.market.trend.dto.PersonalizationMode;
 import com.solv.wefin.domain.market.trend.dto.SourceClusterInfo;
 
 import java.math.BigDecimal;
@@ -17,6 +18,10 @@ import java.util.List;
  */
 public record MarketTrendOverviewResponse(
         boolean generated,
+        /** mode == MATCHED 와 동치. 호환용 derived field */
+        boolean personalized,
+        /** "MATCHED" / "ACTION_BRIEFING" / "OVERVIEW_FALLBACK" */
+        PersonalizationMode mode,
         LocalDate trendDate,
         String title,
         String summary,
@@ -41,6 +46,8 @@ public record MarketTrendOverviewResponse(
                 .toList();
         return new MarketTrendOverviewResponse(
                 overview.generated(),
+                overview.personalized(),
+                overview.mode(),
                 overview.trendDate(),
                 overview.title(),
                 overview.summary(),
@@ -64,13 +71,25 @@ public record MarketTrendOverviewResponse(
         }
     }
 
+    /**
+     * 인사이트 카드 응답
+     *
+     * {@code advice} / {@code adviceLabel}은 personalized 응답에서만 채워지며 overview에서는 항상 {@code null}
+     */
     public record InsightCardResponse(
             String headline,
             String body,
+            String advice,
+            String adviceLabel,
             List<Long> relatedClusterIds
     ) {
         public static InsightCardResponse from(InsightCard card) {
-            return new InsightCardResponse(card.headline(), card.body(), card.relatedClusterIds());
+            return new InsightCardResponse(
+                    card.headline(),
+                    card.body(),
+                    card.advice(),
+                    card.adviceLabel(),
+                    card.relatedClusterIds());
         }
     }
 

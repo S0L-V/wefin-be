@@ -72,8 +72,11 @@ public class MarketTrendQueryService {
         List<SourceClusterInfo> sourceClusters = resolveSourceClusters(trend.getSourceClusterIdsJson());
         int sourceArticleCount = trend.getSourceArticleCount() != null ? trend.getSourceArticleCount() : 0;
 
+        // /overview 엔드포인트 응답은 personalized 개념이 적용되지 않으므로 mode=null.
+        // PersonalizedMarketTrendService가 폴백으로 재사용할 때 withMode(OVERVIEW_FALLBACK)로 갈아끼운다
         return new MarketTrendOverview(
                 true,
+                null,
                 trend.getTrendDate(),
                 trend.getTitle(),
                 trend.getSummary(),
@@ -91,7 +94,14 @@ public class MarketTrendQueryService {
      */
     private List<SourceClusterInfo> resolveSourceClusters(String json) {
         List<Long> ids = parseList(json, CLUSTER_IDS_TYPE);
-        if (ids.isEmpty()) {
+        return resolveSourceClusters(ids);
+    }
+
+    /**
+     * personalized 등 다른 서비스가 카드 union으로부터 직접 source cluster 메타를 만들 때 사용한다.
+     */
+    public List<SourceClusterInfo> resolveSourceClusters(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
             return List.of();
         }
 
