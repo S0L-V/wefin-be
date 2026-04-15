@@ -1,5 +1,6 @@
 package com.solv.wefin.domain.game.vote.service;
 
+import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.game.participant.entity.GameParticipant;
 import com.solv.wefin.domain.game.participant.entity.ParticipantStatus;
 import com.solv.wefin.domain.game.participant.repository.GameParticipantRepository;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -32,6 +34,7 @@ public class GameVoteService {
     private final TurnAdvanceService turnAdvanceService;
     private final VoteBroadcaster voteBroadcaster;
     private final ScheduledExecutorService voteScheduler;
+    private final UserRepository userRepository;
 
     private final ConcurrentHashMap<UUID, VoteSession> activeSessions = new ConcurrentHashMap<>();
 
@@ -57,8 +60,14 @@ public class GameVoteService {
                 .filter(p -> p.getStatus() == ParticipantStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_PARTICIPANT));
 
-        // 3. 세션 조회 또는 생성
+        // 3. 세션 조회 (만료 세션 자동 정리)
         VoteSession session = activeSessions.get(roomId);
+
+        if (session != null && Instant.now().isAfter(session.getDeadline())) {
+            activeSessions.remove(roomId, session);
+            log.warn("[투표] 만료 세션 정리: roomId={}", roomId);
+            session = null;
+        }
 
         if (session == null) {
             // 진행 중인 투표 없음 -> 새 투표 시작 (방장만 가능)
@@ -121,8 +130,12 @@ public class GameVoteService {
                 () -> expireVote(roomId),
                 VOTE_TIMEOUT_SECONDS, TimeUnit.SECONDS));
 
-        // 브로드캐스트: 투표 시작
-        voteBroadcaster.broadcastStart(roomId, userId, totalCount, VOTE_TIMEOUT_SECONDS);
+        // 닉네임 조회 후 브로드캐스트
+        String nickname = userRepository.findById(userId)
+                .map(user -> user.getNickname())
+                .orElse("알 수 없음");
+
+        voteBroadcaster.broadcastStart(roomId, nickname, totalCount, VOTE_TIMEOUT_SECONDS);
 
         // 방장 투표 현황도 브로드캐스트
         voteBroadcaster.broadcastUpdate(

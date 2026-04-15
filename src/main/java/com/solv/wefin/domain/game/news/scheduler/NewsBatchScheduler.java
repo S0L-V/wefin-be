@@ -35,7 +35,7 @@ public class NewsBatchScheduler {
         runBatch("19:00");
     }
 
-    @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 1 * * *", zone = "Asia/Seoul")
     public void collectMidnight() {
         runBatch("00:00");
     }

@@ -9,7 +9,7 @@ import java.util.UUID;
  */
 public interface VoteBroadcaster {
 
-    void broadcastStart(UUID roomId, UUID initiatorId, int totalCount, int timeoutSeconds);
+    void broadcastStart(UUID roomId, String initiatorNickname, int totalCount, int timeoutSeconds);
 
     void broadcastUpdate(UUID roomId, long agreeCount, long disagreeCount, int totalCount);
 
