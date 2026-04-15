@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -110,8 +111,7 @@ public class InterestService {
         if (trimmed.isEmpty() || trimmed.length() > MAX_CODE_LENGTH) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
-        // tag_code는 AI 생성 시점에 정규화되어 저장되므로 여기서는 공백/길이만 방어하고 저장된 그대로 매칭한다
-        return trimmed;
+        return trimmed.toUpperCase(Locale.ROOT);
     }
 
     private NewsArticleTag.TagType toTagType(InterestType type) {
