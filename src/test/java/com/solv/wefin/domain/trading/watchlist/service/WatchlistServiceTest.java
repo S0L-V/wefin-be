@@ -36,6 +36,7 @@ class WatchlistServiceTest {
     @Mock private StockRepository stockRepository;
     @Mock private MarketService marketService;
     @Mock private com.solv.wefin.domain.interest.service.ManualInterestLockService manualInterestLockService;
+    @Mock private com.solv.wefin.domain.market.trend.service.UserMarketTrendCacheService userMarketTrendCacheService;
     @InjectMocks private WatchlistService watchlistService;
 
     private final UUID userId = UUID.randomUUID();

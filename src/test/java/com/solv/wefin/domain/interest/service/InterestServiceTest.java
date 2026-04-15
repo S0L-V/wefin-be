@@ -34,6 +34,7 @@ class InterestServiceTest {
     @Mock private UserInterestRepository userInterestRepository;
     @Mock private NewsArticleTagRepository newsArticleTagRepository;
     @Mock private ManualInterestLockService manualInterestLockService;
+    @Mock private com.solv.wefin.domain.market.trend.service.UserMarketTrendCacheService userMarketTrendCacheService;
     @InjectMocks private InterestService interestService;
 
     private final UUID userId = UUID.randomUUID();
