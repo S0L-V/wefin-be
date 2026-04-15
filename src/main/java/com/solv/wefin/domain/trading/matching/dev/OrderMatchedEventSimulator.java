@@ -1,6 +1,7 @@
 package com.solv.wefin.domain.trading.matching.dev;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -72,6 +73,7 @@ public class OrderMatchedEventSimulator {
 		BigDecimal price = order.getRequestPrice() != null
 			? order.getRequestPrice()
 			: FALLBACK_PRICE;
+		OffsetDateTime matchedAt = OffsetDateTime.now();
 
 		if (order.getSide() == OrderSide.BUY) {
 			return OrderMatchedEvent.ofBuy(
@@ -82,7 +84,8 @@ public class OrderMatchedEventSimulator {
 				order.getQuantity(),
 				price,
 				order.getFee(),
-				account.getBalance()
+				account.getBalance(),
+				matchedAt
 			);
 		}
 
@@ -96,7 +99,8 @@ public class OrderMatchedEventSimulator {
 			order.getFee(),
 			order.getTax(),
 			BigDecimal.ZERO,
-			account.getBalance()
+			account.getBalance(),
+			matchedAt
 		);
 	}
 }

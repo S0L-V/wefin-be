@@ -5,6 +5,7 @@ import static com.solv.wefin.domain.trading.common.TradingConstants.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
@@ -90,7 +91,7 @@ public class OrderService {
 		// 9. 이벤트 발행
 		eventPublisher.publishEvent(OrderMatchedEvent.ofBuy(
 			OrderType.MARKET, order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
-			quantity, currentPrice, fee, account.getBalance()
+			quantity, currentPrice, fee, account.getBalance(), OffsetDateTime.now()
 		));
 
 		questProgressService.handleEvent(account.getUserId(), QuestEventType.BUY_STOCK);
@@ -159,7 +160,7 @@ public class OrderService {
 		// 15. 이벤트 발행
 		eventPublisher.publishEvent(OrderMatchedEvent.ofSell(
 			OrderType.MARKET, order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
-			quantity, currentPrice, fee, tax, realizedAmount, account.getBalance()
+			quantity, currentPrice, fee, tax, realizedAmount, account.getBalance(), OffsetDateTime.now()
 		));
 
 		try {

@@ -35,7 +35,7 @@ public record OrderMatchedNotification(
 			event.tax(),
 			event.realizedProfit(),
 			event.balance(),
-			OffsetDateTime.now()
+			event.matchedAt()
 		);
 	}
 }

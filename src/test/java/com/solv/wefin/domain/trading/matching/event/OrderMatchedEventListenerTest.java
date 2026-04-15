@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -46,7 +47,8 @@ class OrderMatchedEventListenerTest {
 			10,
 			BigDecimal.valueOf(50000),
 			BigDecimal.valueOf(75),
-			BigDecimal.valueOf(9499925)
+			BigDecimal.valueOf(9499925),
+			OffsetDateTime.now()
 		);
 	}
 
