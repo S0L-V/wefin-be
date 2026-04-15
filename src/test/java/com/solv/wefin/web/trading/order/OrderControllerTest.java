@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.solv.wefin.domain.trading.order.dto.OrderCancelInfo;
@@ -68,13 +69,15 @@ class OrderControllerTest {
 			new BigDecimal("178000"), new BigDecimal("9024854"),
 			BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("9024854"));
 
+		Stock stock = mockStock(1L, "005930", "삼성전자");
+		given(stockService.findByStockCode("005930")).willReturn(Optional.of(stock));
 		given(orderService.buyMarket(anyLong(), anyLong(), anyInt()))
 			.willReturn(mockOrderInfo);
 
 		// when & then
 		mockMvc.perform(post("/api/order/buy")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"stockId\": 1, \"quantity\": 10}")
+				.content("{\"stockCode\": \"005930\", \"quantity\": 10}")
 				.with(csrf())
 				.with(authentication(
 					new UsernamePasswordAuthenticationToken(testUserId, null, List.of())
@@ -94,13 +97,15 @@ class OrderControllerTest {
 			new BigDecimal("178000"), new BigDecimal("9013931"),
 			new BigDecimal("3204"), new BigDecimal("80000"), new BigDecimal("9024582"));
 
+		Stock stock = mockStock(1L, "005930", "삼성전자");
+		given(stockService.findByStockCode("005930")).willReturn(Optional.of(stock));
 		given(orderService.sellMarket(anyLong(), anyLong(), anyInt()))
 			.willReturn(mockOrderInfo);
 
 		// when & then
 		mockMvc.perform(post("/api/order/sell")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"stockId\": 1, \"quantity\": 10}")
+				.content("{\"stockCode\": \"005930\", \"quantity\": 10}")
 				.with(csrf())
 				.with(authentication(
 					new UsernamePasswordAuthenticationToken(testUserId, null, List.of())
