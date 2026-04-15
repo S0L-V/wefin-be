@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -58,6 +59,7 @@ public interface UserMarketTrendRepository extends JpaRepository<UserMarketTrend
     /**
      * 사용자의 오늘자 캐시를 삭제한다 (관심사 변경 시 무효화 트리거)
      */
+    @Transactional
     @Modifying(clearAutomatically = true)
     void deleteByUserIdAndTrendDate(UUID userId, LocalDate trendDate);
 }

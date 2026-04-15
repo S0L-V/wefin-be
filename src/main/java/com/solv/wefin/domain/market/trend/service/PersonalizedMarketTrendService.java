@@ -120,7 +120,7 @@ public class PersonalizedMarketTrendService {
 
         OffsetDateTime cacheUpdatedAt = cached.get().getUpdatedAt();
         boolean fresh = cacheUpdatedAt != null
-                && cacheUpdatedAt.isAfter(OffsetDateTime.now().minus(CACHE_TTL));
+                && cacheUpdatedAt.isAfter(OffsetDateTime.now(UserMarketTrendCacheService.TREND_ZONE).minus(CACHE_TTL));
         if (!fresh) {
             log.info("[PersonalizedMarketTrend] 캐시 stale (TTL 경과) — userId={}, cacheUpdatedAt={}",
                     userId, cacheUpdatedAt);
