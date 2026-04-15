@@ -145,7 +145,8 @@ class TurnAdvanceServiceTest {
             setupCommonMocks(room, currentTurn, participant);
             given(gameHoldingRepository.findAllByParticipantAndQuantityGreaterThan(participant, 0))
                     .willReturn(List.of(holding));
-            given(stockDailyRepository.findAllByStockInfoInAndTradeDate(List.of(stockInfo), START_DATE))
+            // 스냅샷은 다음 턴 종가 기준으로 평가하므로 nextTradeDate로 stub
+            given(stockDailyRepository.findAllByStockInfoInAndTradeDate(List.of(stockInfo), nextTradeDate))
                     .willReturn(List.of(daily));
             given(stockDailyRepository.findLatestTradeDateOnOrBefore(START_DATE.plusDays(7)))
                     .willReturn(Optional.of(nextTradeDate));
