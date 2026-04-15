@@ -60,7 +60,7 @@ public class OrderController {
 	public ApiResponse<OrderResponse> buy(@AuthenticationPrincipal UUID userId,
 										  @Valid @RequestBody OrderBuyRequest request) {
 		VirtualAccount account = accountService.getAccountByUserId(userId);
-		Stock stock = stockService.findByStockCode(request.stockCode())
+		Stock stock = stockService.findByStockCode(request.stockCode().strip())
 			.orElseThrow(() -> new BusinessException(ErrorCode.MARKET_STOCK_NOT_FOUND));
 		OrderInfo orderInfo = orderService.buyMarket(account.getVirtualAccountId(),
 			stock.getId(), request.quantity());
@@ -72,7 +72,7 @@ public class OrderController {
 	public ApiResponse<OrderResponse> sell(@AuthenticationPrincipal UUID userId,
 										   @Valid @RequestBody OrderSellRequest request) {
 		VirtualAccount account = accountService.getAccountByUserId(userId);
-		Stock stock = stockService.findByStockCode(request.stockCode())
+		Stock stock = stockService.findByStockCode(request.stockCode().strip())
 			.orElseThrow(() -> new BusinessException(ErrorCode.MARKET_STOCK_NOT_FOUND));
 		OrderInfo orderInfo = orderService.sellMarket(account.getVirtualAccountId(),
 			stock.getId(), request.quantity());
