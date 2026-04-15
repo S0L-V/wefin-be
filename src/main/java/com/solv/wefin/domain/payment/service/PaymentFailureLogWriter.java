@@ -6,6 +6,7 @@ import com.solv.wefin.domain.payment.entity.PaymentFailureLog;
 import com.solv.wefin.domain.payment.repository.PaymentFailureLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -14,7 +15,7 @@ public class PaymentFailureLogWriter {
 
     private final PaymentFailureLogRepository paymentFailureLogRepository;
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void save(
             Payment payment,
             User user,

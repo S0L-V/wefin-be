@@ -79,10 +79,18 @@ public class TossPaymentClient {
                 throw new BusinessException(ErrorCode.PAYMENT_CONFIRM_FAILED);
             }
 
+            TossPaymentStatus status;
+            try {
+                status = TossPaymentStatus.valueOf(responseBody.status());
+            } catch (IllegalArgumentException e) {
+                log.warn("Unexpected Toss payment status. orderId={}, status={}", orderId, responseBody.status());
+                throw new BusinessException(ErrorCode.PAYMENT_CONFIRM_FAILED);
+            }
+
             return new TossPaymentConfirmResult(
                     responseBody.paymentKey(),
                     responseBody.orderId(),
-                    TossPaymentStatus.valueOf(responseBody.status()),
+                    status,
                     responseBody.approvedAt()
             );
         } catch (ResourceAccessException e) {
