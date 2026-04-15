@@ -5,13 +5,18 @@ import com.solv.wefin.domain.auth.dto.SignupCommand;
 import com.solv.wefin.domain.auth.dto.SignupInfo;
 import com.solv.wefin.domain.auth.service.AuthService;
 import com.solv.wefin.global.common.ApiResponse;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.auth.dto.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -67,8 +72,15 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ApiResponse<Void> logout(@RequestBody @Valid LogoutRequest request) {
-        authService.logout(request.refreshToken());
+    public ApiResponse<Void> logout(
+            Authentication authentication,
+            @RequestBody @Valid LogoutRequest request
+    ) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UUID userId)) {
+            throw new BusinessException(ErrorCode.AUTH_UNAUTHORIZED);
+        }
+
+        authService.logout(userId, request.refreshToken());
         return ApiResponse.success(null);
     }
 }

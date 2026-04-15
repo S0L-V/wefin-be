@@ -12,6 +12,7 @@ import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.domain.quest.entity.QuestEventType;
 import com.solv.wefin.domain.quest.service.QuestProgressService;
+import com.solv.wefin.domain.trading.account.service.VirtualAccountService;
 import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
@@ -64,6 +65,9 @@ class AuthServiceTest {
     @Mock
     private QuestProgressService questProgressService;
 
+    @Mock
+    private VirtualAccountService virtualAccountService;
+
     @InjectMocks
     private AuthService authService;
 
@@ -92,7 +96,7 @@ class AuthServiceTest {
 
             ReflectionTestUtils.setField(savedUser, "userId", userId);
 
-            when(userRepository.save(any(User.class))).thenReturn(savedUser);
+            when(userRepository.saveAndFlush(any(User.class))).thenReturn(savedUser);
 
             Group homeGroup = Group.builder()
                     .name("testuser의 그룹")
@@ -105,8 +109,9 @@ class AuthServiceTest {
             );
 
             ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-            verify(userRepository).save(captor.capture());
+            verify(userRepository).saveAndFlush(captor.capture());
             verify(groupService).createDefaultGroup(savedUser);
+            verify(virtualAccountService).createAccount(userId);
 
             User capturedUser = captor.getValue();
 
@@ -135,8 +140,9 @@ class AuthServiceTest {
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_EMAIL_DUPLICATED);
             verify(userRepository, never()).existsByNickname(anyString());
-            verify(userRepository, never()).save(any(User.class));
+            verify(userRepository, never()).saveAndFlush(any(User.class));
             verify(groupService, never()).createDefaultGroup(any(User.class));
+            verify(virtualAccountService, never()).createAccount(any(UUID.class));
         }
 
         @Test
@@ -153,8 +159,9 @@ class AuthServiceTest {
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_NICKNAME_DUPLICATED);
-            verify(userRepository, never()).save(any(User.class));
+            verify(userRepository, never()).saveAndFlush(any(User.class));
             verify(groupService, never()).createDefaultGroup(any(User.class));
+            verify(virtualAccountService, never()).createAccount(any(UUID.class));
         }
 
         @Test
@@ -181,6 +188,7 @@ class AuthServiceTest {
 
             verify(userRepository, never()).save(any(User.class));
             verify(groupService, never()).createDefaultGroup(any(User.class));
+            verify(virtualAccountService, never()).createAccount(any(UUID.class));
         }
 
         @Test
@@ -193,7 +201,7 @@ class AuthServiceTest {
             ConstraintViolationException cause =
                     new ConstraintViolationException("constraint violated", new SQLException(), "uk_users_email");
 
-            when(userRepository.save(any(User.class)))
+            when(userRepository.saveAndFlush(any(User.class)))
                     .thenThrow(new DataIntegrityViolationException("db error", cause));
 
             BusinessException exception = assertThrows(
@@ -205,6 +213,7 @@ class AuthServiceTest {
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_EMAIL_DUPLICATED);
             verify(groupService, never()).createDefaultGroup(any(User.class));
+            verify(virtualAccountService, never()).createAccount(any(UUID.class));
         }
 
         @Test
@@ -217,7 +226,7 @@ class AuthServiceTest {
             ConstraintViolationException cause =
                     new ConstraintViolationException("constraint violated", new SQLException(), "uk_users_nickname");
 
-            when(userRepository.save(any(User.class)))
+            when(userRepository.saveAndFlush(any(User.class)))
                     .thenThrow(new DataIntegrityViolationException("db error", cause));
 
             BusinessException exception = assertThrows(
@@ -229,6 +238,7 @@ class AuthServiceTest {
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_NICKNAME_DUPLICATED);
             verify(groupService, never()).createDefaultGroup(any(User.class));
+            verify(virtualAccountService, never()).createAccount(any(UUID.class));
         }
     }
 

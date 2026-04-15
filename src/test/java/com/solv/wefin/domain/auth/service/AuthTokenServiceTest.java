@@ -82,7 +82,7 @@ class AuthTokenServiceTest {
             when(jwtProvider.getTokenType("refresh-token")).thenReturn("refresh");
             when(jwtProvider.getUserId("refresh-token")).thenReturn(userId);
             when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId)));
-            when(refreshTokenRepository.findById(userId)).thenReturn(Optional.of(savedToken));
+            when(refreshTokenRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(savedToken));
             when(jwtProvider.generateAccessToken(userId)).thenReturn("new-access-token");
 
             String result = authService.refresh("refresh-token");
@@ -103,7 +103,7 @@ class AuthTokenServiceTest {
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_INVALID_TOKEN);
             verify(userRepository, never()).findById(any(UUID.class));
-            verify(refreshTokenRepository, never()).findById(any(UUID.class));
+            verify(refreshTokenRepository, never()).findByUserIdForUpdate(any(UUID.class));
             verify(jwtProvider, never()).generateAccessToken(any(UUID.class));
         }
 
@@ -120,7 +120,7 @@ class AuthTokenServiceTest {
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_INVALID_TOKEN);
             verify(userRepository, never()).findById(any(UUID.class));
-            verify(refreshTokenRepository, never()).findById(any(UUID.class));
+            verify(refreshTokenRepository, never()).findByUserIdForUpdate(any(UUID.class));
             verify(jwtProvider, never()).generateAccessToken(any(UUID.class));
         }
 
@@ -133,7 +133,7 @@ class AuthTokenServiceTest {
             when(jwtProvider.getTokenType("refresh-token")).thenReturn("refresh");
             when(jwtProvider.getUserId("refresh-token")).thenReturn(userId);
             when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId)));
-            when(refreshTokenRepository.findById(userId)).thenReturn(Optional.empty());
+            when(refreshTokenRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.empty());
 
             BusinessException exception = assertThrows(
                     BusinessException.class,
@@ -160,7 +160,7 @@ class AuthTokenServiceTest {
             when(jwtProvider.getTokenType("refresh-token")).thenReturn("refresh");
             when(jwtProvider.getUserId("refresh-token")).thenReturn(userId);
             when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId)));
-            when(refreshTokenRepository.findById(userId)).thenReturn(Optional.of(savedToken));
+            when(refreshTokenRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(savedToken));
 
             BusinessException exception = assertThrows(
                     BusinessException.class,
@@ -188,7 +188,7 @@ class AuthTokenServiceTest {
             when(jwtProvider.getTokenType("refresh-token")).thenReturn("refresh");
             when(jwtProvider.getUserId("refresh-token")).thenReturn(userId);
             when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId)));
-            when(refreshTokenRepository.findById(userId)).thenReturn(Optional.of(savedToken));
+            when(refreshTokenRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(savedToken));
 
             BusinessException exception = assertThrows(
                     BusinessException.class,
@@ -215,7 +215,7 @@ class AuthTokenServiceTest {
             when(jwtProvider.getTokenType("refresh-token")).thenReturn("refresh");
             when(jwtProvider.getUserId("refresh-token")).thenReturn(userId);
             when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId)));
-            when(refreshTokenRepository.findById(userId)).thenReturn(Optional.of(savedToken));
+            when(refreshTokenRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(savedToken));
 
             BusinessException exception = assertThrows(
                     BusinessException.class,
@@ -247,9 +247,9 @@ class AuthTokenServiceTest {
             when(jwtProvider.getTokenType("refresh-token")).thenReturn("refresh");
             when(jwtProvider.getUserId("refresh-token")).thenReturn(userId);
             when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId)));
-            when(refreshTokenRepository.findById(userId)).thenReturn(Optional.of(savedToken));
+            when(refreshTokenRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(savedToken));
 
-            authService.logout("refresh-token");
+            authService.logout(userId, "refresh-token");
 
             assertThat(savedToken.isRevoked()).isTrue();
         }
@@ -257,32 +257,36 @@ class AuthTokenServiceTest {
         @Test
         @DisplayName("토큰이 유효하지 않으면 AUTH_INVALID_TOKEN 예외가 발생한다")
         void logout_fail_when_token_invalid() {
+            UUID userId = UUID.randomUUID();
+
             when(jwtProvider.isValid("invalid-token")).thenReturn(false);
 
             BusinessException exception = assertThrows(
                     BusinessException.class,
-                    () -> authService.logout("invalid-token")
+                    () -> authService.logout(userId, "invalid-token")
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_INVALID_TOKEN);
             verify(userRepository, never()).findById(any(UUID.class));
-            verify(refreshTokenRepository, never()).findById(any(UUID.class));
+            verify(refreshTokenRepository, never()).findByUserIdForUpdate(any(UUID.class));
         }
 
         @Test
         @DisplayName("refresh 토큰 타입이 아니면 AUTH_INVALID_TOKEN 예외가 발생한다")
         void logout_fail_when_token_type_is_not_refresh() {
+            UUID userId = UUID.randomUUID();
+
             when(jwtProvider.isValid("access-token")).thenReturn(true);
             when(jwtProvider.getTokenType("access-token")).thenReturn("access");
 
             BusinessException exception = assertThrows(
                     BusinessException.class,
-                    () -> authService.logout("access-token")
+                    () -> authService.logout(userId, "access-token")
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_INVALID_TOKEN);
             verify(userRepository, never()).findById(any(UUID.class));
-            verify(refreshTokenRepository, never()).findById(any(UUID.class));
+            verify(refreshTokenRepository, never()).findByUserIdForUpdate(any(UUID.class));
         }
 
         @Test
@@ -297,11 +301,11 @@ class AuthTokenServiceTest {
 
             BusinessException exception = assertThrows(
                     BusinessException.class,
-                    () -> authService.logout("refresh-token")
+                    () -> authService.logout(userId, "refresh-token")
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_INVALID_TOKEN);
-            verify(refreshTokenRepository, never()).findById(any(UUID.class));
+            verify(refreshTokenRepository, never()).findByUserIdForUpdate(any(UUID.class));
         }
 
         @Test
@@ -320,11 +324,11 @@ class AuthTokenServiceTest {
 
             BusinessException exception = assertThrows(
                     BusinessException.class,
-                    () -> authService.logout("refresh-token")
+                    () -> authService.logout(userId, "refresh-token")
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_INVALID_TOKEN);
-            verify(refreshTokenRepository, never()).findById(any(UUID.class));
+            verify(refreshTokenRepository, never()).findByUserIdForUpdate(any(UUID.class));
         }
 
         @Test
@@ -336,11 +340,11 @@ class AuthTokenServiceTest {
             when(jwtProvider.getTokenType("refresh-token")).thenReturn("refresh");
             when(jwtProvider.getUserId("refresh-token")).thenReturn(userId);
             when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId)));
-            when(refreshTokenRepository.findById(userId)).thenReturn(Optional.empty());
+            when(refreshTokenRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.empty());
 
             BusinessException exception = assertThrows(
                     BusinessException.class,
-                    () -> authService.logout("refresh-token")
+                    () -> authService.logout(userId, "refresh-token")
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_INVALID_TOKEN);
@@ -362,11 +366,11 @@ class AuthTokenServiceTest {
             when(jwtProvider.getTokenType("refresh-token")).thenReturn("refresh");
             when(jwtProvider.getUserId("refresh-token")).thenReturn(userId);
             when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId)));
-            when(refreshTokenRepository.findById(userId)).thenReturn(Optional.of(savedToken));
+            when(refreshTokenRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(savedToken));
 
             BusinessException exception = assertThrows(
                     BusinessException.class,
-                    () -> authService.logout("refresh-token")
+                    () -> authService.logout(userId, "refresh-token")
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_INVALID_TOKEN);
@@ -389,11 +393,11 @@ class AuthTokenServiceTest {
             when(jwtProvider.getTokenType("refresh-token")).thenReturn("refresh");
             when(jwtProvider.getUserId("refresh-token")).thenReturn(userId);
             when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId)));
-            when(refreshTokenRepository.findById(userId)).thenReturn(Optional.of(savedToken));
+            when(refreshTokenRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(savedToken));
 
             BusinessException exception = assertThrows(
                     BusinessException.class,
-                    () -> authService.logout("refresh-token")
+                    () -> authService.logout(userId, "refresh-token")
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_INVALID_TOKEN);
@@ -415,11 +419,11 @@ class AuthTokenServiceTest {
             when(jwtProvider.getTokenType("refresh-token")).thenReturn("refresh");
             when(jwtProvider.getUserId("refresh-token")).thenReturn(userId);
             when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId)));
-            when(refreshTokenRepository.findById(userId)).thenReturn(Optional.of(savedToken));
+            when(refreshTokenRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(savedToken));
 
             BusinessException exception = assertThrows(
                     BusinessException.class,
-                    () -> authService.logout("refresh-token")
+                    () -> authService.logout(userId, "refresh-token")
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_INVALID_TOKEN);
