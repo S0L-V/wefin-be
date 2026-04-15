@@ -8,10 +8,7 @@ import com.solv.wefin.domain.payment.entity.*;
 import com.solv.wefin.domain.payment.repository.PaymentRepository;
 import com.solv.wefin.domain.payment.repository.SubscriptionPlanRepository;
 import com.solv.wefin.domain.payment.repository.SubscriptionRepository;
-import com.solv.wefin.domain.payment.service.PaymentConfirmWriter;
-import com.solv.wefin.domain.payment.service.PaymentService;
-import com.solv.wefin.domain.payment.service.PaymentWriter;
-import com.solv.wefin.domain.payment.service.TossPaymentClient;
+import com.solv.wefin.domain.payment.service.*;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,6 +51,9 @@ class PaymentConfirmServiceTest {
 
     @Mock
     private PaymentConfirmWriter paymentConfirmWriter;
+
+    @Mock
+    private PaymentFailureLogWriter paymentFailureLogWriter;
 
     @Mock
     private TossPaymentClient tossPaymentClient;
@@ -142,6 +142,7 @@ class PaymentConfirmServiceTest {
         verify(tossPaymentClient).confirm(paymentKey, orderId, amount);
         verify(payment).markPaid(eq(paymentKey), any(OffsetDateTime.class));
         verify(paymentConfirmWriter).savePaidPaymentAndSubscription(eq(payment), any(Subscription.class));
+        verifyNoInteractions(paymentFailureLogWriter);
     }
 
     @Test
@@ -200,6 +201,15 @@ class PaymentConfirmServiceTest {
 
         verifyNoInteractions(tossPaymentClient, paymentConfirmWriter);
         verify(subscriptionRepository, never()).existsByUserUserIdAndStatus(any(), any());
+        verify(paymentFailureLogWriter).save(
+                eq(payment),
+                any(),
+                eq(orderId),
+                eq(paymentKey),
+                eq("PRE_CONFIRM_VALIDATION"),
+                eq(ErrorCode.PAYMENT_NOT_READY.name()),
+                eq(ErrorCode.PAYMENT_NOT_READY.getMessage())
+        );
     }
 
     @Test
@@ -282,6 +292,15 @@ class PaymentConfirmServiceTest {
         verify(payment, never()).markPaid(any(), any());
         verify(paymentConfirmWriter).savePaidPaymentAndSubscription(eq(payment), isNull());
         verify(payment).markFailed(any());
+        verify(paymentFailureLogWriter).save(
+                eq(payment),
+                any(),
+                eq(orderId),
+                eq(paymentKey),
+                eq("CONFIRM_API"),
+                eq(ErrorCode.PAYMENT_CONFIRM_FAILED.name()),
+                any()
+        );
     }
 
     @Test
@@ -338,6 +357,15 @@ class PaymentConfirmServiceTest {
 
         verify(payment).markFailed("TOSS_FAILED");
         verify(paymentConfirmWriter).savePaidPaymentAndSubscription(eq(payment), isNull());
+        verify(paymentFailureLogWriter).save(
+                eq(payment),
+                any(),
+                eq(orderId),
+                eq(paymentKey),
+                eq("CONFIRM_RESULT"),
+                eq(ErrorCode.PAYMENT_CONFIRM_FAILED.name()),
+                eq("Toss payment status is FAILED")
+        );
     }
 
     @Test
@@ -373,6 +401,15 @@ class PaymentConfirmServiceTest {
 
         verify(payment).markCanceled();
         verify(paymentConfirmWriter).savePaidPaymentAndSubscription(eq(payment), isNull());
+        verify(paymentFailureLogWriter).save(
+                eq(payment),
+                any(),
+                eq(orderId),
+                eq(paymentKey),
+                eq("CONFIRM_RESULT"),
+                eq(ErrorCode.PAYMENT_CANCELED.name()),
+                eq("Toss payment status is CANCELED")
+        );
     }
 
     @Test
@@ -418,6 +455,15 @@ class PaymentConfirmServiceTest {
         verify(payment).markPaid(eq(paymentKey), any(OffsetDateTime.class));
         verify(paymentConfirmWriter).savePaidPaymentAndSubscription(eq(payment), any(Subscription.class));
         verify(tossPaymentClient).cancel(paymentKey, "INTERNAL_ERROR");
+        verify(paymentFailureLogWriter).save(
+                eq(payment),
+                any(),
+                eq(orderId),
+                eq(paymentKey),
+                eq("SAVE_AFTER_CONFIRM"),
+                eq(ErrorCode.INTERNAL_SERVER_ERROR.name()),
+                eq("save failed")
+        );
     }
 
     @Test
@@ -465,5 +511,24 @@ class PaymentConfirmServiceTest {
         verify(payment).markPaid(eq(paymentKey), any(OffsetDateTime.class));
         verify(paymentConfirmWriter).savePaidPaymentAndSubscription(eq(payment), any(Subscription.class));
         verify(tossPaymentClient).cancel(paymentKey, "INTERNAL_ERROR");
+        verify(paymentFailureLogWriter).save(
+                eq(payment),
+                any(),
+                eq(orderId),
+                eq(paymentKey),
+                eq("SAVE_AFTER_CONFIRM"),
+                eq(ErrorCode.INTERNAL_SERVER_ERROR.name()),
+                eq("save failed")
+        );
+
+        verify(paymentFailureLogWriter).save(
+                eq(payment),
+                any(),
+                eq(orderId),
+                eq(paymentKey),
+                eq("CANCEL_AFTER_CONFIRM"),
+                eq(ErrorCode.PAYMENT_CANCEL_FAILED.name()),
+                any()
+        );
     }
 }

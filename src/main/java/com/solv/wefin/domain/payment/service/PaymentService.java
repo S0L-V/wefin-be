@@ -35,6 +35,7 @@ public class PaymentService {
     private final PaymentWriter paymentWriter;
     private final PaymentConfirmWriter paymentConfirmWriter;
     private final TossPaymentClient tossPaymentClient;
+    private final PaymentFailureLogWriter paymentFailureLogWriter;
 
     @Transactional
     public PaymentReadyInfo createPayment(UUID userId, CreatePaymentCommand command) {
@@ -90,6 +91,15 @@ public class PaymentService {
         }
 
         if (!payment.isReady()) {
+            paymentFailureLogWriter.save(
+                    payment,
+                    payment.getUser(),
+                    orderId,
+                    paymentKey,
+                    "PRE_CONFIRM_VALIDATION",
+                    ErrorCode.PAYMENT_NOT_READY.name(),
+                    ErrorCode.PAYMENT_NOT_READY.getMessage()
+            );
             throw new BusinessException(ErrorCode.PAYMENT_NOT_READY);
         }
 
@@ -117,18 +127,45 @@ public class PaymentService {
         } catch (BusinessException e) {
             payment.markFailed("TOSS_API_ERROR");
             paymentConfirmWriter.savePaidPaymentAndSubscription(payment, null);
+            paymentFailureLogWriter.save(
+                    payment,
+                    payment.getUser(),
+                    orderId,
+                    paymentKey,
+                    "CONFIRM_API",
+                    e.getErrorCode().name(),
+                    e.getMessage()
+            );
             throw e;
         }
 
         if (result.status() == TossPaymentStatus.FAILED) {
             payment.markFailed("TOSS_FAILED");
             paymentConfirmWriter.savePaidPaymentAndSubscription(payment, null);
+            paymentFailureLogWriter.save(
+                    payment,
+                    payment.getUser(),
+                    orderId,
+                    paymentKey,
+                    "CONFIRM_RESULT",
+                    ErrorCode.PAYMENT_CONFIRM_FAILED.name(),
+                    "Toss payment status is FAILED"
+            );
             throw new BusinessException(ErrorCode.PAYMENT_CONFIRM_FAILED);
         }
 
         if (result.status() == TossPaymentStatus.CANCELED) {
             payment.markCanceled();
             paymentConfirmWriter.savePaidPaymentAndSubscription(payment, null);
+            paymentFailureLogWriter.save(
+                    payment,
+                    payment.getUser(),
+                    orderId,
+                    paymentKey,
+                    "CONFIRM_RESULT",
+                    ErrorCode.PAYMENT_CANCELED.name(),
+                    "Toss payment status is CANCELED"
+            );
             throw new BusinessException(ErrorCode.PAYMENT_CANCELED);
         }
 
@@ -152,12 +189,30 @@ public class PaymentService {
             savedSubscription =
                     paymentConfirmWriter.savePaidPaymentAndSubscription(payment, subscription);
         } catch (Exception e) {
-            // 이미 승인된 결제 취소
+            paymentFailureLogWriter.save(
+                    payment,
+                    payment.getUser(),
+                    orderId,
+                    paymentKey,
+                    "SAVE_AFTER_CONFIRM",
+                    ErrorCode.INTERNAL_SERVER_ERROR.name(),
+                    e.getMessage()
+            );
+
             try {
                 tossPaymentClient.cancel(result.paymentKey(), "INTERNAL_ERROR");
             } catch (Exception cancelException) {
-                // 취소까지 실패하면 로그만 남기고 원 예외 유지
                 log.error("Payment cancel failed after confirm success. paymentKey={}", result.paymentKey(), cancelException);
+
+                paymentFailureLogWriter.save(
+                        payment,
+                        payment.getUser(),
+                        orderId,
+                        paymentKey,
+                        "CANCEL_AFTER_CONFIRM",
+                        ErrorCode.PAYMENT_CANCEL_FAILED.name(),
+                        cancelException.getMessage()
+                );
             }
             throw e;
         }
