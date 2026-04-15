@@ -90,11 +90,7 @@ public class MarketTrendCardMapper {
     }
 
     /**
-     * AI가 반환한 1-based cluster index를 실제 clusterId로 변환한다.
-     *
-     * AI 응답 특성상:
-     * - 동일 index가 중복될 수 있어 카드 단위에서 중복 제거
-     * - 범위를 벗어난 index가 포함될 수 있어 방어 처리
+     * 클러스터별 TOPIC 이름 집계에서 등장 빈도 상위 N개를 반환한다.
      */
     public List<String> collectTopTopicNames(Map<Long, List<String>> perCluster, int topN) {
         Map<String, Integer> counts = new LinkedHashMap<>();
@@ -109,9 +105,16 @@ public class MarketTrendCardMapper {
                 .toList();
     }
 
+    /**
+     * AI가 반환한 1-based cluster index를 실제 clusterId로 변환한다.
+     *
+     * AI 응답 특성상:
+     * - 동일 index가 중복될 수 있어 카드 단위에서 중복 제거 (LinkedHashSet로 순서 유지)
+     * - 범위를 벗어난 index가 포함될 수 있어 방어 처리
+     */
     private List<Long> mapClusterIndices(List<Integer> indices, List<ClusterSummary> clusterSummaries) {
 
-        LinkedHashSet<Long> ids = new LinkedHashSet<>(); // AI가 동일 index를 복수 반환하는 경우가 있어 카드 단위에서 중복 제거
+        LinkedHashSet<Long> ids = new LinkedHashSet<>();
         for (Integer idx : indices) {
             if (idx == null) continue;
             if (idx < 1 || idx > clusterSummaries.size()) continue;

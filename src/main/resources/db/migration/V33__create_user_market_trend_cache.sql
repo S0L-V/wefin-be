@@ -21,13 +21,3 @@ CREATE TABLE IF NOT EXISTS user_market_trend (
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_market_trend_user_date ON user_market_trend (user_id, trend_date);
-
-ALTER TABLE user_market_trend
-    ADD COLUMN IF NOT EXISTS mode VARCHAR(30) NOT NULL DEFAULT 'MATCHED';
-
-ALTER TABLE user_market_trend
-    DROP CONSTRAINT IF EXISTS chk_user_market_trend_mode;
-
-ALTER TABLE user_market_trend
-    ADD CONSTRAINT chk_user_market_trend_mode
-        CHECK (mode IN ('MATCHED', 'ACTION_BRIEFING'));
