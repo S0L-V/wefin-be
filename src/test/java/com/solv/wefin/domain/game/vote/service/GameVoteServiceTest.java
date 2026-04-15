@@ -1,5 +1,7 @@
 package com.solv.wefin.domain.game.vote.service;
 
+import com.solv.wefin.domain.auth.entity.User;
+import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.game.participant.entity.GameParticipant;
 import com.solv.wefin.domain.game.participant.entity.ParticipantStatus;
 import com.solv.wefin.domain.game.participant.repository.GameParticipantRepository;
@@ -45,6 +47,8 @@ class GameVoteServiceTest {
     private TurnAdvanceService turnAdvanceService;
     @Mock
     private VoteBroadcaster voteBroadcaster;
+    @Mock
+    private UserRepository userRepository;
 
     private ScheduledExecutorService voteScheduler;
     private GameVoteService gameVoteService;
@@ -60,7 +64,7 @@ class GameVoteServiceTest {
         voteScheduler = Executors.newSingleThreadScheduledExecutor();
         gameVoteService = new GameVoteService(
                 gameRoomRepository, gameParticipantRepository,
-                turnAdvanceService, voteBroadcaster, voteScheduler);
+                turnAdvanceService, voteBroadcaster, voteScheduler, userRepository);
     }
 
     @AfterEach
@@ -89,6 +93,12 @@ class GameVoteServiceTest {
                 : GameParticipant.createMember(room, userId);
         given(gameParticipantRepository.findByGameRoomAndUserId(room, userId))
                 .willReturn(Optional.of(participant));
+
+        if (isLeader) {
+            User mockUser = mock(User.class);
+            lenient().when(mockUser.getNickname()).thenReturn("테스트방장");
+            lenient().when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
+        }
     }
 
     // === 투표 시작 성공 ===
@@ -115,7 +125,7 @@ class GameVoteServiceTest {
             assertThat(session.getTotalCount()).isEqualTo(3);
             assertThat(session.getInitiatorId()).isEqualTo(HOST_ID);
 
-            verify(voteBroadcaster).broadcastStart(eq(ROOM_ID), eq(HOST_ID), eq(3), eq(15));
+            verify(voteBroadcaster).broadcastStart(eq(ROOM_ID), eq("테스트방장"), eq(3), eq(15));
             verify(voteBroadcaster).broadcastUpdate(eq(ROOM_ID), eq(1L), eq(0L), eq(3));
         }
     }

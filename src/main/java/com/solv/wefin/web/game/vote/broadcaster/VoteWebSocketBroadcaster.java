@@ -1,6 +1,5 @@
 package com.solv.wefin.web.game.vote.broadcaster;
 
-import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.game.vote.VoteBroadcaster;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,23 +15,18 @@ import java.util.UUID;
 public class VoteWebSocketBroadcaster implements VoteBroadcaster {
 
     private final SimpMessagingTemplate messagingTemplate;
-    private final UserRepository userRepository;
 
     @Override
-    public void broadcastStart(UUID roomId, UUID initiatorId, int totalCount, int timeoutSeconds) {
-        String nickname = userRepository.findById(initiatorId)
-                .map(user -> user.getNickname())
-                .orElse("알 수 없음");
-
+    public void broadcastStart(UUID roomId, String initiatorNickname, int totalCount, int timeoutSeconds) {
         Map<String, Object> payload = Map.of(
                 "type", "VOTE_START",
-                "initiator", nickname,
+                "initiator", initiatorNickname,
                 "totalCount", totalCount,
                 "timeoutSeconds", timeoutSeconds
         );
 
         send(roomId, payload);
-        log.info("[투표 WS] VOTE_START: roomId={}, initiator={}, totalCount={}", roomId, nickname, totalCount);
+        log.info("[투표 WS] VOTE_START: roomId={}, initiator={}, totalCount={}", roomId, initiatorNickname, totalCount);
     }
 
     @Override
