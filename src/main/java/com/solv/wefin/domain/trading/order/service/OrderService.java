@@ -247,10 +247,26 @@ public class OrderService {
 		} else if (order.getSide() == OrderSide.SELL) {
 			int diffQuantity = Math.abs(newQuantity - oldQuantity);
 			if (newQuantity > oldQuantity) {
+				// 현재 포트폴리오 avgPrice 조회 (deductQuantity는 락 보유 상태)
+				Portfolio portfolio = portfolioService.getPortfolioForUpdate(
+						virtualAccountId, order.getStockId());
+				BigDecimal currentAvgPrice = portfolio.getAvgPrice();
+
+				// 가중평균으로 reservedAvgPrice 갱신
+				// newReservedAvg = (oldQty × oldReservedAvg + diffQty × currentAvg) / newQty
+				BigDecimal oldReservedAvg = order.getReservedAvgPrice();
+				BigDecimal weightedSum = oldReservedAvg
+						.multiply(BigDecimal.valueOf(oldQuantity))
+						.add(currentAvgPrice.multiply(BigDecimal.valueOf(diffQuantity)));
+				BigDecimal newReservedAvg = weightedSum
+						.divide(BigDecimal.valueOf(newQuantity), 2, RoundingMode.HALF_UP);
+				order.updateReservedAvgPrice(newReservedAvg);
+
 				portfolioService.deductQuantity(virtualAccountId, order.getStockId(), diffQuantity);
 			} else if (newQuantity < oldQuantity) {
 				portfolioService.addHolding(virtualAccountId, order.getStockId(), diffQuantity,
-					order.getReservedAvgPrice(), order.getCurrency());
+						order.getReservedAvgPrice(), order.getCurrency());
+				// reservedAvgPrice 그대로 (수량 감소는 기존 스냅샷 유지)
 			}
 		}
 		Stock stock = stockInfoProvider.getStock(order.getStockId());

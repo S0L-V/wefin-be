@@ -167,4 +167,8 @@ public class Order extends BaseEntity {
 			throw new BusinessException(ErrorCode.ORDER_ALREADY_CANCELLED);
 		}
 	}
+
+	public void updateReservedAvgPrice(BigDecimal newValue) {
+		this.reservedAvgPrice = newValue;
+	}
 }
