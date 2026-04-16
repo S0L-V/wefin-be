@@ -88,11 +88,11 @@ class StockIndicatorServiceTest {
     }
 
     @Test
-    void 한투_API_예외시_MARKET_API_FAILED() {
+    void 한투_RestClient_예외시_MARKET_API_FAILED() {
         // given
         given(stockService.existsByCode("005930")).willReturn(true);
         given(hantuMarketClient.fetchStockInfo("005930"))
-                .willThrow(new RuntimeException("network"));
+                .willThrow(new org.springframework.web.client.RestClientException("network"));
 
         // when & then
         assertThatThrownBy(() -> stockIndicatorService.getIndicator("005930"))

@@ -31,7 +31,7 @@ class StockBasicInfoServiceTest {
     private StockBasicInfoService stockBasicInfoService;
 
     @Test
-    void 기본정보_정상조회_시가총액은_억단위를_원단위로_변환() {
+    void 기본정보_정상조회_시가총액은_한투_원본_억단위로_유지() {
         // given
         given(stockService.existsByCode("005930")).willReturn(true);
         given(hantuMarketClient.fetchStockInfo("005930")).willReturn(
@@ -65,11 +65,11 @@ class StockBasicInfoServiceTest {
     }
 
     @Test
-    void 한투_API_예외시_MARKET_API_FAILED() {
+    void 한투_RestClient_예외시_MARKET_API_FAILED() {
         // given
         given(stockService.existsByCode("005930")).willReturn(true);
         given(hantuMarketClient.fetchStockInfo("005930"))
-                .willThrow(new RuntimeException("network"));
+                .willThrow(new org.springframework.web.client.RestClientException("network"));
 
         // when & then
         assertThatThrownBy(() -> stockBasicInfoService.getBasicInfo("005930"))
