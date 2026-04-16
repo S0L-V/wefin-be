@@ -15,6 +15,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.messaging.MessagingException;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import com.solv.wefin.domain.trading.account.entity.VirtualAccount;
@@ -126,7 +127,7 @@ class OrderMatchedEventListenerTest {
 			given(mockAccount.getUserId()).willReturn(userId);
 			given(virtualAccountService.getAccount(virtualAccountId)).willReturn(mockAccount);
 
-			doThrow(new RuntimeException("broker down"))
+			doThrow(new MessagingException("broker down"))
 				.when(messagingTemplate)
 				.convertAndSendToUser(anyString(), anyString(), any());
 
