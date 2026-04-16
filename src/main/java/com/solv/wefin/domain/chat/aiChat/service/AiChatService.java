@@ -33,6 +33,10 @@ public class AiChatService {
     private static final int MAX_PAGE_SIZE = 100;
     private static final int MAX_NEWS_CONTEXT_CHARS = 4000;
     private static final String TRUNCATED_SUFFIX = "\n...(뉴스 요약이 길어 일부 생략되었습니다)";
+    private static final List<NewsCluster.SummaryStatus> AVAILABLE_SUMMARY_STATUSES = List.of(
+            NewsCluster.SummaryStatus.GENERATED,
+            NewsCluster.SummaryStatus.STALE
+    );
 
     private final OpenAiChatClient openAiChatClient;
     private final AiChatMessagePersistenceService aiChatMessagePersistenceService;
@@ -95,8 +99,16 @@ public class AiChatService {
             return null;
         }
 
-        NewsCluster cluster = newsClusterRepository.findById(newsClusterId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT));
+        NewsCluster cluster = newsClusterRepository.findByIdAndStatusAndSummaryStatusIn(
+                        newsClusterId,
+                        NewsCluster.ClusterStatus.ACTIVE,
+                        AVAILABLE_SUMMARY_STATUSES
+                )
+                .orElse(null);
+
+        if (cluster == null) {
+            return null;
+        }
 
         List<ClusterSummarySection> sections =
                 clusterSummarySectionRepository.findByNewsClusterIdOrderBySectionOrderAsc(newsClusterId);

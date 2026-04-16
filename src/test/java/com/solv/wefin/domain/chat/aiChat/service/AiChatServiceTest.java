@@ -7,6 +7,8 @@ import com.solv.wefin.domain.chat.aiChat.dto.command.AiChatCommand;
 import com.solv.wefin.domain.chat.aiChat.dto.info.AiChatInfo;
 import com.solv.wefin.domain.chat.aiChat.dto.info.AiChatMessagesInfo;
 import com.solv.wefin.domain.chat.aiChat.entity.AiChatMessage;
+import com.solv.wefin.domain.news.cluster.entity.ClusterSummarySection;
+import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.quest.entity.QuestEventType;
@@ -269,6 +271,131 @@ class AiChatServiceTest {
 
         // then
         assertEquals(ErrorCode.AI_CHAT_TIMEOUT, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("유효하지 않거나 비활성 뉴스 클러스터여도 뉴스 컨텍스트 없이 AI 답변을 생성한다")
+    void sendMessage_success_without_news_context_when_cluster_is_not_available() {
+        // given
+        UUID userId = UUID.randomUUID();
+        Long newsClusterId = 999L;
+        AiChatCommand command = new AiChatCommand("질문", newsClusterId);
+        User user = createUser(userId);
+
+        AiChatMessage historyUserMessage = AiChatMessage.createUserMessage(user, "이전 질문");
+        ReflectionTestUtils.setField(historyUserMessage, "messageId", 1L);
+        ReflectionTestUtils.setField(historyUserMessage, "createdAt", OffsetDateTime.now().minusSeconds(10));
+
+        AiChatMessage savedUserMessage = AiChatMessage.createUserMessage(user, command.message());
+        ReflectionTestUtils.setField(savedUserMessage, "messageId", 2L);
+        ReflectionTestUtils.setField(savedUserMessage, "createdAt", OffsetDateTime.now().minusSeconds(5));
+
+        AiChatMessage savedAiMessage = AiChatMessage.createAiMessage(user, "뉴스 맥락 없이도 답변합니다.");
+        ReflectionTestUtils.setField(savedAiMessage, "messageId", 3L);
+        ReflectionTestUtils.setField(savedAiMessage, "createdAt", OffsetDateTime.now());
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(aiChatMessagePersistenceService.getRecentHistory(userId))
+                .thenReturn(List.of(historyUserMessage));
+        when(newsClusterRepository.findByIdAndStatusAndSummaryStatusIn(
+                eq(newsClusterId),
+                eq(NewsCluster.ClusterStatus.ACTIVE),
+                anyList()
+        )).thenReturn(Optional.empty());
+        when(openAiChatClient.ask(anyList(), eq(command.message()), isNull()))
+                .thenReturn("뉴스 맥락 없이도 답변합니다.");
+        when(aiChatMessagePersistenceService.saveUserMessage(user, command.message()))
+                .thenReturn(savedUserMessage);
+        when(aiChatMessagePersistenceService.saveAiMessage(user, "뉴스 맥락 없이도 답변합니다."))
+                .thenReturn(savedAiMessage);
+
+        // when
+        AiChatInfo result = aiChatService.sendMessage(command, userId);
+
+        // then
+        verify(openAiChatClient).ask(anyList(), eq(command.message()), isNull());
+        verify(clusterSummarySectionRepository, org.mockito.Mockito.never())
+                .findByNewsClusterIdOrderBySectionOrderAsc(eq(newsClusterId));
+        assertEquals("뉴스 맥락 없이도 답변합니다.", result.content());
+    }
+
+    @Test
+    @DisplayName("유효한 newsClusterId가 있으면 뉴스 컨텍스트를 함께 전달한다")
+    void sendMessage_success_with_news_context() {
+        // given
+        UUID userId = UUID.randomUUID();
+        Long newsClusterId = 55L;
+        AiChatCommand command = new AiChatCommand("질문", newsClusterId);
+        User user = createUser(userId);
+
+        AiChatMessage historyUserMessage = AiChatMessage.createUserMessage(user, "이전 질문");
+        ReflectionTestUtils.setField(historyUserMessage, "messageId", 1L);
+        ReflectionTestUtils.setField(historyUserMessage, "createdAt", OffsetDateTime.now().minusSeconds(10));
+
+        AiChatMessage savedUserMessage = AiChatMessage.createUserMessage(user, command.message());
+        ReflectionTestUtils.setField(savedUserMessage, "messageId", 2L);
+        ReflectionTestUtils.setField(savedUserMessage, "createdAt", OffsetDateTime.now().minusSeconds(5));
+
+        AiChatMessage savedAiMessage = AiChatMessage.createAiMessage(user, "뉴스 맥락을 참고한 답변입니다.");
+        ReflectionTestUtils.setField(savedAiMessage, "messageId", 3L);
+        ReflectionTestUtils.setField(savedAiMessage, "createdAt", OffsetDateTime.now());
+
+        NewsCluster newsCluster = NewsCluster.createSingle(
+                new float[]{1.0f},
+                100L,
+                "https://image.test/thumb.png",
+                OffsetDateTime.now()
+        );
+        ReflectionTestUtils.setField(newsCluster, "id", newsClusterId);
+        ReflectionTestUtils.setField(newsCluster, "title", "cluster title");
+        ReflectionTestUtils.setField(newsCluster, "summary", "cluster summary");
+        ReflectionTestUtils.setField(newsCluster, "status", NewsCluster.ClusterStatus.ACTIVE);
+        ReflectionTestUtils.setField(newsCluster, "summaryStatus", NewsCluster.SummaryStatus.GENERATED);
+
+        ClusterSummarySection firstSection = ClusterSummarySection.create(
+                newsClusterId,
+                0,
+                "first heading",
+                "first body"
+        );
+        ClusterSummarySection secondSection = ClusterSummarySection.create(
+                newsClusterId,
+                1,
+                "second heading",
+                "second body"
+        );
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(aiChatMessagePersistenceService.getRecentHistory(userId))
+                .thenReturn(List.of(historyUserMessage));
+        when(newsClusterRepository.findByIdAndStatusAndSummaryStatusIn(
+                eq(newsClusterId),
+                eq(NewsCluster.ClusterStatus.ACTIVE),
+                anyList()
+        )).thenReturn(Optional.of(newsCluster));
+        when(clusterSummarySectionRepository.findByNewsClusterIdOrderBySectionOrderAsc(newsClusterId))
+                .thenReturn(List.of(firstSection, secondSection));
+        when(openAiChatClient.ask(anyList(), eq(command.message()), org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn("뉴스 맥락을 참고한 답변입니다.");
+        when(aiChatMessagePersistenceService.saveUserMessage(user, command.message()))
+                .thenReturn(savedUserMessage);
+        when(aiChatMessagePersistenceService.saveAiMessage(user, "뉴스 맥락을 참고한 답변입니다."))
+                .thenReturn(savedAiMessage);
+
+        ArgumentCaptor<String> newsContextCaptor = ArgumentCaptor.forClass(String.class);
+
+        // when
+        AiChatInfo result = aiChatService.sendMessage(command, userId);
+
+        // then
+        verify(openAiChatClient).ask(anyList(), eq(command.message()), newsContextCaptor.capture());
+
+        String newsContext = newsContextCaptor.getValue();
+        assertEquals(true, newsContext.contains("Title: cluster title"));
+        assertEquals(true, newsContext.contains("Summary: cluster summary"));
+        assertEquals(true, newsContext.contains("- first heading: first body"));
+        assertEquals(true, newsContext.contains("- second heading: second body"));
+        assertEquals("뉴스 맥락을 참고한 답변입니다.", result.content());
     }
 
     private User createUser(UUID userId) {
