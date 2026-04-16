@@ -6,6 +6,7 @@ import com.solv.wefin.domain.auth.dto.SignupInfo;
 import com.solv.wefin.domain.auth.entity.RefreshToken;
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.entity.UserStatus;
+import com.solv.wefin.domain.auth.entity.VerificationPurpose;
 import com.solv.wefin.domain.auth.repository.RefreshTokenRepository;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.group.entity.Group;
@@ -40,10 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -62,6 +60,9 @@ class AuthServiceTest {
 
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
+
+    @Mock
+    private EmailVerificationService emailVerificationService;
 
     @Mock
     private QuestProgressService questProgressService;
@@ -113,9 +114,13 @@ class AuthServiceTest {
             );
 
             ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+            verify(emailVerificationService)
+                    .validateVerifiedEmail("test@example.com", VerificationPurpose.SIGNUP);
             verify(userRepository).saveAndFlush(captor.capture());
             verify(groupService).createDefaultGroup(savedUser);
             verify(virtualAccountService).createAccount(userId);
+            verify(emailVerificationService)
+                    .consumeVerifiedEmail("test@example.com", VerificationPurpose.SIGNUP);
 
             User capturedUser = captor.getValue();
 
@@ -131,6 +136,27 @@ class AuthServiceTest {
         }
 
         @Test
+        @DisplayName("이메일 인증이 완료되지 않으면 회원가입에 실패한다")
+        void signup_fail_when_email_not_verified() {
+            doThrow(new BusinessException(ErrorCode.AUTH_EMAIL_NOT_VERIFIED))
+                    .when(emailVerificationService)
+                    .validateVerifiedEmail("test@example.com", VerificationPurpose.SIGNUP);
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.signup(
+                            new SignupCommand("test@example.com", "nickname", "pass1234")
+                    )
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_EMAIL_NOT_VERIFIED);
+            verify(userRepository, never()).existsByEmail(anyString());
+            verify(userRepository, never()).saveAndFlush(any(User.class));
+            verify(groupService, never()).createDefaultGroup(any(User.class));
+            verify(virtualAccountService, never()).createAccount(any(UUID.class));
+        }
+
+        @Test
         @DisplayName("이메일이 중복되면 예외가 발생한다")
         void signup_fail_when_email_duplicated() {
             when(userRepository.existsByEmail("test@example.com")).thenReturn(true);
@@ -143,6 +169,8 @@ class AuthServiceTest {
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_EMAIL_DUPLICATED);
+            verify(emailVerificationService)
+                    .validateVerifiedEmail("test@example.com", VerificationPurpose.SIGNUP);
             verify(userRepository, never()).existsByNickname(anyString());
             verify(userRepository, never()).saveAndFlush(any(User.class));
             verify(groupService, never()).createDefaultGroup(any(User.class));
@@ -163,6 +191,8 @@ class AuthServiceTest {
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_NICKNAME_DUPLICATED);
+            verify(emailVerificationService)
+                    .validateVerifiedEmail("test@example.com", VerificationPurpose.SIGNUP);
             verify(userRepository, never()).saveAndFlush(any(User.class));
             verify(groupService, never()).createDefaultGroup(any(User.class));
             verify(virtualAccountService, never()).createAccount(any(UUID.class));
@@ -216,6 +246,8 @@ class AuthServiceTest {
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_EMAIL_DUPLICATED);
+            verify(emailVerificationService)
+                    .validateVerifiedEmail("test@example.com", VerificationPurpose.SIGNUP);
             verify(groupService, never()).createDefaultGroup(any(User.class));
             verify(virtualAccountService, never()).createAccount(any(UUID.class));
         }
@@ -241,8 +273,85 @@ class AuthServiceTest {
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_NICKNAME_DUPLICATED);
+            verify(emailVerificationService)
+                    .validateVerifiedEmail("test@example.com", VerificationPurpose.SIGNUP);
             verify(groupService, never()).createDefaultGroup(any(User.class));
             verify(virtualAccountService, never()).createAccount(any(UUID.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("resetPassword")
+    class ResetPasswordTest {
+
+        @Test
+        @DisplayName("비밀번호 재설정에 성공한다")
+        void resetPassword_success() {
+            String email = "test@example.com";
+            String newPassword = "newpass123";
+
+            UUID userId = UUID.randomUUID();
+
+            User user = User.builder()
+                    .email(email)
+                    .nickname("testuser")
+                    .password("old-password")
+                    .build();
+
+            ReflectionTestUtils.setField(user, "userId", userId);
+
+            when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+            when(passwordEncoder.encode(newPassword)).thenReturn("encoded-password");
+
+            authService.resetPassword(email, newPassword);
+
+            verify(emailVerificationService)
+                    .validateVerifiedEmail(email, VerificationPurpose.PASSWORD_RESET);
+            verify(emailVerificationService)
+                    .consumeVerifiedEmail(email, VerificationPurpose.PASSWORD_RESET);
+
+            assertThat(user.getPassword()).isEqualTo("encoded-password");
+        }
+
+        @Test
+        @DisplayName("이메일 인증이 안 되어 있으면 실패한다")
+        void resetPassword_fail_when_not_verified() {
+            String email = "test@example.com";
+
+            doThrow(new BusinessException(ErrorCode.AUTH_EMAIL_NOT_VERIFIED))
+                    .when(emailVerificationService)
+                    .validateVerifiedEmail(email, VerificationPurpose.PASSWORD_RESET);
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.resetPassword(email, "newpass123")
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_EMAIL_NOT_VERIFIED);
+            verify(userRepository, never()).findByEmail(anyString());
+        }
+
+        @Test
+        @DisplayName("사용자가 존재하지 않으면 실패한다")
+        void resetPassword_fail_when_user_not_found() {
+            String email = "test@example.com";
+
+            // 인증은 통과된 상태
+            doNothing()
+                    .when(emailVerificationService)
+                    .validateVerifiedEmail(email, VerificationPurpose.PASSWORD_RESET);
+
+            when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.resetPassword(email, "newpass123")
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
+
+            verify(emailVerificationService)
+                    .validateVerifiedEmail(email, VerificationPurpose.PASSWORD_RESET);
         }
     }
 
