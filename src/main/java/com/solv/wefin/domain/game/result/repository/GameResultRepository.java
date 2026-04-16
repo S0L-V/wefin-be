@@ -12,5 +12,7 @@ public interface GameResultRepository extends JpaRepository<GameResult, UUID> {
 
     List<GameResult> findByGameRoomOrderByFinalRankAsc(GameRoom gameRoom);
 
+    List<GameResult> findByGameRoomOrderByFinalAssetDescCreatedAtAsc(GameRoom gameRoom);
+
     boolean existsByGameRoomAndParticipant(GameRoom gameRoom, GameParticipant participant);
 }
