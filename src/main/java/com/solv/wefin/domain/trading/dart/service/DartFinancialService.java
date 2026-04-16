@@ -57,8 +57,12 @@ public class DartFinancialService {
                 throw new BusinessException(ErrorCode.DART_FINANCIAL_FETCH_FAILED);
             }
             if (response.isSuccess()) {
-                log.debug("DART 재무제표 조회 성공: corp_code={}, year={}", corpCode, year);
-                return new YearlyResponse(response, year);
+                if (response.list() != null && !response.list().isEmpty()) {
+                    log.debug("DART 재무제표 조회 성공: corp_code={}, year={}", corpCode, year);
+                    return new YearlyResponse(response, year);
+                }
+                log.debug("DART 재무제표 성공 응답이지만 데이터 없음, 연도 fallback: corp_code={}, year={}", corpCode, year);
+                continue;
             }
             if (!response.isNoData()) {
                 log.error("DART 재무제표 에러 응답: status={}, message={}",
