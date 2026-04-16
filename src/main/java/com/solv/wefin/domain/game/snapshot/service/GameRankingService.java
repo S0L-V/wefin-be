@@ -46,9 +46,10 @@ public class GameRankingService {
             throw new BusinessException(ErrorCode.GAME_NOT_STARTED);
         }
 
-        // 2. 참가자 검증
+        // 2. 참가자 검증 (ACTIVE 또는 FINISHED 참가자만 랭킹 조회 가능)
         gameParticipantRepository.findByGameRoomAndUserId(gameRoom, userId)
-                .filter(p -> p.getStatus() == ParticipantStatus.ACTIVE)
+                .filter(p -> p.getStatus() == ParticipantStatus.ACTIVE
+                        || p.getStatus() == ParticipantStatus.FINISHED)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_PARTICIPANT));
 
         // 3. 최신 완료 턴의 스냅샷 조회
@@ -96,7 +97,7 @@ public class GameRankingService {
      */
     private List<RankingInfo> buildInitialRankings(GameRoom gameRoom) {
         List<GameParticipant> participants = gameParticipantRepository
-                .findByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
+                .findByGameRoomAndStatusIn(gameRoom, List.of(ParticipantStatus.ACTIVE, ParticipantStatus.FINISHED));
 
         List<UUID> userIds = participants.stream()
                 .map(GameParticipant::getUserId)

@@ -28,6 +28,9 @@ public interface GameParticipantRepository extends JpaRepository<GameParticipant
     //방장 위임 - 참가자 중 랜덤 선택
     List<GameParticipant> findByGameRoomAndStatus(GameRoom gameRoom, ParticipantStatus status);
 
+    // 복수 상태 조회 (랭킹 등에서 ACTIVE + FINISHED 조회)
+    List<GameParticipant> findByGameRoomAndStatusIn(GameRoom gameRoom, List<ParticipantStatus> statuses);
+
     // 매수/매도 시 참가자 잔액 비관적 락 (SELECT FOR UPDATE)
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM GameParticipant p WHERE p.gameRoom = :gameRoom AND p.userId = :userId")
