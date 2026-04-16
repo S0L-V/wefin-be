@@ -37,6 +37,16 @@ public class CacheConfig {
                 .maximumSize(5000)
                 .build());
 
+        manager.registerCustomCache("stockBasicInfo", Caffeine.newBuilder()
+                .expireAfterWrite(10, TimeUnit.MINUTES)
+                .maximumSize(5000)
+                .build());
+
+        manager.registerCustomCache("stockIndicator", Caffeine.newBuilder()
+                .expireAfterWrite(10, TimeUnit.MINUTES)
+                .maximumSize(5000)
+                .build());
+
         return manager;
     }
 }

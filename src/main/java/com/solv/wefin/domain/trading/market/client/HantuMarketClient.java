@@ -46,6 +46,27 @@ public class HantuMarketClient {
     }
 
     /**
+     * 국내 주식 기본정보(시가총액/상장주식수/외국인소진율)를 조회합니다.
+     * fetchCurrentPrice와 동일한 endpoint 호출이지만 다른 필드 subset을 매핑한 DTO로 받습니다.
+     * @param stockCode 종목코드
+     * @return 기본정보 응답
+     */
+    public HantuStockInfoApiResponse fetchStockInfo(String stockCode) {
+        return hantuRestClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/uapi/domestic-stock/v1/quotations/inquire-price")
+                        .queryParam("FID_COND_MRKT_DIV_CODE", "J")
+                        .queryParam("FID_INPUT_ISCD", stockCode)
+                        .build())
+                .header("authorization", "Bearer " + hantuTokenManager.getAccessToken())
+                .header("appkey", appKey)
+                .header("appsecret", appSecret)
+                .header("tr_id", "FHKST01010100")
+                .header("custtype", "P")
+                .retrieve().body(HantuStockInfoApiResponse.class);
+    }
+
+    /**
      * 국내 주식 호가를 조회합니다.
      * @param stockCode 종목코드
      * @return 호가 응답
