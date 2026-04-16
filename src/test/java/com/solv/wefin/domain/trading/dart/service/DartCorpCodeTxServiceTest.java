@@ -112,6 +112,48 @@ class DartCorpCodeTxServiceTest {
     }
 
     @Test
+    void payload_내부에_stockCode가_중복되면_첫번째는_insert_이후는_update_분기() {
+        // given — DB는 비어있고, payload에 같은 005930이 2번 + 다른 값
+        given(dartCorpCodeRepository.findAll()).willReturn(List.of());
+        List<DartCorpCodeItem> items = List.of(
+                new DartCorpCodeItem("005930", "00126380", "삼성전자", "20251201"),
+                new DartCorpCodeItem("005930", "99999999", "DUPLICATE", "29991231")
+        );
+
+        // when
+        int result = dartCorpCodeTxService.upsertAll(items);
+
+        // then — saveAll에는 1건만 (UNIQUE 충돌 방지)
+        assertThat(result).isEqualTo(2);
+        ArgumentCaptor<List<DartCorpCode>> captor = ArgumentCaptor.forClass(List.class);
+        verify(dartCorpCodeRepository).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(1);
+        // 두 번째 등장한 item의 값으로 update됨 (insert된 엔티티에 반영)
+        assertThat(captor.getValue().get(0).getCorpCode()).isEqualTo("99999999");
+        assertThat(captor.getValue().get(0).getCorpName()).isEqualTo("DUPLICATE");
+    }
+
+    @Test
+    void 빈_stockCode_아이템은_무시() {
+        // given
+        given(dartCorpCodeRepository.findAll()).willReturn(List.of());
+        List<DartCorpCodeItem> items = new java.util.ArrayList<>();
+        items.add(new DartCorpCodeItem(null, "X", "X", "X"));
+        items.add(new DartCorpCodeItem("", "X", "X", "X"));
+        items.add(new DartCorpCodeItem("  ", "X", "X", "X"));
+        items.add(new DartCorpCodeItem("005930", "00126380", "삼성전자", "20251201"));
+
+        // when
+        dartCorpCodeTxService.upsertAll(items);
+
+        // then
+        ArgumentCaptor<List<DartCorpCode>> captor = ArgumentCaptor.forClass(List.class);
+        verify(dartCorpCodeRepository).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(1);
+        assertThat(captor.getValue().get(0).getStockCode()).isEqualTo("005930");
+    }
+
+    @Test
     void findAll_1회만_호출되어_N플러스1_없음() {
         // given
         given(dartCorpCodeRepository.findAll()).willReturn(List.of());

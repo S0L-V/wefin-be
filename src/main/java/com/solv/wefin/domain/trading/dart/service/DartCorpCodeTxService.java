@@ -26,16 +26,21 @@ public class DartCorpCodeTxService {
 
         List<DartCorpCode> toInsert = new ArrayList<>();
         for (DartCorpCodeItem item : items) {
+            if (item.stockCode() == null || item.stockCode().isBlank()) {
+                continue;
+            }
             DartCorpCode existing = existingByCode.get(item.stockCode());
             if (existing != null) {
                 existing.update(item.corpCode(), item.corpName(), item.modifyDate());
             } else {
-                toInsert.add(new DartCorpCode(
+                DartCorpCode created = new DartCorpCode(
                         item.stockCode(),
                         item.corpCode(),
                         item.corpName(),
                         item.modifyDate()
-                ));
+                );
+                toInsert.add(created);
+                existingByCode.put(item.stockCode(), created);
             }
         }
         dartCorpCodeRepository.saveAll(toInsert);
