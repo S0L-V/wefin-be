@@ -103,7 +103,8 @@ class DartFinancialServiceTest {
 
         // then
         assertThat(result.businessYear()).isEqualTo(secondYear);
-        verify(dartFinancialClient, times(2)).fetch(anyString(), anyString(), anyString(), anyString());
+        verify(dartFinancialClient).fetch("00126380", firstYear, "11011", "CFS");
+        verify(dartFinancialClient).fetch("00126380", secondYear, "11011", "CFS");
     }
 
     @Test
