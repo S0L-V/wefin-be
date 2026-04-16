@@ -28,7 +28,7 @@ public class MailServiceImpl implements MailService {
 
             mailSender.send(message);
         } catch (MailException e) {
-            log.error("메일 발송 실패: to={}", to, e);
+            log.error("메일 발송 실패: to={}", maskEmail(to), e);
             throw new BusinessException(ErrorCode.AUTH_EMAIL_SEND_FAILED);
         }
     }
@@ -39,10 +39,26 @@ public class MailServiceImpl implements MailService {
 
                 요청하신 인증코드는 아래와 같습니다.
 
-                👉 인증코드: [%s]
+                인증코드: [%s]
 
                 해당 코드는 5분간 유효합니다.
                 본인이 요청하지 않았다면 이 메일을 무시해주세요.
                 """.formatted(code);
+    }
+
+    private String maskEmail(String email) {
+        if (email == null || !email.contains("@")) {
+            return "***";
+        }
+
+        String[] parts = email.split("@", 2);
+        String local = parts[0];
+        String domain = parts[1];
+
+        if (local.isEmpty()) {
+            return "***@" + domain;
+        }
+
+        return local.charAt(0) + "***@" + domain;
     }
 }
