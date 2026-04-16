@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,6 +24,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Transactional
 public class UserQuestService {
+
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final UserRepository userRepository;
     private final UserQuestRepository userQuestRepository;
@@ -34,7 +37,7 @@ public class UserQuestService {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(KST);
 
         List<UserQuest> todayUserQuests =
                 userQuestRepository.findTodayUserQuests(userId, today);
@@ -61,12 +64,16 @@ public class UserQuestService {
 
     @Transactional(readOnly = true)
     public List<UserQuest> getTodayUserQuests(UUID userId) {
-        return userQuestRepository.findTodayUserQuests(userId, LocalDate.now());
+        return userQuestRepository.findTodayUserQuests(userId, LocalDate.now(KST));
     }
 
     public UserQuest claimReward(UUID userId, Long questId) {
         UserQuest userQuest = userQuestRepository.findByIdAndUserIdForUpdate(questId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_QUEST_NOT_FOUND));
+
+        if (!userQuest.getDailyQuest().getQuestDate().isEqual(LocalDate.now(KST))) {
+            throw new BusinessException(ErrorCode.USER_QUEST_NOT_FOUND);
+        }
 
         VirtualAccount account = virtualAccountService.getAccountByUserId(userId);
         BigDecimal rewardAmount = BigDecimal.valueOf(userQuest.getDailyQuest().getReward());

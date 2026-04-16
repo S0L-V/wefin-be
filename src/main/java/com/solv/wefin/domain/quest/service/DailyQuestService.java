@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -23,12 +24,13 @@ import java.util.concurrent.ThreadLocalRandom;
 public class DailyQuestService {
 
     private static final int DAILY_QUEST_COUNT = 3;
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final DailyQuestRepository dailyQuestRepository;
     private final QuestTemplateRepository questTemplateRepository;
 
     public List<DailyQuest> getOrCreateTodayDailyQuests() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(KST);
 
         List<DailyQuest> todayQuests = dailyQuestRepository.findAllByQuestDate(today);
         if (!todayQuests.isEmpty()) {
@@ -62,7 +64,7 @@ public class DailyQuestService {
 
     @Transactional(readOnly = true)
     public List<DailyQuest> getTodayDailyQuests() {
-        return dailyQuestRepository.findAllByQuestDate(LocalDate.now());
+        return dailyQuestRepository.findAllByQuestDate(LocalDate.now(KST));
     }
 
     private int resolveRandomTargetValue(QuestTemplate template) {

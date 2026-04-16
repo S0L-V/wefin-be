@@ -84,8 +84,10 @@ class QuestControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data.questDate").value(today.toString()))
+                .andExpect(jsonPath("$.data.expiresAt").exists())
                 .andExpect(jsonPath("$.data.quests[0].questId").value(21))
                 .andExpect(jsonPath("$.data.quests[0].dailyQuestId").value(11))
+                .andExpect(jsonPath("$.data.quests[0].expiresAt").exists())
                 .andExpect(jsonPath("$.data.quests[0].code").value("SEND_GROUP_CHAT"))
                 .andExpect(jsonPath("$.data.quests[0].status").value("IN_PROGRESS"))
                 .andExpect(jsonPath("$.data.quests[0].progress").value(1))
@@ -151,6 +153,7 @@ class QuestControllerTest {
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data.questId").value(21))
                 .andExpect(jsonPath("$.data.dailyQuestId").value(11))
+                .andExpect(jsonPath("$.data.expiresAt").exists())
                 .andExpect(jsonPath("$.data.status").value("REWARDED"))
                 .andExpect(jsonPath("$.data.progress").value(3))
                 .andExpect(jsonPath("$.data.reward").value(100));
