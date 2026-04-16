@@ -64,6 +64,8 @@ class EmailVerificationServiceTest {
 
         assertThat(exception.getErrorCode())
                 .isEqualTo(ErrorCode.AUTH_VERIFICATION_TOO_MANY_ATTEMPTS);
+
+        verify(repository, atLeastOnce()).saveAndFlush(verification);
     }
 
     @Test

@@ -101,11 +101,14 @@ public class EmailVerificationService {
                 verification.lock(now.plusMinutes(LOCK_MINUTES));
             }
 
+            emailVerificationRepository.saveAndFlush(verification);
+
             throw new BusinessException(ErrorCode.AUTH_VERIFICATION_CODE_INVALID);
         }
 
         verification.resetAttempt();
         verification.verify();
+        emailVerificationRepository.saveAndFlush(verification);
     }
 
     public void validateVerifiedEmail(String email, VerificationPurpose purpose) {
