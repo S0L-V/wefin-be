@@ -71,6 +71,10 @@ summary:
   collect:
     cron: ${SUMMARY_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
 
+wefin-news:
+  api:
+    base-url: ${WEFIN_NEWS_BASE_URL:https://wefin.ai.kr}
+
 websocket:
   allowed-origins:
     - https://wefin.ai.kr
