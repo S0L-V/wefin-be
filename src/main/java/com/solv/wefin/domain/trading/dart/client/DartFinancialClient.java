@@ -28,8 +28,9 @@ public class DartFinancialClient {
                                           String businessYear,
                                           String reportCode,
                                           String fsDiv) {
+        DartFinancialApiResponse body;
         try {
-            return dartRestClient.get()
+            body = dartRestClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path(FINANCIAL_PATH)
                             .queryParam("crtfc_key", dartProperties.getKey())
@@ -44,5 +45,10 @@ public class DartFinancialClient {
             log.error("DART fnlttSinglAcntAll.json 호출 실패: type={}", e.getClass().getSimpleName());
             throw new BusinessException(ErrorCode.DART_FINANCIAL_FETCH_FAILED);
         }
+        if (body == null) {
+            log.error("DART fnlttSinglAcntAll.json 응답 body가 null");
+            throw new BusinessException(ErrorCode.DART_FINANCIAL_FETCH_FAILED);
+        }
+        return body;
     }
 }

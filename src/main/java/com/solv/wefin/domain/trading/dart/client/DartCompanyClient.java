@@ -25,8 +25,9 @@ public class DartCompanyClient {
     }
 
     public DartCompanyApiResponse fetch(String corpCode) {
+        DartCompanyApiResponse body;
         try {
-            return dartRestClient.get()
+            body = dartRestClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path(COMPANY_PATH)
                             .queryParam("crtfc_key", dartProperties.getKey())
@@ -38,5 +39,10 @@ public class DartCompanyClient {
             log.error("DART company.json 호출 실패: type={}", e.getClass().getSimpleName());
             throw new BusinessException(ErrorCode.DART_COMPANY_FETCH_FAILED);
         }
+        if (body == null) {
+            log.error("DART company.json 응답 body가 null");
+            throw new BusinessException(ErrorCode.DART_COMPANY_FETCH_FAILED);
+        }
+        return body;
     }
 }
