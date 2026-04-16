@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -38,7 +39,7 @@ public class StockIndicatorService {
         HantuStockInfoApiResponse response;
         try {
             response = hantuMarketClient.fetchStockInfo(stockCode);
-        } catch (Exception e) {
+        } catch (RestClientException e) {
             log.error("한투 투자지표 조회 실패: type={}", e.getClass().getSimpleName());
             throw new BusinessException(ErrorCode.MARKET_API_FAILED);
         }

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,10 +24,11 @@ public class DartDividendService {
 
     private static final String DEFAULT_REPORT_CODE = "11011"; // 사업보고서
     private static final String COMMON_STOCK = "보통주";
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
-    private static final String CATEGORY_DIVIDEND_PER_SHARE = "주당 현금배당금";
-    private static final String CATEGORY_YIELD_RATE = "현금배당수익률";
-    private static final String CATEGORY_PAYOUT_RATIO = "현금배당성향";
+    private static final String CATEGORY_DIVIDEND_PER_SHARE = "주당 현금배당금(원)";
+    private static final String CATEGORY_YIELD_RATE = "현금배당수익률(%)";
+    private static final String CATEGORY_PAYOUT_RATIO = "현금배당성향(%)";
 
     private final DartCorpCodeService dartCorpCodeService;
     private final DartDividendClient dartDividendClient;
@@ -35,7 +37,7 @@ public class DartDividendService {
     public DartDividendInfo getDividend(String stockCode) {
         String corpCode = dartCorpCodeService.getCorpCode(stockCode);
 
-        int currentYear = LocalDate.now().getYear();
+        int currentYear = LocalDate.now(KST).getYear();
         YearlyResponse yearly = fetchWithYearFallback(corpCode, currentYear);
 
         return buildDividendInfo(yearly.response().list(), yearly.businessYear());
@@ -78,9 +80,9 @@ public class DartDividendService {
         return new DartDividendInfo(businessYear, dividendPerShare, yieldRate, payoutRatio);
     }
 
-    private BigDecimal pickCurrent(List<DartDividendItem> items, String categoryKeyword) {
+    private BigDecimal pickCurrent(List<DartDividendItem> items, String category) {
         Optional<DartDividendItem> item = items.stream()
-                .filter(i -> i.category() != null && i.category().contains(categoryKeyword))
+                .filter(i -> category.equals(i.category()))
                 .filter(i -> COMMON_STOCK.equals(i.stockKind()))
                 .findFirst();
         return item.map(i -> parseAmount(i.currentAmount())).orElse(null);

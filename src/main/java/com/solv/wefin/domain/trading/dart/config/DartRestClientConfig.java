@@ -19,6 +19,7 @@ public class DartRestClientConfig {
     @Bean("dartRestClient")
     public RestClient dartRestClient() {
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(5));
         factory.setReadTimeout(Duration.ofSeconds(30));
 
         return RestClient.builder()

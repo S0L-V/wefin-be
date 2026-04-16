@@ -48,7 +48,7 @@ public class CacheConfig {
                 .build());
 
         manager.registerCustomCache("dartDividend", Caffeine.newBuilder()
-                .expireAfterWrite(24, TimeUnit.HOURS)
+                .expireAfterWrite(12, TimeUnit.HOURS)
                 .maximumSize(5000)
                 .build());
 
