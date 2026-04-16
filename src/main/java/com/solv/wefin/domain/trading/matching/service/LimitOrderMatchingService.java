@@ -93,10 +93,11 @@ public class LimitOrderMatchingService {
         );
 
         order.fillPartially(matchedQuantity);
+        OffsetDateTime matchedAt = OffsetDateTime.now();
 
         eventPublisher.publishEvent(OrderMatchedEvent.ofBuy(
                 OrderType.LIMIT, order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
-                matchedQuantity, currentPrice, actualFee, account.getBalance(), OffsetDateTime.now()
+                matchedQuantity, currentPrice, actualFee, account.getBalance(), matchedAt
         ));
     }
 
@@ -134,11 +135,12 @@ public class LimitOrderMatchingService {
         );
 
         order.fillPartially(matchedQuantity);
+        OffsetDateTime matchedAt = OffsetDateTime.now();
 
         eventPublisher.publishEvent(OrderMatchedEvent.ofSell(
                 OrderType.LIMIT, order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
                 matchedQuantity, currentPrice, actualFee, actualTax,
-                realizedProfit, account.getBalance(), OffsetDateTime.now()
+                realizedProfit, account.getBalance(), matchedAt
         ));
     }
 
