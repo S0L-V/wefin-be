@@ -88,9 +88,9 @@ class GameEndServiceTest {
             given(gameOrderRepository.countByParticipant(participantA)).willReturn(5);
             given(gameResultRepository.save(any(GameResult.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));
-            // 다른 ACTIVE 참가자가 남아있음
+            // finish() 이전 ACTIVE 조회 → 본인 포함 전원 ACTIVE
             given(gameParticipantRepository.findByGameRoomAndStatus(room, ParticipantStatus.ACTIVE))
-                    .willReturn(List.of(participantB));
+                    .willReturn(List.of(participantA, participantB));
 
             // When
             GameEndInfo result = gameEndService.endGame(ROOM_ID, USER_A);
@@ -124,9 +124,9 @@ class GameEndServiceTest {
             given(gameOrderRepository.countByParticipant(participantA)).willReturn(10);
             given(gameResultRepository.save(any(GameResult.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));
-            // ACTIVE 참가자 없음 (본인이 방금 FINISHED됨)
+            // finish() 이전 ACTIVE 조회 → 본인만 ACTIVE (본인 제외하면 빈 리스트 → 방 종료)
             given(gameParticipantRepository.findByGameRoomAndStatus(room, ParticipantStatus.ACTIVE))
-                    .willReturn(List.of());
+                    .willReturn(List.of(participantA));
             given(gameResultRepository.findByGameRoomOrderByFinalRankAsc(room))
                     .willReturn(List.of(GameResult.create(
                             room, participantA, 0, SEED,
@@ -166,9 +166,9 @@ class GameEndServiceTest {
             given(gameOrderRepository.countByParticipant(participantA)).willReturn(7);
             given(gameResultRepository.save(any(GameResult.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));
-            // A가 FINISHED되면 ACTIVE 없음
+            // finish() 이전 ACTIVE 조회 → A만 ACTIVE (B는 이미 FINISHED)
             given(gameParticipantRepository.findByGameRoomAndStatus(room, ParticipantStatus.ACTIVE))
-                    .willReturn(List.of());
+                    .willReturn(List.of(participantA));
             // 순위 확정 시 A + B 결과 모두 조회
             GameResult resultA = GameResult.create(room, participantA, 0, SEED,
                     new BigDecimal("12000000"), new BigDecimal("20.00"), 7);
@@ -201,8 +201,9 @@ class GameEndServiceTest {
             given(gameOrderRepository.countByParticipant(participantA)).willReturn(0);
             given(gameResultRepository.save(any(GameResult.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));
+            // finish() 이전 ACTIVE 조회 → 본인 + B 둘 다 ACTIVE
             given(gameParticipantRepository.findByGameRoomAndStatus(room, ParticipantStatus.ACTIVE))
-                    .willReturn(List.of(GameParticipant.createMember(room, USER_B)));
+                    .willReturn(List.of(participantA, GameParticipant.createMember(room, USER_B)));
 
             // When
             GameEndInfo result = gameEndService.endGame(ROOM_ID, USER_A);

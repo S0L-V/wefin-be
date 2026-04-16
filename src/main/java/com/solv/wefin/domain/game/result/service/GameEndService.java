@@ -92,32 +92,41 @@ public class GameEndService {
                     gameRoom.getSeed(), finalAsset, profitRate, totalTrades));
         }
 
-        // 6. 방장이면 위임
+        // 6. 본인을 제외한 ACTIVE 참가자 목록 조회 (finish() 전에 조회 — JPA flush 타이밍 의존 회피)
+        //    한 번 조회해서 ① 방 종료 판단 ② 방장 위임 후보 양쪽에 재사용 (DB 조회 절약)
+        List<GameParticipant> otherActive = gameParticipantRepository
+                .findByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE)
+                .stream()
+                .filter(p -> !p.getUserId().equals(participant.getUserId()))
+                .toList();
+
+        // 7. 방장이면 위임 해제
         boolean wasLeader = participant.getIsLeader();
         if (wasLeader) {
             participant.resignLeader();
         }
 
-        // 7. 참가자 상태 FINISHED 전환
+        // 8. 참가자 상태 FINISHED 전환
         participant.finish();
 
-        // 8. 남은 ACTIVE 참가자 확인 → 없으면 방 종료 + 순위 확정
-        boolean roomFinished = checkAndFinishRoom(gameRoom);
+        // 9. 본인 외 ACTIVE 참가자가 없으면 방 종료 + 순위 확정
+        boolean roomFinished = false;
+        if (otherActive.isEmpty()) {
+            gameRoom.finish();
+            finalizeRanks(gameRoom);
+            roomFinished = true;
+        }
 
-        // 9. 방장 위임 (방이 아직 진행 중이고, 종료한 참가자가 방장이었으면)
+        // 10. 방이 아직 진행 중이고 종료한 참가자가 방장이었으면 랜덤 위임
         if (!roomFinished && wasLeader) {
-            List<GameParticipant> remainingActive =
-                    gameParticipantRepository.findByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
-            if (!remainingActive.isEmpty()) {
-                int randomIndex = ThreadLocalRandom.current().nextInt(remainingActive.size());
-                remainingActive.get(randomIndex).assignLeader();
-            }
+            int randomIndex = ThreadLocalRandom.current().nextInt(otherActive.size());
+            otherActive.get(randomIndex).assignLeader();
         }
 
         log.info("[게임 종료] userId={}, roomId={}, finalAsset={}, roomFinished={}",
                 userId, roomId, finalAsset, roomFinished);
 
-        // 10. WebSocket 이벤트 발행 (커밋 후 브로드캐스트)
+        // 11. WebSocket 이벤트 발행 (커밋 후 브로드캐스트)
         eventPublisher.publishEvent(
                 new GameRoomEvent(roomId, GameRoomEvent.EventType.PARTICIPANT_FINISHED));
 
@@ -127,23 +136,6 @@ public class GameEndService {
                 profitRate,
                 totalTrades,
                 roomFinished);
-    }
-
-    /**
-     * 모든 ACTIVE 참가자가 FINISHED → 방 FINISHED + 순위 확정.
-     * @return 방이 종료되었으면 true
-     */
-    private boolean checkAndFinishRoom(GameRoom gameRoom) {
-        List<GameParticipant> activeParticipants =
-                gameParticipantRepository.findByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
-
-        if (!activeParticipants.isEmpty()) {
-            return false;
-        }
-
-        gameRoom.finish();
-        finalizeRanks(gameRoom);
-        return true;
     }
 
     /**
