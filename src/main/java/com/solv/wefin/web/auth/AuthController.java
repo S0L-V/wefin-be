@@ -4,6 +4,7 @@ import com.solv.wefin.domain.auth.dto.LoginInfo;
 import com.solv.wefin.domain.auth.dto.SignupCommand;
 import com.solv.wefin.domain.auth.dto.SignupInfo;
 import com.solv.wefin.domain.auth.service.AuthService;
+import com.solv.wefin.domain.auth.service.EmailVerificationService;
 import com.solv.wefin.global.common.ApiResponse;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
@@ -23,6 +24,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
+    private final EmailVerificationService emailVerificationService;
 
     @PostMapping("/signup")
     public ApiResponse<SignupResponse> signup(@RequestBody @Valid SignupRequest request) {
@@ -81,6 +83,43 @@ public class AuthController {
         }
 
         authService.logout(userId, request.refreshToken());
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/email-verifications")
+    public ApiResponse<Void> sendEmailVerification(
+            @RequestBody @Valid SendEmailVerificationRequest request
+    ) {
+        emailVerificationService.sendVerificationCode(
+                request.getEmail(),
+                request.getPurpose()
+        );
+
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/email-verifications/confirm")
+    public ApiResponse<Void> confirmEmailVerification(
+            @RequestBody @Valid ConfirmEmailVerificationRequest request
+    ) {
+        emailVerificationService.confirmVerificationCode(
+                request.getEmail(),
+                request.getCode(),
+                request.getPurpose()
+        );
+
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/password/reset")
+    public ApiResponse<Void> resetPassword(
+            @RequestBody @Valid ResetPasswordRequest request
+    ) {
+        authService.resetPassword(
+                request.getEmail(),
+                request.getNewPassword()
+        );
+
         return ApiResponse.success(null);
     }
 }
