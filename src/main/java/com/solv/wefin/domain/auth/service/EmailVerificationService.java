@@ -21,34 +21,51 @@ public class EmailVerificationService {
 
     private static final long EXPIRE_MINUTES = 5L;
 
+    private static final int MAX_ATTEMPTS = 5;
+    private static final int MAX_RESEND = 5;
+    private static final long LOCK_MINUTES = 10L;
+    private static final long RESEND_COOLDOWN_SECONDS = 60L;
+
     private final EmailVerificationRepository emailVerificationRepository;
     private final MailService mailService;
 
-    // 인증코드 발송
     @Transactional
     public void sendVerificationCode(String email, VerificationPurpose purpose) {
         String normalizedEmail = normalizeEmail(email);
         String code = generateCode();
         OffsetDateTime expiresAt = OffsetDateTime.now().plusMinutes(EXPIRE_MINUTES);
+        OffsetDateTime now = OffsetDateTime.now();
 
         EmailVerification verification = emailVerificationRepository
                 .findByEmailAndPurpose(normalizedEmail, purpose)
-                .map(saved -> {
-                    saved.renew(code, expiresAt);
-                    return saved;
-                })
-                .orElseGet(() -> EmailVerification.builder()
-                        .email(normalizedEmail)
-                        .purpose(purpose)
-                        .verificationCode(code)
-                        .expiresAt(expiresAt)
-                        .build());
+                .orElse(null);
+
+        if (verification != null) {
+            if (verification.isResendTooSoon(now, RESEND_COOLDOWN_SECONDS)) {
+                throw new BusinessException(ErrorCode.AUTH_VERIFICATION_TOO_FAST_REQUEST);
+            }
+
+            if (verification.getResendCount() >= MAX_RESEND) {
+                throw new BusinessException(ErrorCode.AUTH_VERIFICATION_TOO_MANY_REQUESTS);
+            }
+
+            verification.renew(code, expiresAt);
+        } else {
+            verification = EmailVerification.builder()
+                    .email(normalizedEmail)
+                    .purpose(purpose)
+                    .verificationCode(code)
+                    .expiresAt(expiresAt)
+                    .build();
+        }
 
         emailVerificationRepository.save(verification);
         mailService.sendVerificationCode(normalizedEmail, code);
+
+        verification.increaseResend();
+        verification.updateLastSentAt(now);
     }
 
-    // 인증코드 확인
     @Transactional
     public void confirmVerificationCode(String email, String code, VerificationPurpose purpose) {
         String normalizedEmail = normalizeEmail(email);
@@ -58,18 +75,30 @@ public class EmailVerificationService {
                 .findByEmailAndPurpose(normalizedEmail, purpose)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_VERIFICATION_CODE_INVALID));
 
-        if (verification.isExpired(OffsetDateTime.now())) {
+        OffsetDateTime now = OffsetDateTime.now();
+
+        if (verification.isLocked(now)) {
+            throw new BusinessException(ErrorCode.AUTH_VERIFICATION_TOO_MANY_ATTEMPTS);
+        }
+
+        if (verification.isExpired(now)) {
             throw new BusinessException(ErrorCode.AUTH_VERIFICATION_CODE_EXPIRED);
         }
 
         if (!verification.matchesCode(normalizedCode)) {
+            verification.increaseAttempt();
+
+            if (verification.getAttemptCount() >= MAX_ATTEMPTS) {
+                verification.lock(now.plusMinutes(LOCK_MINUTES));
+            }
+
             throw new BusinessException(ErrorCode.AUTH_VERIFICATION_CODE_INVALID);
         }
 
+        verification.resetAttempt();
         verification.verify();
     }
 
-    // 인증 완료 여부 확인 (signup, resetPassword에서 사용)
     public void validateVerifiedEmail(String email, VerificationPurpose purpose) {
         String normalizedEmail = normalizeEmail(email);
 
@@ -86,7 +115,6 @@ public class EmailVerificationService {
         }
     }
 
-    // 인증 소모 (한 번 쓰고 끝)
     @Transactional
     public void consumeVerifiedEmail(String email, VerificationPurpose purpose) {
         String normalizedEmail = normalizeEmail(email);
@@ -96,8 +124,6 @@ public class EmailVerificationService {
 
         optionalVerification.ifPresent(EmailVerification::consume);
     }
-
-    // ===== 내부 유틸 =====
 
     private String normalizeEmail(String email) {
         if (email == null) {

@@ -53,7 +53,6 @@ public enum ErrorCode {
     INTERNAL_SERVER_ERROR(500, "서버 내부 오류가 발생했습니다."),
 
     // Auth - SIGNUP
-    // Auth - SIGNUP
     AUTH_EMAIL_DUPLICATED(409, "이미 사용 중인 이메일입니다."),
     AUTH_NICKNAME_DUPLICATED(409, "이미 사용 중인 닉네임입니다."),
     AUTH_VALIDATION_FAILED(400, "잘못된 입력입니다."),
@@ -61,6 +60,10 @@ public enum ErrorCode {
     AUTH_VERIFICATION_CODE_INVALID(400, "인증코드가 올바르지 않습니다."),
     AUTH_VERIFICATION_CODE_EXPIRED(400, "인증코드가 만료되었습니다."),
     AUTH_EMAIL_SEND_FAILED(500, "인증 메일 발송에 실패했습니다."),
+    AUTH_VERIFICATION_TOO_FAST_REQUEST(400, "인증코드 재발송 요청이 너무 빠릅니다."),
+    AUTH_VERIFICATION_TOO_MANY_REQUESTS(400, "인증코드 재발송 횟수를 초과했습니다."),
+    AUTH_VERIFICATION_TOO_MANY_ATTEMPTS(400, "인증 시도 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."),
+
     // Auth - LOGIN
     AUTH_LOGIN_FAILED(401, "이메일 또는 비밀번호가 올바르지 않습니다."),
     ACCOUNT_LOCKED(423, "계정이 잠금 상태입니다."),
