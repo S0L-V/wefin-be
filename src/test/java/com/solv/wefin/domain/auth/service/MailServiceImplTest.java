@@ -36,8 +36,11 @@ class MailServiceImplTest {
 
         SimpleMailMessage message = captor.getValue();
         assertThat(message.getTo()).containsExactly(to);
-        assertThat(message.getSubject()).isEqualTo("[wefin] 이메일 인증코드");
-        assertThat(message.getText()).contains(code);
+        assertThat(message.getSubject()).isEqualTo("[wefin] 이메일 인증코드 안내");
+        assertThat(message.getText())
+                .contains(code)
+                .contains("요청하신 인증코드는 아래와 같습니다")
+                .contains("5분간 유효합니다");
     }
 
     @Test
