@@ -134,7 +134,7 @@ class DartCorpCodeTxServiceTest {
     }
 
     @Test
-    void 빈_stockCode_아이템은_무시() {
+    void 빈_stockCode_아이템은_무시되고_반환값은_실제_처리_건수() {
         // given
         given(dartCorpCodeRepository.findAll()).willReturn(List.of());
         List<DartCorpCodeItem> items = new java.util.ArrayList<>();
@@ -144,9 +144,10 @@ class DartCorpCodeTxServiceTest {
         items.add(new DartCorpCodeItem("005930", "00126380", "삼성전자", "20251201"));
 
         // when
-        dartCorpCodeTxService.upsertAll(items);
+        int result = dartCorpCodeTxService.upsertAll(items);
 
-        // then
+        // then — 입력 4건 중 3건(blank)은 skip, 1건만 처리
+        assertThat(result).isEqualTo(1);
         ArgumentCaptor<List<DartCorpCode>> captor = ArgumentCaptor.forClass(List.class);
         verify(dartCorpCodeRepository).saveAll(captor.capture());
         assertThat(captor.getValue()).hasSize(1);
