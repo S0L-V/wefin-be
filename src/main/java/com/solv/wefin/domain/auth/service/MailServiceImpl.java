@@ -4,7 +4,7 @@ import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnBean(JavaMailSender.class)
+@ConditionalOnProperty(name = "spring.mail.host")
 public class MailServiceImpl implements MailService {
 
     private final JavaMailSender mailSender;
@@ -23,13 +23,26 @@ public class MailServiceImpl implements MailService {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(to);
-            message.setSubject("[wefin] 이메일 인증코드");
-            message.setText("인증코드는 [" + code + "] 입니다. 5분 내에 입력해주세요.");
+            message.setSubject("[wefin] 이메일 인증코드 안내");
+            message.setText(buildVerificationContent(code));
 
             mailSender.send(message);
         } catch (MailException e) {
-            log.error("메일 발송 실패", e);
+            log.error("메일 발송 실패: to={}", to, e);
             throw new BusinessException(ErrorCode.AUTH_EMAIL_SEND_FAILED);
         }
+    }
+
+    private String buildVerificationContent(String code) {
+        return """
+                안녕하세요, wefin입니다.
+
+                요청하신 인증코드는 아래와 같습니다.
+
+                👉 인증코드: [%s]
+
+                해당 코드는 5분간 유효합니다.
+                본인이 요청하지 않았다면 이 메일을 무시해주세요.
+                """.formatted(code);
     }
 }
