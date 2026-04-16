@@ -36,7 +36,7 @@ public class DartFinancialService {
     private final DartFinancialClient dartFinancialClient;
 
     @Cacheable(cacheNames = "dartFinancial", key = "#stockCode")
-    public DartFinancialSummary getDartFinancialSummary(String stockCode) {
+    public DartFinancialSummary getFinancialSummary(String stockCode) {
         String corpCode = dartCorpCodeService.getCorpCode(stockCode);
 
         int currentYear = LocalDate.now().getYear();
