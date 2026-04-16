@@ -187,7 +187,11 @@ public enum ErrorCode {
     VOTE_NOT_IN_PROGRESS(400, "진행 중인 투표가 없습니다."),
     VOTE_ALREADY_IN_PROGRESS(409, "이미 투표가 진행 중입니다."),
     // MarketTrend
-    MARKET_TREND_ALREADY_RUNNING(409, "금융 동향 생성이 이미 실행 중입니다.");
+    MARKET_TREND_ALREADY_RUNNING(409, "금융 동향 생성이 이미 실행 중입니다."),
+
+    // DART
+    DART_CORP_CODE_NOT_FOUND(404, "DART 고유번호를 찾을 수 없습니다."),
+    DART_CORP_CODE_FETCH_FAILED(503, "DART 고유번호 조회에 실패했습니다.");
 
     private final int status;
     private final String message;
