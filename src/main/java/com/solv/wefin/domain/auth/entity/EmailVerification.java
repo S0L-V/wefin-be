@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -75,6 +77,9 @@ public class EmailVerification extends BaseEntity {
     }
 
     public boolean matchesCode(String code) {
-        return this.verificationCode.equals(code);
+        return MessageDigest.isEqual(
+                this.verificationCode.getBytes(StandardCharsets.UTF_8),
+                code.getBytes(StandardCharsets.UTF_8)
+        );
     }
 }
