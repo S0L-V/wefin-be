@@ -159,6 +159,11 @@ public enum ErrorCode {
     // GameTurn
     GAME_NOT_STARTED(400, "게임이 시작되지 않았습니다."),
     GAME_ALREADY_FINISHED(400, "이미 종료된 게임입니다."),
+    GAME_NOT_FINISHED(400, "게임이 아직 종료되지 않았습니다."),
+
+    // GameParticipant - 개별 종료
+    PARTICIPANT_ALREADY_FINISHED(400, "이미 게임을 종료한 참가자입니다."),
+    PARTICIPANT_NOT_FINISHED(400, "아직 게임을 종료하지 않은 참가자입니다."),
 
     // GameStock
     GAME_STOCK_NOT_FOUND(404, "해당 종목을 찾을 수 없습니다."),

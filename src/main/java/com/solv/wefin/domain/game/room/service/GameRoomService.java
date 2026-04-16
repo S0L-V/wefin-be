@@ -151,6 +151,9 @@ public class GameRoomService {
             if (participant.getStatus() == ParticipantStatus.ACTIVE) {
                 throw new BusinessException(ErrorCode.ROOM_ALREADY_JOINED);
             }
+            if (participant.getStatus() == ParticipantStatus.FINISHED) {
+                throw new BusinessException(ErrorCode.PARTICIPANT_ALREADY_FINISHED);
+            }
             int currentPlayers = gameParticipantRepository.countByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
             if (currentPlayers >= 6) {
                 throw new BusinessException(ErrorCode.ROOM_FULL);

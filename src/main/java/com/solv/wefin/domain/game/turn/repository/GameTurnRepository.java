@@ -13,4 +13,6 @@ public interface GameTurnRepository extends JpaRepository<GameTurn, UUID> {
     Optional<GameTurn> findByGameRoomAndStatus(GameRoom gameRoom, TurnStatus status);
 
     Optional<GameTurn> findFirstByGameRoomAndStatusOrderByTurnNumberDesc(GameRoom gameRoom, TurnStatus status);
+
+    int countByGameRoomAndStatus(GameRoom gameRoom, TurnStatus status);
 }

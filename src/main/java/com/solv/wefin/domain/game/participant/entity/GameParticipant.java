@@ -107,8 +107,14 @@ public class GameParticipant {
     }
 
     public void leave() {
-
         this.status = LEFT;
+    }
+
+    public void finish() {
+        if (this.status != ACTIVE) {
+            throw new IllegalStateException("ACTIVE 상태의 참가자만 종료할 수 있습니다. 현재 상태: " + this.status);
+        }
+        this.status = ParticipantStatus.FINISHED;
     }
 
     //방장 퇴장 시
@@ -121,7 +127,9 @@ public class GameParticipant {
     }
 
     public void rejoin() {
-
+        if (this.status != LEFT) {
+            throw new IllegalStateException("LEFT 상태의 참가자만 재입장할 수 있습니다. 현재 상태: " + this.status);
+        }
         this.status = ACTIVE;
     }
 }

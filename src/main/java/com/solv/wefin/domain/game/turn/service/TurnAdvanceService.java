@@ -3,9 +3,13 @@ package com.solv.wefin.domain.game.turn.service;
 import com.solv.wefin.domain.game.holding.entity.GameHolding;
 import com.solv.wefin.domain.game.holding.repository.GameHoldingRepository;
 import com.solv.wefin.domain.game.news.repository.BriefingCacheRepository;
+import com.solv.wefin.domain.game.order.repository.GameOrderRepository;
 import com.solv.wefin.domain.game.participant.entity.GameParticipant;
 import com.solv.wefin.domain.game.participant.entity.ParticipantStatus;
 import com.solv.wefin.domain.game.participant.repository.GameParticipantRepository;
+import com.solv.wefin.domain.game.result.entity.GameResult;
+import com.solv.wefin.domain.game.result.repository.GameResultRepository;
+import com.solv.wefin.domain.game.result.service.GameEndService;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.room.entity.RoomStatus;
 import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
@@ -47,6 +51,9 @@ public class TurnAdvanceService {
     private final GameHoldingRepository gameHoldingRepository;
     private final StockDailyRepository stockDailyRepository;
     private final GamePortfolioSnapshotRepository snapshotRepository;
+    private final GameOrderRepository gameOrderRepository;
+    private final GameResultRepository gameResultRepository;
+    private final GameEndService gameEndService;
     private final BriefingCacheRepository briefingCacheRepository;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -93,8 +100,9 @@ public class TurnAdvanceService {
         // 6. 현재 턴 완료 처리
         currentTurn.complete();
 
-        // 7. 종료 판단
+        // 7. 종료 판단 — 기간 만료 시 남은 ACTIVE 전원 강제 종료
         if (isGameOver) {
+            forceEndAllActive(gameRoom, snapshots);
             gameRoom.finish();
             log.info("[턴 전환] 게임 종료: roomId={}, 마지막 턴={}", roomId, currentTurn.getTurnNumber());
             return null;
@@ -194,6 +202,42 @@ public class TurnAdvanceService {
                 .flatMap(tradeDate -> stockDailyRepository.findByStockInfoAndTradeDate(stockInfo, tradeDate))
                 .map(StockDaily::getClosePrice)
                 .orElse(BigDecimal.ZERO);
+    }
+
+    /**
+     * 기간 만료 시 남은 ACTIVE 참가자 전원을 강제 종료한다.
+     * 스냅샷 기반으로 game_result 저장 + FINISHED 전환 + 순위 확정.
+     * 이미 개별 종료한(FINISHED) 참가자의 결과도 함께 순위 확정한다.
+     */
+    private void forceEndAllActive(GameRoom gameRoom, List<GamePortfolioSnapshot> snapshots) {
+        BigDecimal seedMoney = gameRoom.getSeed();
+
+        // 스냅샷 → participant 매핑
+        Map<UUID, GamePortfolioSnapshot> snapshotMap = snapshots.stream()
+                .collect(Collectors.toMap(
+                        s -> s.getParticipant().getParticipantId(),
+                        Function.identity()));
+
+        // ACTIVE 참가자 전원 → game_result 저장 + FINISHED
+        List<GameParticipant> activeParticipants =
+                gameParticipantRepository.findByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
+
+        for (GameParticipant participant : activeParticipants) {
+            GamePortfolioSnapshot snapshot = snapshotMap.get(participant.getParticipantId());
+
+            BigDecimal finalAsset = snapshot != null ? snapshot.getTotalAsset() : seedMoney;
+            BigDecimal profitRate = snapshot != null ? snapshot.getProfitRate() : BigDecimal.ZERO;
+            int totalTrades = gameOrderRepository.countByParticipant(participant);
+
+            gameResultRepository.save(GameResult.create(
+                    gameRoom, participant, 0,
+                    seedMoney, finalAsset, profitRate, totalTrades));
+
+            participant.finish();
+        }
+
+        // 전원(기존 FINISHED + 방금 FINISHED) 순위 확정
+        gameEndService.finalizeRanks(gameRoom);
     }
 
     /**
