@@ -139,34 +139,40 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
             return cached;
         }
 
-        HantuRankingApiResponse response = switch (type) {
-            case VOLUME -> hantuMarketClient.fetchVolumeRanking();
-            case AMOUNT -> hantuMarketClient.fetchTradingAmountRanking();
-            case RISING -> hantuMarketClient.fetchChangeRateRanking(true);
-            case FALLING -> hantuMarketClient.fetchChangeRateRanking(false);
-        };
+        try {
+            HantuRankingApiResponse response = switch (type) {
+                case VOLUME -> hantuMarketClient.fetchVolumeRanking();
+                case AMOUNT -> hantuMarketClient.fetchTradingAmountRanking();
+                case RISING -> hantuMarketClient.fetchChangeRateRanking(true);
+                case FALLING -> hantuMarketClient.fetchChangeRateRanking(false);
+            };
 
-        List<StockRankingItem> items = (response.output() != null)
-            ? response.output().stream().map(StockRankingItem::from).toList()
-            : List.of();
+            List<StockRankingItem> items = (response.output() != null)
+                ? response.output().stream().map(StockRankingItem::from).toList()
+                : List.of();
 
-        // FALLING: 등락률 오름차순 재정렬 (가장 큰 하락이 1위)
-        if (!items.isEmpty() && type == RankingType.FALLING) {
-            var sorted = new java.util.ArrayList<>(items);
-            sorted.sort((a, b) -> a.changeRate().compareTo(b.changeRate()));
-            items = java.util.stream.IntStream.range(0, sorted.size())
-                .mapToObj(i -> new StockRankingItem(
-                    i + 1, sorted.get(i).stockCode(), sorted.get(i).stockName(),
-                    sorted.get(i).currentPrice(), sorted.get(i).changeRate(),
-                    sorted.get(i).changeAmount(), sorted.get(i).changeSign(),
-                    sorted.get(i).volume(), sorted.get(i).tradingAmount()))
-                .toList();
+            // FALLING: 등락률 오름차순 재정렬 (가장 큰 하락이 1위)
+            if (!items.isEmpty() && type == RankingType.FALLING) {
+                var sorted = new java.util.ArrayList<>(items);
+                sorted.sort((a, b) -> a.changeRate().compareTo(b.changeRate()));
+                items = java.util.stream.IntStream.range(0, sorted.size())
+                    .mapToObj(i -> new StockRankingItem(
+                        i + 1, sorted.get(i).stockCode(), sorted.get(i).stockName(),
+                        sorted.get(i).currentPrice(), sorted.get(i).changeRate(),
+                        sorted.get(i).changeAmount(), sorted.get(i).changeSign(),
+                        sorted.get(i).volume(), sorted.get(i).tradingAmount()))
+                    .toList();
+            }
+
+            rankingCache.put(cacheKey, items);
+            rankingCacheTimestamp.put(cacheKey, System.currentTimeMillis());
+
+            return items;
+        } catch (Exception e) {
+            if (e instanceof BusinessException) throw (BusinessException) e;
+            log.error("랭킹 조회 실패: type={}", type, e);
+            throw new BusinessException(ErrorCode.MARKET_API_FAILED);
         }
-
-        rankingCache.put(cacheKey, items);
-        rankingCacheTimestamp.put(cacheKey, System.currentTimeMillis());
-
-        return items;
     }
 
     private List<StockRankingItem> getCachedRanking(String type) {

@@ -186,7 +186,7 @@ public class HantuMarketClient {
     }
 
     /**
-     * 구갠 주식 등략률 순위를 조회
+     * 국내 주식 등락률 순위를 조회
      * @param isRising true: 급등 (상승률 상위), false: 급락 (하락률 상위)
      */
     public HantuRankingApiResponse fetchChangeRateRanking(boolean isRising) {
