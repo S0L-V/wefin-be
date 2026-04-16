@@ -5,6 +5,7 @@ import static com.solv.wefin.domain.trading.common.TradingConstants.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
@@ -83,6 +84,7 @@ public class OrderService {
 		tradeService.createBuyTrade(order.getOrderId(), virtualAccountId, stockId,
 			quantity, currentPrice, totalAmount, fee, Currency.KRW, null);
 		order.fill(quantity);
+		OffsetDateTime matchedAt = OffsetDateTime.now();
 
 		// 8. 포트폴리오 갱신
 		portfolioService.addHolding(virtualAccountId, stockId, quantity, currentPrice, Currency.KRW);
@@ -90,7 +92,7 @@ public class OrderService {
 		// 9. 이벤트 발행
 		eventPublisher.publishEvent(OrderMatchedEvent.ofBuy(
 			OrderType.MARKET, order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
-			quantity, currentPrice, fee, account.getBalance()
+			quantity, currentPrice, fee, account.getBalance(), matchedAt
 		));
 
 		questProgressService.handleEvent(account.getUserId(), QuestEventType.BUY_STOCK);
@@ -146,6 +148,7 @@ public class OrderService {
 
 		// 11. Order 상태 변경
 		order.fill(quantity);
+		OffsetDateTime matchedAt = OffsetDateTime.now();
 
 		// 12. 포트폴리오 수량 차감
 		portfolioService.deductQuantity(virtualAccountId, stockId, quantity);
@@ -159,7 +162,7 @@ public class OrderService {
 		// 15. 이벤트 발행
 		eventPublisher.publishEvent(OrderMatchedEvent.ofSell(
 			OrderType.MARKET, order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
-			quantity, currentPrice, fee, tax, realizedAmount, account.getBalance()
+			quantity, currentPrice, fee, tax, realizedAmount, account.getBalance(), matchedAt
 		));
 
 		try {

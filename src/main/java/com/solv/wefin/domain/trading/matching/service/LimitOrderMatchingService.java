@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 
@@ -92,10 +93,11 @@ public class LimitOrderMatchingService {
         );
 
         order.fillPartially(matchedQuantity);
+        OffsetDateTime matchedAt = OffsetDateTime.now();
 
         eventPublisher.publishEvent(OrderMatchedEvent.ofBuy(
                 OrderType.LIMIT, order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
-                matchedQuantity, currentPrice, actualFee, account.getBalance()
+                matchedQuantity, currentPrice, actualFee, account.getBalance(), matchedAt
         ));
     }
 
@@ -133,11 +135,12 @@ public class LimitOrderMatchingService {
         );
 
         order.fillPartially(matchedQuantity);
+        OffsetDateTime matchedAt = OffsetDateTime.now();
 
         eventPublisher.publishEvent(OrderMatchedEvent.ofSell(
                 OrderType.LIMIT, order.getOrderNo(), stock.getStockCode(), stock.getStockName(),
                 matchedQuantity, currentPrice, actualFee, actualTax,
-                realizedProfit, account.getBalance()
+                realizedProfit, account.getBalance(), matchedAt
         ));
     }
 
