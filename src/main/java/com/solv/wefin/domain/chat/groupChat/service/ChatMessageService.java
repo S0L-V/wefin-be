@@ -125,11 +125,8 @@ public class ChatMessageService {
 
         eventPublisher.publishEvent(new ChatMessageCreatedEvent(group.getId(), info));
 
-        try {
-            questProgressService.handleEvent(userId, QuestEventType.SHARE_NEWS);
-        } catch (RuntimeException e) {
-            log.warn("퀘스트 진행도 반영 실패 userId={}", userId, e);
-        }
+        handleQuestEventSafely(userId, QuestEventType.SHARE_NEWS);
+        handleQuestEventSafely(userId, QuestEventType.SEND_GROUP_CHAT);
 
         return info;
     }
@@ -211,6 +208,14 @@ public class ChatMessageService {
     private void validateShareNewsCommand(ShareNewsCommand command) {
         if(command == null || command.newsClusterId() == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+    }
+
+    private void handleQuestEventSafely(UUID userId, QuestEventType eventType) {
+        try {
+            questProgressService.handleEvent(userId, eventType);
+        } catch (RuntimeException e) {
+            log.warn("퀘스트 진행도 반영 실패 userId={}, eventType={}", userId, eventType, e);
         }
     }
 
