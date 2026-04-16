@@ -27,6 +27,16 @@ public class CacheConfig {
                 .maximumSize(5000)
                 .build());
 
+        manager.registerCustomCache("dartCompany", Caffeine.newBuilder()
+                .expireAfterWrite(6, TimeUnit.HOURS)
+                .maximumSize(5000)
+                .build());
+
+        manager.registerCustomCache("dartFinancial", Caffeine.newBuilder()
+                .expireAfterWrite(12, TimeUnit.HOURS)
+                .maximumSize(5000)
+                .build());
+
         return manager;
     }
 }
