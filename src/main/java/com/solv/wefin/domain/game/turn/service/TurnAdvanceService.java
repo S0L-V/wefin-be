@@ -223,6 +223,13 @@ public class TurnAdvanceService {
                 gameParticipantRepository.findByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
 
         for (GameParticipant participant : activeParticipants) {
+            if (gameResultRepository.existsByGameRoomAndParticipant(gameRoom, participant)) {
+                log.warn("[강제 종료] game_result 이미 존재 — 참가자 {} 중복 저장 생략",
+                        participant.getParticipantId());
+                participant.finish();
+                continue;
+            }
+
             GamePortfolioSnapshot snapshot = snapshotMap.get(participant.getParticipantId());
 
             BigDecimal finalAsset = snapshot != null ? snapshot.getTotalAsset() : seedMoney;
