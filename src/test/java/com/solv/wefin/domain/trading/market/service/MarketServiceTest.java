@@ -2,7 +2,10 @@ package com.solv.wefin.domain.trading.market.service;
 
 import com.solv.wefin.domain.trading.market.client.HantuMarketClient;
 import com.solv.wefin.domain.trading.market.client.dto.HantuPriceApiResponse;
+import com.solv.wefin.domain.trading.market.client.dto.HantuRankingApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuRecentTradeApiResponse;
+import com.solv.wefin.domain.trading.market.client.dto.RankingType;
+import com.solv.wefin.domain.trading.market.client.dto.StockRankingItem;
 import com.solv.wefin.domain.trading.market.dto.PriceResponse;
 import com.solv.wefin.domain.trading.market.dto.RecentTradeResponse;
 import com.solv.wefin.domain.trading.stock.service.StockService;
@@ -205,5 +208,111 @@ class MarketServiceTest {
         // when & then
         assertThatThrownBy(() -> marketService.getRecentTrades("005930"))
                 .isInstanceOf(BusinessException.class);
+    }
+
+
+
+    // === getStockRanking FALLING 재정렬 테스트 ===
+
+    /**
+     * FALLING 재부여 시 같은 changeRate 면 거래량 큰 쪽이 먼저 오고,
+     * 거래량도 같으면 stockCode 오름차순으로 안정화된다.
+     */
+    @Test
+    void 급락_랭킹_동률시_거래량_내림차순_종목코드_오름차순으로_tie_break() {
+        // given — 같은 등락률 -3.00 (종목 A, B) + 다른 등락률 -5.00 (종목 C)
+        // 종목 A: volume=100, B: volume=500 → B 가 먼저 와야 함
+        List<HantuRankingApiResponse.Output> output = List.of(
+            rankingOutput("1", "A0000001", "종목A", "1000", "-3.00", "100"),
+            rankingOutput("2", "B0000002", "종목B", "1000", "-3.00", "500"),
+            rankingOutput("3", "C0000003", "종목C", "1000", "-5.00", "300")
+        );
+        given(hantuMarketClient.fetchChangeRateRanking(false))
+            .willReturn(new HantuRankingApiResponse(output));
+
+        // when
+        List<StockRankingItem> result = marketService.getStockRanking(RankingType.FALLING);
+
+        // then
+        // 가장 큰 하락(-5.00) 이 1위, 그 다음 -3.00 두 개 중 거래량 큰 B 가 2위
+        assertThat(result).extracting(StockRankingItem::stockCode)
+            .containsExactly("C0000003", "B0000002", "A0000001");
+        assertThat(result).extracting(StockRankingItem::rank)
+            .containsExactly(1, 2, 3);
+    }
+
+    // === getStockRanking 네거티브 캐시 테스트 ===
+
+    /**
+     * 외부 API 실패 시 stale 캐시가 있으면 예외 대신 stale 데이터를 반환한다.
+     * 프론트 5초 polling 상황에서 KIS rate limit 폭주 방지.
+     */
+    @Test
+    void 랭킹_조회_실패시_직전_캐시를_stale로_반환() {
+        // given — 첫 호출은 성공해서 캐시에 저장됨
+        List<HantuRankingApiResponse.Output> firstOutput = List.of(
+            rankingOutput("1", "A0000001", "종목A", "1000", "+5.00", "100")
+        );
+        given(hantuMarketClient.fetchVolumeRanking())
+            .willReturn(new HantuRankingApiResponse(firstOutput))
+            .willThrow(new RuntimeException("KIS API 장애"));
+
+        // when — 첫 호출 (성공 → 캐시 저장)
+        List<StockRankingItem> firstResult = marketService.getStockRanking(RankingType.VOLUME);
+        assertThat(firstResult).hasSize(1);
+
+        // 캐시 만료시키기 위해 TTL 경과 대기 대신 내부 강제 만료하지 않고,
+        // 새 쿼리가 미스로 판정되도록 직접 캐시 제거 후 stale 복원 시나리오를 재현.
+        // 실제로는 TTL 만료 후 API 호출 → 실패 → 이전 값 유지.
+        // 여기서는 두 번째 호출이 예외를 던지도록 stub 했으므로
+        // 캐시가 만료된 상태를 시뮬레이션하기 위해 timestamp 만 과거로 돌림
+        forceCacheExpire("VOLUME");
+
+        // when — 두 번째 호출 (TTL 만료 + API 실패 → stale 반환)
+        List<StockRankingItem> staleResult = marketService.getStockRanking(RankingType.VOLUME);
+
+        // then — 예외 대신 직전 값이 반환됨
+        assertThat(staleResult).isEqualTo(firstResult);
+    }
+
+    /**
+     * 실패 + 이전 캐시도 없음 → 기존처럼 BusinessException 전파.
+     */
+    @Test
+    void 랭킹_조회_실패시_이전캐시_없으면_예외_전파() {
+        // given
+        given(hantuMarketClient.fetchVolumeRanking())
+            .willThrow(new RuntimeException("KIS API 장애"));
+
+        // when & then
+        assertThatThrownBy(() -> marketService.getStockRanking(RankingType.VOLUME))
+            .isInstanceOf(BusinessException.class)
+            .extracting("errorCode")
+            .isEqualTo(ErrorCode.MARKET_API_FAILED);
+    }
+
+    // === 헬퍼 ===
+
+    private HantuRankingApiResponse.Output rankingOutput(String rank, String code, String name,
+                                                         String price, String changeRate, String volume) {
+        return new HantuRankingApiResponse.Output(
+            rank, code, name, price, "0", "2", changeRate, volume, "0"
+        );
+    }
+
+    /**
+     * 캐시 TTL 이 만료된 상태를 시뮬레이션하기 위해 내부 timestamp 를 과거로 돌린다.
+     * 리플렉션으로 private 맵 접근.
+     */
+    private void forceCacheExpire(String cacheKey) {
+        try {
+            var field = MarketService.class.getDeclaredField("rankingCacheTimestamp");
+            field.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            var map = (java.util.concurrent.ConcurrentHashMap<String, Long>) field.get(marketService);
+            map.put(cacheKey, 0L); // 아주 과거 — 무조건 만료
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }
