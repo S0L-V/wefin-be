@@ -195,7 +195,9 @@ public enum ErrorCode {
     DART_COMPANY_NOT_FOUND(404, "DART 기업 정보가 존재하지 않습니다."),
     DART_COMPANY_FETCH_FAILED(503, "DART 기업 정보 조회에 실패했습니다."),
     DART_FINANCIAL_NOT_FOUND(404, "DART 재무제표가 존재하지 않습니다."),
-    DART_FINANCIAL_FETCH_FAILED(503, "DART 재무제표 조회에 실패했습니다.");
+    DART_FINANCIAL_FETCH_FAILED(503, "DART 재무제표 조회에 실패했습니다."),
+    DART_DIVIDEND_NOT_FOUND(404, "DART 배당 정보가 존재하지 않습니다."),
+    DART_DIVIDEND_FETCH_FAILED(503, "DART 배당 정보 조회에 실패했습니다.");
 
     private final int status;
     private final String message;

@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,6 +29,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class UserQuestServiceTest {
+
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private UserRepository userRepository;
     private UserQuestRepository userQuestRepository;
@@ -70,7 +73,7 @@ class UserQuestServiceTest {
     void getOrIssueTodayUserQuests_issues_new() {
         // given
         UUID userId = UUID.randomUUID();
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(KST);
 
         User user = User.builder()
                 .email("test@test.com")
@@ -154,7 +157,7 @@ class UserQuestServiceTest {
         QuestTemplate template = mock(QuestTemplate.class);
         when(template.getReward()).thenReturn(100_000);
 
-        DailyQuest dailyQuest = DailyQuest.create(template, LocalDate.now(), 3, 100_000);
+        DailyQuest dailyQuest = DailyQuest.create(template, LocalDate.now(KST), 3, 100_000);
         UserQuest userQuest = UserQuest.assign(user, dailyQuest);
         ReflectionTestUtils.setField(userQuest, "id", 1L);
         ReflectionTestUtils.setField(userQuest, "status", QuestStatus.COMPLETED);

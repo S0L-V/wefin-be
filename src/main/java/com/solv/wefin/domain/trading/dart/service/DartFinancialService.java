@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +25,7 @@ public class DartFinancialService {
 
     private static final String DEFAULT_REPORT_CODE = "11011"; // 사업보고서
     private static final String DEFAULT_FS_DIV = "CFS";        // 연결재무제표
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private static final String ACCOUNT_ASSETS = "ifrs-full_Assets";
     private static final String ACCOUNT_LIABILITIES = "ifrs-full_Liabilities";
@@ -39,7 +41,7 @@ public class DartFinancialService {
     public DartFinancialSummary getFinancialSummary(String stockCode) {
         String corpCode = dartCorpCodeService.getCorpCode(stockCode);
 
-        int currentYear = LocalDate.now().getYear();
+        int currentYear = LocalDate.now(KST).getYear();
         YearlyResponse yearly = fetchWithYearFallback(corpCode, currentYear);
 
         return buildSummary(yearly.response(), yearly.businessYear());
