@@ -93,6 +93,8 @@ public class EmailVerification extends BaseEntity {
 
     public void verify() {
         this.verified = true;
+        this.resendCount = 0;
+        this.resendWindowStartedAt = null;
     }
 
     public void consume() {
