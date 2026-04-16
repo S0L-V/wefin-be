@@ -31,6 +31,8 @@ public class AiChatService {
 
     private static final int MAX_MESSAGE_LENGTH = 1000;
     private static final int MAX_PAGE_SIZE = 100;
+    private static final int MAX_NEWS_CONTEXT_CHARS = 4000;
+    private static final String TRUNCATED_SUFFIX = "\n...(뉴스 요약이 길어 일부 생략되었습니다)";
 
     private final OpenAiChatClient openAiChatClient;
     private final AiChatMessagePersistenceService aiChatMessagePersistenceService;
@@ -103,7 +105,7 @@ public class AiChatService {
                 .map(section -> "- " + section.getHeading() + ": " + section.getBody())
                 .collect(Collectors.joining("\n"));
 
-        return """
+        String context = """
                 [NEWS_CONTEXT]
                 Title: %s
                 Summary: %s
@@ -115,8 +117,17 @@ public class AiChatService {
                 sectionText.isBlank() ? "(no section summary)" : sectionText
         );
 
+        return truncate(context, MAX_NEWS_CONTEXT_CHARS);
     }
 
+    private String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+
+        int endIndex = Math.max(0, maxLength - TRUNCATED_SUFFIX.length());
+        return value.substring(0, endIndex) + TRUNCATED_SUFFIX;
+    }
     private void validateUserId(UUID userId) {
         if (userId == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
