@@ -92,6 +92,12 @@ public class DartFinancialService {
         DartFinancialItem operatingIncome = byAccountId.get(ACCOUNT_OPERATING_INCOME);
         DartFinancialItem netIncome = byAccountId.get(ACCOUNT_NET_INCOME);
 
+        if (java.util.stream.Stream.of(assets, liabilities, equity, revenue, operatingIncome, netIncome)
+                .allMatch(java.util.Objects::isNull)) {
+            log.error("DART 재무제표 응답에 핵심 account_id 6개 모두 없음 (IFRS 체계 불일치 가능)");
+            throw new BusinessException(ErrorCode.DART_FINANCIAL_NOT_FOUND);
+        }
+
         String currency = firstNonNull(
                 assets, liabilities, equity, revenue, operatingIncome, netIncome,
                 DartFinancialItem::currency, "KRW");

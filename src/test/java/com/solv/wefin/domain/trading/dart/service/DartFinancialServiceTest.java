@@ -70,7 +70,7 @@ class DartFinancialServiceTest {
                 .willReturn(successResponse());
 
         // when
-        DartFinancialSummary result = dartFinancialService.getDartFinancialSummary("005930");
+        DartFinancialSummary result = dartFinancialService.getFinancialSummary("005930");
 
         // then
         assertThat(result.currency()).isEqualTo("KRW");
@@ -99,7 +99,7 @@ class DartFinancialServiceTest {
         given(dartFinancialClient.fetch("00126380", secondYear, "11011", "CFS")).willReturn(successResponse());
 
         // when
-        DartFinancialSummary result = dartFinancialService.getDartFinancialSummary("005930");
+        DartFinancialSummary result = dartFinancialService.getFinancialSummary("005930");
 
         // then
         assertThat(result.businessYear()).isEqualTo(secondYear);
@@ -115,7 +115,7 @@ class DartFinancialServiceTest {
                 .willReturn(noData);
 
         // when & then
-        assertThatThrownBy(() -> dartFinancialService.getDartFinancialSummary("005930"))
+        assertThatThrownBy(() -> dartFinancialService.getFinancialSummary("005930"))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.DART_FINANCIAL_NOT_FOUND);
@@ -130,7 +130,7 @@ class DartFinancialServiceTest {
                 .willReturn(error);
 
         // when & then
-        assertThatThrownBy(() -> dartFinancialService.getDartFinancialSummary("005930"))
+        assertThatThrownBy(() -> dartFinancialService.getFinancialSummary("005930"))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.DART_FINANCIAL_FETCH_FAILED);
@@ -144,7 +144,7 @@ class DartFinancialServiceTest {
                 .willReturn(null);
 
         // when & then
-        assertThatThrownBy(() -> dartFinancialService.getDartFinancialSummary("005930"))
+        assertThatThrownBy(() -> dartFinancialService.getFinancialSummary("005930"))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.DART_FINANCIAL_FETCH_FAILED);
@@ -163,7 +163,7 @@ class DartFinancialServiceTest {
                 .willReturn(response);
 
         // when
-        DartFinancialSummary result = dartFinancialService.getDartFinancialSummary("005930");
+        DartFinancialSummary result = dartFinancialService.getFinancialSummary("005930");
 
         // then
         assertThat(result.currentPeriod().totalAssets()).isNotNull();
@@ -176,6 +176,24 @@ class DartFinancialServiceTest {
     }
 
     @Test
+    void 핵심_6개_계정이_하나도_매칭안되면_NOT_FOUND() {
+        // given — list는 비어있지 않지만 6개 account_id 중 하나도 매칭 안 됨
+        given(dartCorpCodeService.getCorpCode("005930")).willReturn("00126380");
+        DartFinancialApiResponse response = new DartFinancialApiResponse("000", "정상", List.of(
+                item("ifrs-full_UnknownAccount", "100", "100", "100"),
+                item("dart_SomethingElse", "200", "200", "200")
+        ));
+        given(dartFinancialClient.fetch(eq("00126380"), anyString(), anyString(), anyString()))
+                .willReturn(response);
+
+        // when & then
+        assertThatThrownBy(() -> dartFinancialService.getFinancialSummary("005930"))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.DART_FINANCIAL_NOT_FOUND);
+    }
+
+    @Test
     void list이_비어있으면_NOT_FOUND() {
         // given
         given(dartCorpCodeService.getCorpCode("005930")).willReturn("00126380");
@@ -184,7 +202,7 @@ class DartFinancialServiceTest {
                 .willReturn(empty);
 
         // when & then
-        assertThatThrownBy(() -> dartFinancialService.getDartFinancialSummary("005930"))
+        assertThatThrownBy(() -> dartFinancialService.getFinancialSummary("005930"))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.DART_FINANCIAL_NOT_FOUND);
@@ -197,7 +215,7 @@ class DartFinancialServiceTest {
                 .willThrow(new BusinessException(ErrorCode.DART_CORP_CODE_NOT_FOUND));
 
         // when & then
-        assertThatThrownBy(() -> dartFinancialService.getDartFinancialSummary("999999"))
+        assertThatThrownBy(() -> dartFinancialService.getFinancialSummary("999999"))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.DART_CORP_CODE_NOT_FOUND);
