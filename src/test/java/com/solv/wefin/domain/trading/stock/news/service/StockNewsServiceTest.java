@@ -90,8 +90,22 @@ class StockNewsServiceTest {
     }
 
     @Test
-    void 뉴스팀_data가_null이면_empty_반환() {
-        // given
+    void 뉴스팀_응답_status가_null이면_FETCH_FAILED() {
+        // given — 뉴스팀이 status 필드 누락/결측 시 성공 경로로 흘러가지 않도록
+        given(stockService.existsByCode("005930")).willReturn(true);
+        given(wefinNewsClient.fetchClusters("005930"))
+                .willReturn(new WefinNewsApiResponse(null, null, null, null));
+
+        // when & then
+        assertThatThrownBy(() -> stockNewsService.getNews("005930"))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.STOCK_NEWS_FETCH_FAILED);
+    }
+
+    @Test
+    void 정상응답이고_data가_null이면_empty_반환() {
+        // given — status=200 성공이지만 검색 결과 없음(data=null) 시나리오는 empty로 허용
         given(stockService.existsByCode("005930")).willReturn(true);
         given(wefinNewsClient.fetchClusters("005930"))
                 .willReturn(new WefinNewsApiResponse(200, null, null, null));

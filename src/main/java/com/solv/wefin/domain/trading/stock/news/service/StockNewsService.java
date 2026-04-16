@@ -24,8 +24,9 @@ public class StockNewsService {
         }
 
         WefinNewsApiResponse response = wefinNewsClient.fetchClusters(stockCode);
-        // 뉴스팀 응답의 status는 Integer HTTP 코드. 200 이외엔 실패.
-        if (response.status() != null && response.status() != 200) {
+        // 뉴스팀 응답의 status는 Integer HTTP 코드. 200만 성공, null·그 외는 실패로 처리.
+        // (null을 성공으로 두면 stockNews 캐시에 빈 값이 저장되어 재조회 시 stale 반환)
+        if (response.status() == null || response.status() != 200) {
             throw new BusinessException(ErrorCode.STOCK_NEWS_FETCH_FAILED);
         }
         return StockNewsInfo.from(response.data());
