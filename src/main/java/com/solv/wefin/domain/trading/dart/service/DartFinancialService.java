@@ -31,7 +31,9 @@ public class DartFinancialService {
     private static final String ACCOUNT_LIABILITIES = "ifrs-full_Liabilities";
     private static final String ACCOUNT_EQUITY = "ifrs-full_Equity";
     private static final String ACCOUNT_REVENUE = "ifrs-full_Revenue";
+    // 영업이익: 제조업은 dart_OperatingIncomeLoss, 금융지주/보험업은 ifrs-full_ProfitLossFromOperatingActivities
     private static final String ACCOUNT_OPERATING_INCOME = "dart_OperatingIncomeLoss";
+    private static final String ACCOUNT_OPERATING_INCOME_IFRS = "ifrs-full_ProfitLossFromOperatingActivities";
     private static final String ACCOUNT_NET_INCOME = "ifrs-full_ProfitLoss";
 
     private final DartCorpCodeService dartCorpCodeService;
@@ -96,6 +98,10 @@ public class DartFinancialService {
         DartFinancialItem equity = byAccountId.get(ACCOUNT_EQUITY);
         DartFinancialItem revenue = byAccountId.get(ACCOUNT_REVENUE);
         DartFinancialItem operatingIncome = byAccountId.get(ACCOUNT_OPERATING_INCOME);
+        if (operatingIncome == null) {
+            // 금융지주/보험업 fallback
+            operatingIncome = byAccountId.get(ACCOUNT_OPERATING_INCOME_IFRS);
+        }
         DartFinancialItem netIncome = byAccountId.get(ACCOUNT_NET_INCOME);
 
         if (java.util.stream.Stream.of(assets, liabilities, equity, revenue, operatingIncome, netIncome)

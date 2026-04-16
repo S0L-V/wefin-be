@@ -28,7 +28,9 @@ public class DartDividendService {
 
     private static final String CATEGORY_DIVIDEND_PER_SHARE = "주당 현금배당금(원)";
     private static final String CATEGORY_YIELD_RATE = "현금배당수익률(%)";
-    private static final String CATEGORY_PAYOUT_RATIO = "현금배당성향(%)";
+    // 배당성향은 DART가 "(연결)현금배당성향(%)"/"(별도)현금배당성향(%)"/"현금배당성향(%)" 등 접두어를
+    // 회사별로 다르게 붙임. 또한 회사 전체 기준이라 stock_knd가 null이므로 contains + stock_knd 무필터.
+    private static final String CATEGORY_PAYOUT_RATIO_KEYWORD = "현금배당성향";
 
     private final DartCorpCodeService dartCorpCodeService;
     private final DartDividendClient dartDividendClient;
@@ -72,9 +74,9 @@ public class DartDividendService {
             throw new BusinessException(ErrorCode.DART_DIVIDEND_NOT_FOUND);
         }
 
-        BigDecimal dividendPerShare = pickCurrent(items, CATEGORY_DIVIDEND_PER_SHARE);
-        BigDecimal yieldRate = pickCurrent(items, CATEGORY_YIELD_RATE);
-        BigDecimal payoutRatio = pickCurrent(items, CATEGORY_PAYOUT_RATIO);
+        BigDecimal dividendPerShare = pickCommonStock(items, CATEGORY_DIVIDEND_PER_SHARE);
+        BigDecimal yieldRate = pickCommonStock(items, CATEGORY_YIELD_RATE);
+        BigDecimal payoutRatio = pickPayoutRatio(items);
 
         if (dividendPerShare == null && yieldRate == null && payoutRatio == null) {
             log.error("DART 배당 응답에 핵심 항목 3개 모두 없음 (보통주 기준)");
@@ -84,10 +86,34 @@ public class DartDividendService {
         return new DartDividendInfo(businessYear, dividendPerShare, yieldRate, payoutRatio);
     }
 
-    private BigDecimal pickCurrent(List<DartDividendItem> items, String category) {
-        Optional<DartDividendItem> item = items.stream()
+    /**
+     * 주식종류별 값(주당배당금, 배당수익률) 추출.
+     * DART가 회사별로 stock_knd를 다르게 줌:
+     *   - 삼성전자: "보통주"/"우선주" 명시 → 명시 매칭
+     *   - 셀트리온: stock_knd 필드 자체 없음(null) → 같은 category row 중 첫 번째 사용 (보통 보통주가 먼저)
+     */
+    private BigDecimal pickCommonStock(List<DartDividendItem> items, String category) {
+        Optional<DartDividendItem> explicit = items.stream()
                 .filter(i -> category.equals(i.category()))
                 .filter(i -> COMMON_STOCK.equals(i.stockKind()))
+                .findFirst();
+        if (explicit.isPresent()) {
+            return parseAmount(explicit.get().currentAmount());
+        }
+        Optional<DartDividendItem> implicit = items.stream()
+                .filter(i -> category.equals(i.category()))
+                .filter(i -> i.stockKind() == null)
+                .findFirst();
+        return implicit.map(i -> parseAmount(i.currentAmount())).orElse(null);
+    }
+
+    /**
+     * 배당성향은 회사 전체 기준이라 stock_knd가 null인 경우가 많고,
+     * "(연결)"/"(별도)" 접두어 변동이 있어 contains 매칭으로 유연하게 처리.
+     */
+    private BigDecimal pickPayoutRatio(List<DartDividendItem> items) {
+        Optional<DartDividendItem> item = items.stream()
+                .filter(i -> i.category() != null && i.category().contains(CATEGORY_PAYOUT_RATIO_KEYWORD))
                 .findFirst();
         return item.map(i -> parseAmount(i.currentAmount())).orElse(null);
     }
