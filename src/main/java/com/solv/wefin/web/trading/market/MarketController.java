@@ -4,9 +4,11 @@ import com.solv.wefin.domain.trading.market.client.dto.RankingType;
 import com.solv.wefin.domain.trading.market.client.dto.StockRankingItem;
 import com.solv.wefin.domain.trading.market.client.dto.StockRankingResponse;
 import com.solv.wefin.domain.trading.market.dto.CandleResponse;
+import com.solv.wefin.domain.trading.market.dto.InvestorTrendResponse;
 import com.solv.wefin.domain.trading.market.dto.OrderbookResponse;
 import com.solv.wefin.domain.trading.market.dto.PriceResponse;
 import com.solv.wefin.domain.trading.market.dto.RecentTradeResponse;
+import com.solv.wefin.domain.trading.market.service.InvestorTrendService;
 import com.solv.wefin.domain.trading.market.service.MarketService;
 import com.solv.wefin.domain.trading.stock.dto.StockSearchResponse;
 import com.solv.wefin.domain.trading.stock.service.StockService;
@@ -30,6 +32,7 @@ public class MarketController {
 
     private final MarketService marketService;
     private final StockService stockService;
+    private final InvestorTrendService investorTrendService;
 
     @GetMapping("/{code}/price")
     public ApiResponse<PriceResponse> getPrice(@PathVariable String code) {
@@ -60,6 +63,11 @@ public class MarketController {
     @GetMapping("/{code}/trades/recent")
     public ApiResponse<List<RecentTradeResponse>> getRecentTrades(@PathVariable String code) {
         return ApiResponse.success(marketService.getRecentTrades(code));
+    }
+
+    @GetMapping("/{code}/investor-trend")
+    public ApiResponse<InvestorTrendResponse> getInvestorTrend(@PathVariable String code) {
+        return ApiResponse.success(investorTrendService.getInvestorTrend(code));
     }
 
     @GetMapping("/ranking")
