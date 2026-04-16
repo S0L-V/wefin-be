@@ -15,7 +15,6 @@ public record GameResultInfo(
         UUID roomId,
         LocalDate startDate,
         LocalDate endDate,
-        int totalTurns,
         List<RankingEntry> rankings
 ) {
     public record RankingEntry(

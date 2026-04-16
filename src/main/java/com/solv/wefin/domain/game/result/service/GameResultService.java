@@ -8,7 +8,6 @@ import com.solv.wefin.domain.game.result.entity.GameResult;
 import com.solv.wefin.domain.game.result.repository.GameResultRepository;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
-import com.solv.wefin.domain.game.turn.repository.GameTurnRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -29,13 +28,12 @@ public class GameResultService {
     private final GameRoomRepository gameRoomRepository;
     private final GameParticipantRepository gameParticipantRepository;
     private final GameResultRepository gameResultRepository;
-    private final GameTurnRepository gameTurnRepository;
     private final UserRepository userRepository;
 
     /**
      * 게임 결과 조회.
      * 본인이 FINISHED 상태여야 조회 가능.
-     * 순위는 매 요청마다 finalAsset DESC로 동적 계산(dense rank) —
+     * 순위는 매 요청마다 finalAsset DESC로 동적 계산(standard competition rank: 1, 1, 3) —
      * 방이 아직 IN_PROGRESS면 finalRank=0인 레코드가 섞일 수 있으므로 필드 값을 신뢰하지 않는다.
      */
     public GameResultInfo getGameResult(UUID roomId, UUID userId) {
@@ -49,9 +47,11 @@ public class GameResultService {
                 .filter(p -> p.getStatus() == ParticipantStatus.FINISHED)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PARTICIPANT_NOT_FINISHED));
 
-        // 3. 결과 조회 (finalAsset 내림차순, 동률이면 먼저 종료한 순)
+        // 3. 결과 조회 (finalAsset 내림차순)
         //    2차 정렬(createdAt ASC): 동률 시 DB 반환 순서 비결정성을 제거 —
-        //    같은 요청을 반복해도 동률 참가자들의 순서가 바뀌지 않도록 한다.
+        //    같은 요청을 반복해도 동률 참가자들의 순서가 바뀌지 않도록 정렬 결정성을 보장한다.
+        //    (강제 종료 경로에서는 같은 트랜잭션 내 일괄 저장이라 createdAt이 거의 동일하므로
+        //     "먼저 종료한 순" 의미보다는 결정성 보장 용도가 우선이다.)
         List<GameResult> results = gameResultRepository
                 .findByGameRoomOrderByFinalAssetDescCreatedAtAsc(gameRoom);
 
@@ -61,7 +61,7 @@ public class GameResultService {
                 .toList();
         Map<UUID, String> nicknameMap = buildNicknameMap(userIds);
 
-        // 5. dense rank 부여 (동률이면 같은 순위: 1, 1, 3)
+        // 5. standard competition rank 부여 (동률이면 같은 순위, 다음은 건너뜀: 1, 1, 3)
         List<GameResultInfo.RankingEntry> rankings = new ArrayList<>();
         for (int i = 0; i < results.size(); i++) {
             GameResult r = results.get(i);
@@ -79,14 +79,10 @@ public class GameResultService {
                     r.getTotalTrades()));
         }
 
-        // 6. 총 턴 수 — 실제 game_turn 행 수 (비거래일 보정 때문에 기간/moveDays 계산보다 정확)
-        int totalTurns = gameTurnRepository.countByGameRoom(gameRoom);
-
         return new GameResultInfo(
                 gameRoom.getRoomId(),
                 gameRoom.getStartDate(),
                 gameRoom.getEndDate(),
-                totalTurns,
                 rankings);
     }
 

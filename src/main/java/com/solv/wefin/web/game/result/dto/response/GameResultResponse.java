@@ -15,7 +15,6 @@ public class GameResultResponse {
     private UUID roomId;
     private LocalDate startDate;
     private LocalDate endDate;
-    private int totalTurns;
     private List<RankingEntryDto> rankings;
 
     public static GameResultResponse from(GameResultInfo info) {
@@ -27,7 +26,6 @@ public class GameResultResponse {
                 info.roomId(),
                 info.startDate(),
                 info.endDate(),
-                info.totalTurns(),
                 rankings);
     }
 }

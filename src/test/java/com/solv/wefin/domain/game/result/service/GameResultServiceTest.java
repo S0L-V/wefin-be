@@ -10,7 +10,6 @@ import com.solv.wefin.domain.game.result.entity.GameResult;
 import com.solv.wefin.domain.game.result.repository.GameResultRepository;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
-import com.solv.wefin.domain.game.turn.repository.GameTurnRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -45,8 +44,6 @@ class GameResultServiceTest {
     private GameParticipantRepository gameParticipantRepository;
     @Mock
     private GameResultRepository gameResultRepository;
-    @Mock
-    private GameTurnRepository gameTurnRepository;
     @Mock
     private UserRepository userRepository;
 
@@ -90,7 +87,6 @@ class GameResultServiceTest {
                     .willReturn(Optional.of(participantA));
             given(gameResultRepository.findByGameRoomOrderByFinalAssetDescCreatedAtAsc(room))
                     .willReturn(List.of(resultB, resultC, resultA));
-            given(gameTurnRepository.countByGameRoom(room)).willReturn(26);
 
             User userA = mockUser(USER_A, "재훈");
             User userB = mockUser(USER_B, "길동");
@@ -104,7 +100,6 @@ class GameResultServiceTest {
             // Then
             assertThat(info.startDate()).isEqualTo(START_DATE);
             assertThat(info.endDate()).isEqualTo(END_DATE);
-            assertThat(info.totalTurns()).isEqualTo(26);
             assertThat(info.rankings()).hasSize(3);
 
             // 1위: B
@@ -148,7 +143,6 @@ class GameResultServiceTest {
                     .willReturn(Optional.of(participantA));
             given(gameResultRepository.findByGameRoomOrderByFinalAssetDescCreatedAtAsc(room))
                     .willReturn(List.of(resultA, resultB, resultC));
-            given(gameTurnRepository.countByGameRoom(room)).willReturn(26);
 
             User userA = mockUser(USER_A, "재훈");
             User userB = mockUser(USER_B, "길동");
@@ -182,7 +176,6 @@ class GameResultServiceTest {
                     .willReturn(Optional.of(participantA));
             given(gameResultRepository.findByGameRoomOrderByFinalAssetDescCreatedAtAsc(room))
                     .willReturn(List.of(resultA));
-            given(gameTurnRepository.countByGameRoom(room)).willReturn(8);
 
             User userA = mockUser(USER_A, "재훈");
             given(userRepository.findAllById(any())).willReturn(List.of(userA));
@@ -194,7 +187,6 @@ class GameResultServiceTest {
             assertThat(info.rankings()).hasSize(1);
             assertThat(info.rankings().get(0).rank()).isEqualTo(1);
             assertThat(info.rankings().get(0).userName()).isEqualTo("재훈");
-            assertThat(info.totalTurns()).isEqualTo(8);
         }
 
         @Test
@@ -217,7 +209,6 @@ class GameResultServiceTest {
                     .willReturn(Optional.of(participantA));
             given(gameResultRepository.findByGameRoomOrderByFinalAssetDescCreatedAtAsc(room))
                     .willReturn(List.of(resultA, resultB));
-            given(gameTurnRepository.countByGameRoom(room)).willReturn(26);
 
             // USER_A만 user 테이블에 존재, USER_B는 누락
             User userA = mockUser(USER_A, "재훈");
