@@ -7,6 +7,8 @@ import com.solv.wefin.domain.chat.aiChat.dto.command.AiChatCommand;
 import com.solv.wefin.domain.chat.aiChat.dto.info.AiChatInfo;
 import com.solv.wefin.domain.chat.aiChat.dto.info.AiChatMessagesInfo;
 import com.solv.wefin.domain.chat.aiChat.entity.AiChatMessage;
+import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionRepository;
+import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.quest.entity.QuestEventType;
 import com.solv.wefin.domain.quest.service.QuestProgressService;
 import com.solv.wefin.global.error.BusinessException;
@@ -26,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -36,6 +39,8 @@ class AiChatServiceTest {
     private UserRepository userRepository;
     private OpenAiChatClient openAiChatClient;
     private QuestProgressService questProgressService;
+    private NewsClusterRepository newsClusterRepository;
+    private ClusterSummarySectionRepository clusterSummarySectionRepository;
     private AiChatService aiChatService;
 
     @BeforeEach
@@ -44,12 +49,16 @@ class AiChatServiceTest {
         userRepository = mock(UserRepository.class);
         openAiChatClient = mock(OpenAiChatClient.class);
         questProgressService = mock(QuestProgressService.class);
+        newsClusterRepository = mock(NewsClusterRepository.class);
+        clusterSummarySectionRepository = mock(ClusterSummarySectionRepository.class);
 
         aiChatService = new AiChatService(
                 openAiChatClient,
                 aiChatMessagePersistenceService,
                 userRepository,
-                questProgressService
+                questProgressService,
+                newsClusterRepository,
+                clusterSummarySectionRepository
         );
     }
 
@@ -89,7 +98,7 @@ class AiChatServiceTest {
     void sendMessage_success() {
         // given
         UUID userId = UUID.randomUUID();
-        AiChatCommand command = new AiChatCommand("삼성전자 전망 알려줘");
+        AiChatCommand command = new AiChatCommand("삼성전자 전망 알려줘", null);
         User user = createUser(userId);
 
         AiChatMessage historyUserMessage = AiChatMessage.createUserMessage(user, "이전 대화 질문");
@@ -107,7 +116,7 @@ class AiChatServiceTest {
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(aiChatMessagePersistenceService.getRecentHistory(userId))
                 .thenReturn(List.of(historyUserMessage));
-        when(openAiChatClient.ask(anyList(), eq(command.message())))
+        when(openAiChatClient.ask(anyList(), eq(command.message()), isNull()))
                 .thenReturn("최근 실적 기준으로 설명드릴게요.");
         when(aiChatMessagePersistenceService.saveUserMessage(user, command.message()))
                 .thenReturn(savedUserMessage);
@@ -122,7 +131,7 @@ class AiChatServiceTest {
         // then
         verify(aiChatMessagePersistenceService).saveUserMessage(user, command.message());
         verify(aiChatMessagePersistenceService).saveAiMessage(user, "최근 실적 기준으로 설명드릴게요.");
-        verify(openAiChatClient).ask(historyCaptor.capture(), eq(command.message()));
+        verify(openAiChatClient).ask(historyCaptor.capture(), eq(command.message()), isNull());
         verify(questProgressService).handleEvent(userId, QuestEventType.USE_AI_CHAT);
 
         List<AiChatMessage> history = historyCaptor.getValue();
@@ -140,7 +149,7 @@ class AiChatServiceTest {
     void sendMessage_fail_blank() {
         // given
         UUID userId = UUID.randomUUID();
-        AiChatCommand command = new AiChatCommand(" ");
+        AiChatCommand command = new AiChatCommand(" ", null);
 
         // when
         BusinessException exception = assertThrows(BusinessException.class,
@@ -155,7 +164,7 @@ class AiChatServiceTest {
     void sendMessage_fail_too_long() {
         // given
         UUID userId = UUID.randomUUID();
-        AiChatCommand command = new AiChatCommand("a".repeat(1001));
+        AiChatCommand command = new AiChatCommand("a".repeat(1001), null);
 
         // when
         BusinessException exception = assertThrows(BusinessException.class,
@@ -183,7 +192,7 @@ class AiChatServiceTest {
     @DisplayName("userId가 null이면 예외가 발생한다")
     void sendMessage_fail_null_userId() {
         // given
-        AiChatCommand command = new AiChatCommand("질문");
+        AiChatCommand command = new AiChatCommand("질문", null);
 
         // when
         BusinessException exception = assertThrows(BusinessException.class,
@@ -198,7 +207,7 @@ class AiChatServiceTest {
     void sendMessage_fail_user_not_found() {
         // given
         UUID userId = UUID.randomUUID();
-        AiChatCommand command = new AiChatCommand("질문");
+        AiChatCommand command = new AiChatCommand("질문", null);
 
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
@@ -215,7 +224,7 @@ class AiChatServiceTest {
     void sendMessage_fail_when_client_throws() {
         // given
         UUID userId = UUID.randomUUID();
-        AiChatCommand command = new AiChatCommand("질문");
+        AiChatCommand command = new AiChatCommand("질문", null);
         User user = createUser(userId);
 
         AiChatMessage historyUserMessage = AiChatMessage.createUserMessage(user, "이전 질문");
@@ -225,7 +234,7 @@ class AiChatServiceTest {
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(aiChatMessagePersistenceService.getRecentHistory(userId))
                 .thenReturn(List.of(historyUserMessage));
-        when(openAiChatClient.ask(anyList(), eq(command.message())))
+        when(openAiChatClient.ask(anyList(), eq(command.message()), isNull()))
                 .thenThrow(new BusinessException(ErrorCode.AI_CHAT_REQUEST_FAILED));
 
         // when
@@ -241,7 +250,7 @@ class AiChatServiceTest {
     void sendMessage_fail_timeout() {
         // given
         UUID userId = UUID.randomUUID();
-        AiChatCommand command = new AiChatCommand("질문");
+        AiChatCommand command = new AiChatCommand("질문", null);
         User user = createUser(userId);
 
         AiChatMessage historyUserMessage = AiChatMessage.createUserMessage(user, "이전 질문");
@@ -251,7 +260,7 @@ class AiChatServiceTest {
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(aiChatMessagePersistenceService.getRecentHistory(userId))
                 .thenReturn(List.of(historyUserMessage));
-        when(openAiChatClient.ask(anyList(), eq(command.message())))
+        when(openAiChatClient.ask(anyList(), eq(command.message()), isNull()))
                 .thenThrow(new BusinessException(ErrorCode.AI_CHAT_TIMEOUT));
 
         // when
