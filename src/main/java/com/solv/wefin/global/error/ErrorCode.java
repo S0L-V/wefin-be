@@ -63,6 +63,7 @@ public enum ErrorCode {
     AUTH_VERIFICATION_TOO_FAST_REQUEST(400, "인증코드 재발송 요청이 너무 빠릅니다."),
     AUTH_VERIFICATION_TOO_MANY_REQUESTS(400, "인증코드 재발송 횟수를 초과했습니다."),
     AUTH_VERIFICATION_TOO_MANY_ATTEMPTS(400, "인증 시도 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."),
+    AUTH_VERIFICATION_CONCURRENT_REQUEST(409, "동시에 여러 인증 요청이 처리되어 다시 시도해주세요."),
 
     // Auth - LOGIN
     AUTH_LOGIN_FAILED(401, "이메일 또는 비밀번호가 올바르지 않습니다."),

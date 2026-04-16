@@ -6,6 +6,7 @@ import com.solv.wefin.domain.auth.repository.EmailVerificationRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,45 +26,53 @@ public class EmailVerificationService {
     private static final int MAX_RESEND = 5;
     private static final long LOCK_MINUTES = 10L;
     private static final long RESEND_COOLDOWN_SECONDS = 60L;
+    private static final long RESEND_WINDOW_SECONDS = 600L;
 
     private final EmailVerificationRepository emailVerificationRepository;
     private final MailService mailService;
 
     @Transactional
     public void sendVerificationCode(String email, VerificationPurpose purpose) {
-        String normalizedEmail = normalizeEmail(email);
-        String code = generateCode();
-        OffsetDateTime expiresAt = OffsetDateTime.now().plusMinutes(EXPIRE_MINUTES);
-        OffsetDateTime now = OffsetDateTime.now();
+        try {
+            String normalizedEmail = normalizeEmail(email);
+            String code = generateCode();
+            OffsetDateTime expiresAt = OffsetDateTime.now().plusMinutes(EXPIRE_MINUTES);
+            OffsetDateTime now = OffsetDateTime.now();
 
-        EmailVerification verification = emailVerificationRepository
-                .findByEmailAndPurpose(normalizedEmail, purpose)
-                .orElse(null);
+            EmailVerification verification = emailVerificationRepository
+                    .findByEmailAndPurpose(normalizedEmail, purpose)
+                    .orElse(null);
 
-        if (verification != null) {
-            if (verification.isResendTooSoon(now, RESEND_COOLDOWN_SECONDS)) {
-                throw new BusinessException(ErrorCode.AUTH_VERIFICATION_TOO_FAST_REQUEST);
+            if (verification != null) {
+                if (verification.isResendTooSoon(now, RESEND_COOLDOWN_SECONDS)) {
+                    throw new BusinessException(ErrorCode.AUTH_VERIFICATION_TOO_FAST_REQUEST);
+                }
+
+                if (verification.isResendWindowExpired(now, RESEND_WINDOW_SECONDS)) {
+                    verification.resetResendWindow(now);
+                } else if (verification.getResendCount() >= MAX_RESEND) {
+                    throw new BusinessException(ErrorCode.AUTH_VERIFICATION_TOO_MANY_REQUESTS);
+                }
+
+                verification.renew(code, expiresAt);
+            } else {
+                verification = EmailVerification.builder()
+                        .email(normalizedEmail)
+                        .purpose(purpose)
+                        .verificationCode(code)
+                        .expiresAt(expiresAt)
+                        .build();
+
+                verification.resetResendWindow(now);
             }
 
-            if (verification.getResendCount() >= MAX_RESEND) {
-                throw new BusinessException(ErrorCode.AUTH_VERIFICATION_TOO_MANY_REQUESTS);
-            }
+            verification.recordResend(now);
+            emailVerificationRepository.saveAndFlush(verification);
+            mailService.sendVerificationCode(normalizedEmail, code);
 
-            verification.renew(code, expiresAt);
-        } else {
-            verification = EmailVerification.builder()
-                    .email(normalizedEmail)
-                    .purpose(purpose)
-                    .verificationCode(code)
-                    .expiresAt(expiresAt)
-                    .build();
+        } catch (ObjectOptimisticLockingFailureException e) {
+            throw new BusinessException(ErrorCode.AUTH_VERIFICATION_CONCURRENT_REQUEST);
         }
-
-        emailVerificationRepository.save(verification);
-        mailService.sendVerificationCode(normalizedEmail, code);
-
-        verification.increaseResend();
-        verification.updateLastSentAt(now);
     }
 
     @Transactional

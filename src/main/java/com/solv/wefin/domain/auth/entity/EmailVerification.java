@@ -58,6 +58,13 @@ public class EmailVerification extends BaseEntity {
     @Column(name = "last_sent_at")
     private OffsetDateTime lastSentAt;
 
+    @Column(name = "resend_window_started_at")
+    private OffsetDateTime resendWindowStartedAt;
+
+    @Version
+    @Column(name = "version")
+    private Long version;
+
     @Builder
     public EmailVerification(String email,
                              VerificationPurpose purpose,
@@ -72,6 +79,7 @@ public class EmailVerification extends BaseEntity {
         this.resendCount = 0;
         this.lockedUntil = null;
         this.lastSentAt = null;
+        this.resendWindowStartedAt = null;
     }
 
     public void renew(String verificationCode, OffsetDateTime expiresAt) {
@@ -81,7 +89,6 @@ public class EmailVerification extends BaseEntity {
 
         this.attemptCount = 0;
         this.lockedUntil = null;
-        this.lastSentAt = null;
     }
 
     public void verify() {
@@ -119,15 +126,22 @@ public class EmailVerification extends BaseEntity {
         return lockedUntil != null && now.isBefore(lockedUntil);
     }
 
-    public void increaseResend() {
+    public boolean isResendWindowExpired(OffsetDateTime now, long windowSeconds) {
+        return resendWindowStartedAt == null
+                || !resendWindowStartedAt.plusSeconds(windowSeconds).isAfter(now);
+    }
+
+    public void resetResendWindow(OffsetDateTime now) {
+        this.resendWindowStartedAt = now;
+        this.resendCount = 0;
+    }
+
+    public void recordResend(OffsetDateTime now) {
+        this.lastSentAt = now;
         this.resendCount++;
     }
 
     public boolean isResendTooSoon(OffsetDateTime now, long cooldownSeconds) {
         return lastSentAt != null && lastSentAt.plusSeconds(cooldownSeconds).isAfter(now);
-    }
-
-    public void updateLastSentAt(OffsetDateTime now) {
-        this.lastSentAt = now;
     }
 }

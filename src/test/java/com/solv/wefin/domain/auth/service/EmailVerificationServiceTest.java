@@ -16,7 +16,10 @@ import java.time.OffsetDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -86,9 +89,10 @@ class EmailVerificationServiceTest {
     void resend_cooldown() {
         String email = "test@example.com";
         EmailVerification verification = createVerification(email, "123456");
+        OffsetDateTime now = OffsetDateTime.now();
 
-        verification.increaseResend();
-        verification.updateLastSentAt(OffsetDateTime.now());
+        verification.resetResendWindow(now.minusSeconds(30));
+        verification.recordResend(now);
 
         when(repository.findByEmailAndPurpose(email, PURPOSE))
                 .thenReturn(Optional.of(verification));
@@ -102,29 +106,56 @@ class EmailVerificationServiceTest {
                 .isEqualTo(ErrorCode.AUTH_VERIFICATION_TOO_FAST_REQUEST);
 
         verify(mailService, never()).sendVerificationCode(anyString(), anyString());
-        verify(repository, never()).save(any(EmailVerification.class));
+        verify(repository, never()).saveAndFlush(any(EmailVerification.class));
     }
 
     @Test
-    @DisplayName("재발송 횟수 초과 시 예외가 발생한다")
-    void resend_limit_exceeded() {
+    @DisplayName("10분 내 재발송 횟수 초과 시 예외가 발생한다")
+    void resend_limit_exceeded_within_window() {
         String email = "test@example.com";
         EmailVerification verification = createVerification(email, "123456");
+        OffsetDateTime now = OffsetDateTime.now();
 
+        verification.resetResendWindow(now.minusMinutes(5));
         for (int i = 0; i < 5; i++) {
-            verification.increaseResend();
+            verification.recordResend(now.minusSeconds(61 + i));
         }
 
         when(repository.findByEmailAndPurpose(email, PURPOSE))
                 .thenReturn(Optional.of(verification));
 
-        BusinessException exception = assertThrows(BusinessException.class,
-                () -> service.sendVerificationCode(email, PURPOSE));
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.sendVerificationCode(email, PURPOSE)
+        );
 
         assertThat(exception.getErrorCode())
                 .isEqualTo(ErrorCode.AUTH_VERIFICATION_TOO_MANY_REQUESTS);
 
         verify(mailService, never()).sendVerificationCode(anyString(), anyString());
-        verify(repository, never()).save(any(EmailVerification.class));
+        verify(repository, never()).saveAndFlush(any(EmailVerification.class));
+    }
+
+    @Test
+    @DisplayName("재발송 윈도우가 만료되면 다시 요청할 수 있다")
+    void resend_allowed_when_window_expired() {
+        String email = "test@example.com";
+        EmailVerification verification = createVerification(email, "123456");
+        OffsetDateTime now = OffsetDateTime.now();
+
+        verification.resetResendWindow(now.minusMinutes(11));
+        for (int i = 0; i < 5; i++) {
+            verification.recordResend(now.minusMinutes(11).plusSeconds(i));
+        }
+
+        when(repository.findByEmailAndPurpose(email, PURPOSE))
+                .thenReturn(Optional.of(verification));
+        when(repository.saveAndFlush(any(EmailVerification.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertDoesNotThrow(() -> service.sendVerificationCode(email, PURPOSE));
+
+        verify(repository).saveAndFlush(verification);
+        verify(mailService).sendVerificationCode(eq(email), anyString());
     }
 }
