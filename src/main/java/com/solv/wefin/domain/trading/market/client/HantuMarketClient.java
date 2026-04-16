@@ -130,4 +130,90 @@ public class HantuMarketClient {
                 .header("custtype", "P")
                 .retrieve().body(HantuMinuteCandleApiResponse.class);
     }
+
+    /**
+     * 국내 주식 거래량 순위를 조회
+     */
+    public HantuRankingApiResponse fetchVolumeRanking() {
+        return hantuRestClient.get()
+            .uri(uriBuilder -> uriBuilder
+                .path("/uapi/domestic-stock/v1/quotations/volume-rank")
+                .queryParam("FID_COND_MRKT_DIV_CODE", "J")
+                .queryParam("FID_COND_SCR_DIV_CODE", "20171")
+                .queryParam("FID_INPUT_ISCD", "0000")
+                .queryParam("FID_DIV_CLS_CODE", "0")
+                .queryParam("FID_BLNG_CLS_CODE", "0")
+                .queryParam("FID_TRGT_CLS_CODE", "111111111")
+                .queryParam("FID_TRGT_EXLS_CLS_CODE", "000000")
+                .queryParam("FID_INPUT_PRICE_1", "0")
+                .queryParam("FID_INPUT_PRICE_2", "0")
+                .queryParam("FID_VOL_CNT", "0")
+                .queryParam("FID_INPUT_DATE_1", "")
+                .build())
+            .header("authorization", "Bearer " + hantuTokenManager.getAccessToken())
+            .header("appkey", appKey)
+            .header("appsecret", appSecret)
+            .header("tr_id", "FHPST01710000")
+            .header("custtype", "P")
+            .retrieve().body(HantuRankingApiResponse.class);
+    }
+
+    /**
+     * 국내 주식 거래대금 순위를 조회
+     */
+    public HantuRankingApiResponse fetchTradingAmountRanking() {
+        return hantuRestClient.get()
+            .uri(uriBuilder -> uriBuilder
+                .path("/uapi/domestic-stock/v1/quotations/volume-rank")
+                .queryParam("FID_COND_MRKT_DIV_CODE", "J")
+                .queryParam("FID_COND_SCR_DIV_CODE", "20171")
+                .queryParam("FID_INPUT_ISCD", "0000")
+                .queryParam("FID_DIV_CLS_CODE", "0")
+                .queryParam("FID_BLNG_CLS_CODE", "3")       // 3: 거래금액순 (공식 문서)
+                .queryParam("FID_TRGT_CLS_CODE", "111111111")
+                .queryParam("FID_TRGT_EXLS_CLS_CODE", "000000")
+                .queryParam("FID_INPUT_PRICE_1", "0")
+                .queryParam("FID_INPUT_PRICE_2", "0")
+                .queryParam("FID_VOL_CNT", "0")
+                .queryParam("FID_INPUT_DATE_1", "")
+                .build())
+            .header("authorization", "Bearer " + hantuTokenManager.getAccessToken())
+            .header("appkey", appKey)
+            .header("appsecret", appSecret)
+            .header("tr_id", "FHPST01710000")  // 거래량과 동일 API, DIV_CLS_CODE로 구분
+            .header("custtype", "P")
+            .retrieve().body(HantuRankingApiResponse.class);
+    }
+
+    /**
+     * 구갠 주식 등략률 순위를 조회
+     * @param isRising true: 급등 (상승률 상위), false: 급락 (하락률 상위)
+     */
+    public HantuRankingApiResponse fetchChangeRateRanking(boolean isRising) {
+        return hantuRestClient.get()
+            .uri(uriBuilder -> uriBuilder
+                .path("/uapi/domestic-stock/v1/ranking/fluctuation")
+                .queryParam("fid_cond_mrkt_div_code", "J")
+                .queryParam("fid_cond_scr_div_code", "20170")
+                .queryParam("fid_input_iscd", "0000")
+                .queryParam("fid_rank_sort_cls_code", isRising ? "0" : "1")
+                .queryParam("fid_input_cnt_1", "0")
+                .queryParam("fid_prc_cls_code", "0")
+                .queryParam("fid_input_price_1", "0")
+                .queryParam("fid_input_price_2", "0")
+                .queryParam("fid_vol_cnt", "0")
+                .queryParam("fid_trgt_cls_code", "0")
+                .queryParam("fid_trgt_exls_cls_code", "0")
+                .queryParam("fid_div_cls_code", "0")
+                .queryParam("fid_rsfl_rate1", "")
+                .queryParam("fid_rsfl_rate2", "")
+                .build())
+            .header("authorization", "Bearer " + hantuTokenManager.getAccessToken())
+            .header("appkey", appKey)
+            .header("appsecret", appSecret)
+            .header("tr_id", "FHPST01720000")
+            .header("custtype", "P")
+            .retrieve().body(HantuRankingApiResponse.class);
+    }
+
 }

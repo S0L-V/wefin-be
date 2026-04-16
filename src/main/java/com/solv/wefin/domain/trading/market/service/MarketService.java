@@ -6,7 +6,10 @@ import com.solv.wefin.domain.trading.market.client.dto.HantuCandleApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuMinuteCandleApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuOrderbookApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuPriceApiResponse;
+import com.solv.wefin.domain.trading.market.client.dto.HantuRankingApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuRecentTradeApiResponse;
+import com.solv.wefin.domain.trading.market.client.dto.RankingType;
+import com.solv.wefin.domain.trading.market.client.dto.StockRankingItem;
 import com.solv.wefin.domain.trading.market.dto.CandleResponse;
 import com.solv.wefin.domain.trading.market.dto.OrderbookResponse;
 import com.solv.wefin.domain.trading.market.dto.PriceResponse;
@@ -42,6 +45,10 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
     private final ConcurrentHashMap<String, CompletableFuture<PriceResponse>> ongoingRequests = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, PriceResponse> priceCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Long> priceCacheTimestamp = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, List<StockRankingItem>> rankingCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Long> rankingCacheTimestamp = new ConcurrentHashMap<>();
+
+    private static final long RANKING_CACHE_TTL_MS = 10000;
     private static final long CACHE_TTL_MS = 5000; // 5초
     private static final Set<String> VALID_PERIOD_CODES = Set.of("D", "W", "M", "Y");
     private static final Set<String> MINUTE_PERIOD_CODES = Set.of("1", "5", "15", "30", "60");
@@ -121,6 +128,56 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
             priceCacheTimestamp.remove(stockCode);
         }
 
+        return null;
+    }
+
+    public List<StockRankingItem> getStockRanking(RankingType type) {
+
+        String cacheKey = type.name();
+        List<StockRankingItem> cached = getCachedRanking(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+
+        HantuRankingApiResponse response = switch (type) {
+            case VOLUME -> hantuMarketClient.fetchVolumeRanking();
+            case AMOUNT -> hantuMarketClient.fetchTradingAmountRanking();
+            case RISING -> hantuMarketClient.fetchChangeRateRanking(true);
+            case FALLING -> hantuMarketClient.fetchChangeRateRanking(false);
+        };
+
+        List<StockRankingItem> items = (response.output() != null)
+            ? response.output().stream().map(StockRankingItem::from).toList()
+            : List.of();
+
+        // FALLING: 등락률 오름차순 재정렬 (가장 큰 하락이 1위)
+        if (!items.isEmpty() && type == RankingType.FALLING) {
+            var sorted = new java.util.ArrayList<>(items);
+            sorted.sort((a, b) -> a.changeRate().compareTo(b.changeRate()));
+            items = java.util.stream.IntStream.range(0, sorted.size())
+                .mapToObj(i -> new StockRankingItem(
+                    i + 1, sorted.get(i).stockCode(), sorted.get(i).stockName(),
+                    sorted.get(i).currentPrice(), sorted.get(i).changeRate(),
+                    sorted.get(i).changeAmount(), sorted.get(i).changeSign(),
+                    sorted.get(i).volume(), sorted.get(i).tradingAmount()))
+                .toList();
+        }
+
+        rankingCache.put(cacheKey, items);
+        rankingCacheTimestamp.put(cacheKey, System.currentTimeMillis());
+
+        return items;
+    }
+
+    private List<StockRankingItem> getCachedRanking(String type) {
+        Long cachedTime = rankingCacheTimestamp.get(type);
+        if (cachedTime != null && System.currentTimeMillis() - cachedTime < RANKING_CACHE_TTL_MS) {
+            return rankingCache.get(type);
+        }
+        if (cachedTime != null) {
+            rankingCache.remove(type);
+            rankingCacheTimestamp.remove(type);
+        }
         return null;
     }
 
