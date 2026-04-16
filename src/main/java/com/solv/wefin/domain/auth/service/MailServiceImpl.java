@@ -3,15 +3,17 @@ package com.solv.wefin.domain.auth.service;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "spring.mail.host")
+@ConditionalOnBean(JavaMailSender.class)
 public class MailServiceImpl implements MailService {
 
     private final JavaMailSender mailSender;
@@ -26,6 +28,7 @@ public class MailServiceImpl implements MailService {
 
             mailSender.send(message);
         } catch (MailException e) {
+            log.error("메일 발송 실패", e);
             throw new BusinessException(ErrorCode.AUTH_EMAIL_SEND_FAILED);
         }
     }
