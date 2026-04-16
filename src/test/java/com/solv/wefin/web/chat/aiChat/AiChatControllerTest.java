@@ -59,7 +59,7 @@ class AiChatControllerTest {
     void sendMessage_success() throws Exception {
         // given
         UUID userId = UUID.randomUUID();
-        AiChatRequest request = new AiChatRequest("삼성전자 전망 알려줘");
+        AiChatRequest request = new AiChatRequest("삼성전자 전망 알려줘", null);
         OffsetDateTime createdAt = OffsetDateTime.now();
 
         when(aiChatService.sendMessage(any(AiChatCommand.class), eq(userId)))
@@ -87,6 +87,7 @@ class AiChatControllerTest {
         ArgumentCaptor<AiChatCommand> captor = ArgumentCaptor.forClass(AiChatCommand.class);
         verify(aiChatService).sendMessage(captor.capture(), eq(userId));
         assertEquals(request.message(), captor.getValue().message());
+        assertEquals(request.newsClusterId(), captor.getValue().newsClusterId());
     }
 
     @Test
@@ -94,7 +95,7 @@ class AiChatControllerTest {
     void sendMessage_fail_blank() throws Exception {
         // given
         UUID userId = UUID.randomUUID();
-        AiChatRequest request = new AiChatRequest(" ");
+        AiChatRequest request = new AiChatRequest(" ", null);
 
         // when // then
         mockMvc.perform(post("/api/chat/ai/messages")
@@ -112,7 +113,7 @@ class AiChatControllerTest {
     void sendMessage_fail_timeout() throws Exception {
         // given
         UUID userId = UUID.randomUUID();
-        AiChatRequest request = new AiChatRequest("질문");
+        AiChatRequest request = new AiChatRequest("질문", null);
 
         when(aiChatService.sendMessage(any(AiChatCommand.class), eq(userId)))
                 .thenThrow(new BusinessException(ErrorCode.AI_CHAT_TIMEOUT));

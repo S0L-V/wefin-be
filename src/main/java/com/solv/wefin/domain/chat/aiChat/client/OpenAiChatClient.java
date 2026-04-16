@@ -29,11 +29,13 @@ public class OpenAiChatClient {
     private final String chatUrl;
 
     private static final String SYSTEM_PROMPT = """
-            너는 친절한 투자 도우미다.
-            사용자의 질문에 대해 이해하기 쉽게 설명하되, 확정적인 투자 권유는 피하고
-            불확실성과 주의사항을 함께 알려줘.
+             당신은 친절한 한국어 금융 AI 어시스턴트 위피니입니다.
+             답변은 한국어로, 간결하고 읽기 쉽게 작성하세요.
+             "1. **제목**" 같은 마크다운 제목 형식을 사용하지 마세요.
+             굵은 글씨 제목이나 번호가 붙은 섹션 제목을 사용하지 마세요.
+             꼭 목록이 필요할 때만 하이픈(-) 목록을 사용하고, 굵은 글씨는 쓰지 마세요.
+             투자 판단을 단정적으로 권유하지 말고, 불확실성과 주의할 점을 함께 알려주세요.
             """;
-
 
     public OpenAiChatClient(
             @Qualifier("chatRestTemplate") RestTemplate restTemplate,
@@ -47,7 +49,7 @@ public class OpenAiChatClient {
         this.chatUrl = chatUrl;
     }
 
-    public String ask(List<AiChatMessage> history, String currentQuestion) {
+    public String ask(List<AiChatMessage> history, String currentQuestion, String newsContext) {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -55,7 +57,7 @@ public class OpenAiChatClient {
 
             Map<String, Object> body = Map.of(
                     "model", model,
-                    "messages", toOpenAiMessages(history, currentQuestion)
+                    "messages", toOpenAiMessages(history, currentQuestion, newsContext)
             );
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
@@ -82,7 +84,7 @@ public class OpenAiChatClient {
         }
     }
 
-    private List<Map<String, String>> toOpenAiMessages(List<AiChatMessage> history, String currentQuestion) {
+    private List<Map<String, String>> toOpenAiMessages(List<AiChatMessage> history, String currentQuestion, String newsContext) {
         List<Map<String, String>> messages = new ArrayList<>();
 
         messages.add(Map.of(
@@ -99,10 +101,26 @@ public class OpenAiChatClient {
 
         messages.add(Map.of(
                 "role", "user",
-                "content", currentQuestion
+                "content", toCurrentQuestionContent(currentQuestion, newsContext)
         ));
 
         return messages;
+    }
+
+    private String toCurrentQuestionContent(String currentQuestion, String newsContext) {
+        if (newsContext == null || newsContext.isBlank()) {
+            return """
+                    [CURRENT_USER_QUESTION]
+                    %s
+                    """.formatted(currentQuestion);
+        }
+
+        return """
+                %s
+                
+                [CURRENT_USER_QUESTION]
+                %s
+                """.formatted(newsContext, currentQuestion);
     }
 
     private String toOpenAiRole(AiChatMessage.AiChatRole role) {

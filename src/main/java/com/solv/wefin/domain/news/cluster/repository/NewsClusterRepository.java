@@ -45,6 +45,11 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
             ClusterStatus status,
             java.util.Collection<SummaryStatus> summaryStatuses);
 
+    Optional<NewsCluster> findByIdAndStatusAndSummaryStatusIn(
+            Long id,
+            ClusterStatus status,
+            java.util.Collection<SummaryStatus> summaryStatuses);
+
     /**
      * 특정 상태이면서, 마지막 갱신 시각이 기준 시각 이전인 클러스터를 조회한다.
      */
