@@ -53,7 +53,7 @@ public class DartCorpCodeClient {
                     .retrieve()
                     .body(byte[].class);
         } catch (Exception e) {
-            log.error("DART corpCode.xml 다운로드 실패", e);
+            log.error("DART corpCode.xml 다운로드 실패: type={}", e.getClass().getSimpleName());
             throw new BusinessException(ErrorCode.DART_CORP_CODE_FETCH_FAILED);
         }
 
