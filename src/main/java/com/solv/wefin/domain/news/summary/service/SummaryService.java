@@ -8,6 +8,7 @@ import com.solv.wefin.domain.news.cluster.entity.NewsCluster.SummaryStatus;
 import com.solv.wefin.domain.news.cluster.entity.NewsClusterArticle;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
+import com.solv.wefin.domain.news.config.NewsBatchProperties;
 import com.solv.wefin.domain.news.summary.client.OpenAiSummaryClient;
 import com.solv.wefin.domain.news.summary.dto.SummaryResult;
 import com.solv.wefin.global.error.BusinessException;
@@ -38,14 +39,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SummaryService {
 
-    private static final int BATCH_SIZE = 50;
-
     private final NewsClusterRepository newsClusterRepository;
     private final NewsClusterArticleRepository clusterArticleRepository;
     private final NewsArticleRepository newsArticleRepository;
     private final OpenAiSummaryClient openAiSummaryClient;
     private final OutlierDetectionService outlierDetectionService;
     private final SummaryPersistenceService persistenceService;
+    private final NewsBatchProperties batchProperties;
 
     /**
      * 요약 생성이 필요한 클러스터를 조회하여 AI 요약을 생성한다.
@@ -59,7 +59,7 @@ public class SummaryService {
         List<NewsCluster> targets = newsClusterRepository.findByStatusAndSummaryStatusIn(
                 ClusterStatus.ACTIVE,
                 List.of(SummaryStatus.PENDING, SummaryStatus.STALE, SummaryStatus.FAILED),
-                PageRequest.of(0, BATCH_SIZE, Sort.by(Sort.Direction.ASC, "id")));
+                PageRequest.of(0, batchProperties.summarySize(), Sort.by(Sort.Direction.ASC, "id")));
 
         log.info("요약 생성 대상 클러스터 수: {}", targets.size());
 

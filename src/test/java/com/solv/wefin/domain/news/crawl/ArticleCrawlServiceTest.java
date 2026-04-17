@@ -73,7 +73,8 @@ class ArticleCrawlServiceTest {
                 newsArticleRepository,
                 persistenceService,
                 List.of(extractor),
-                newsRestTemplate
+                newsRestTemplate,
+                new com.solv.wefin.domain.news.config.NewsBatchProperties(500, 500, 500, 500, 50, 500)
         );
     }
 

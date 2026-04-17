@@ -8,6 +8,7 @@ import com.solv.wefin.domain.news.article.entity.NewsArticle.CrawlStatus;
 import com.solv.wefin.domain.news.article.entity.NewsArticle.EmbeddingStatus;
 import com.solv.wefin.domain.news.article.entity.NewsArticle.RelevanceStatus;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
+import com.solv.wefin.domain.news.config.NewsBatchProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,7 +31,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EmbeddingService {
 
-    private static final int BATCH_SIZE = 500;
     private static final int PROCESS_CHUNK_SIZE = 20;
     private static final int MAX_RETRY = 3;
     private static final int STALE_PROCESSING_MINUTES = 30;
@@ -39,6 +39,7 @@ public class EmbeddingService {
     private final OpenAiEmbeddingClient openAiEmbeddingClient;
     private final ArticleChunker articleChunker;
     private final EmbeddingPersistenceService persistenceService;
+    private final NewsBatchProperties batchProperties;
 
     @Value("${openai.embedding.model}")
     private String embeddingModel;
@@ -85,7 +86,7 @@ public class EmbeddingService {
                 MAX_RETRY,
                 staleBefore,
                 RelevanceStatus.IRRELEVANT,
-                PageRequest.of(0, BATCH_SIZE));
+                PageRequest.of(0, batchProperties.embeddingSize()));
     }
 
     private int[] processChunk(List<NewsArticle> articles) {

@@ -5,6 +5,7 @@ import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.ClusterStatus;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
+import com.solv.wefin.domain.news.config.NewsBatchProperties;
 import com.solv.wefin.domain.news.cluster.service.ClusterMatchingService.MatchResult;
 import com.solv.wefin.domain.news.cluster.service.SuspiciousScoringService.ScoreResult;
 import com.solv.wefin.domain.news.cluster.service.SuspiciousScoringService.Verdict;
@@ -28,7 +29,6 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class ClusteringService {
 
-    private static final int BATCH_SIZE = 500;
     private static final int HOURS_RANGE = 24;
 
     private final NewsArticleRepository newsArticleRepository;
@@ -37,6 +37,7 @@ public class ClusteringService {
     private final ClusterMatchingService clusterMatchingService;
     private final SuspiciousScoringService suspiciousScoringService;
     private final ClusteringPersistenceService persistenceService;
+    private final NewsBatchProperties batchProperties;
 
     /**
      * 임베딩이 완료된 기사 중 아직 클러스터에 속하지 않은 기사를 가져온다.
@@ -127,7 +128,7 @@ public class ClusteringService {
                 NewsArticle.EmbeddingStatus.SUCCESS,
                 since,
                 NewsArticle.RelevanceStatus.IRRELEVANT,
-                PageRequest.of(0, BATCH_SIZE));
+                PageRequest.of(0, batchProperties.clusteringSize()));
     }
 
     private ClusterStats getClusterStats(List<NewsCluster> clusters) {

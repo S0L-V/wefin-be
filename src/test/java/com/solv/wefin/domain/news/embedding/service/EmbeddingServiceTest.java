@@ -46,7 +46,8 @@ class EmbeddingServiceTest {
     @BeforeEach
     void setUp() {
         embeddingService = new EmbeddingService(
-                newsArticleRepository, openAiEmbeddingClient, articleChunker, persistenceService);
+                newsArticleRepository, openAiEmbeddingClient, articleChunker, persistenceService,
+                new com.solv.wefin.domain.news.config.NewsBatchProperties(500, 500, 500, 500, 50, 500));
         ReflectionTestUtils.setField(embeddingService, "embeddingModel", "text-embedding-3-small");
         ReflectionTestUtils.setField(embeddingService, "embeddingVersion", "v1");
     }

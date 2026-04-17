@@ -5,6 +5,7 @@ import com.solv.wefin.domain.news.article.entity.NewsArticle.CrawlStatus;
 import com.solv.wefin.domain.news.article.entity.NewsArticle.TaggingStatus;
 import com.solv.wefin.domain.news.article.entity.NewsArticleTag;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
+import com.solv.wefin.domain.news.config.NewsBatchProperties;
 import com.solv.wefin.domain.news.tagging.client.OpenAiTaggingClient;
 import com.solv.wefin.domain.news.tagging.dto.TaggingResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -51,7 +52,8 @@ class TaggingServiceTest {
     @BeforeEach
     void setUp() {
         taggingService = new TaggingService(newsArticleRepository, openAiTaggingClient,
-                persistenceService, stockCodeValidator);
+                persistenceService, stockCodeValidator,
+                new NewsBatchProperties(500, 500, 500, 500, 50, 500));
         lenient().when(stockCodeValidator.loadStockMap())
                 .thenReturn(java.util.Map.of(
                         "005930", "삼성전자",

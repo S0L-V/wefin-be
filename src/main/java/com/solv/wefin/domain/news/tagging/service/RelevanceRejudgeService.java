@@ -3,6 +3,7 @@ package com.solv.wefin.domain.news.tagging.service;
 import com.solv.wefin.domain.news.article.entity.NewsArticle;
 import com.solv.wefin.domain.news.article.entity.NewsArticle.RelevanceStatus;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
+import com.solv.wefin.domain.news.config.NewsBatchProperties;
 import com.solv.wefin.domain.news.tagging.client.OpenAiTaggingClient;
 import com.solv.wefin.domain.news.tagging.dto.TaggingResult;
 import com.solv.wefin.global.error.BusinessException;
@@ -22,11 +23,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RelevanceRejudgeService {
 
-    private static final int MAX_REJUDGE_LIMIT = 500;
-
     private final NewsArticleRepository newsArticleRepository;
     private final OpenAiTaggingClient openAiTaggingClient;
     private final RelevancePersistenceService persistenceService;
+    private final NewsBatchProperties batchProperties;
 
     /**
      * 지정된 article ID들의 관련성을 재판정한다.
@@ -55,7 +55,8 @@ public class RelevanceRejudgeService {
     /**
      * PENDING 상태의 기사를 배치 크기만큼 재판정한다.
      *
-     * @param limit 한 번에 처리할 최대 기사 수 (1~500)
+     * @param limit 한 번에 처리할 최대 기사 수
+     *              (허용 범위: 1 ~ {@code batch.news.rejudge-max-limit})
      * @return 재판정 처리 결과 요약
      */
     public RejudgeSummary rejudgePending(int limit) {
@@ -73,9 +74,10 @@ public class RelevanceRejudgeService {
     }
 
     private void validateLimit(int limit) {
-        if (limit < 1 || limit > MAX_REJUDGE_LIMIT) {
+        int maxLimit = batchProperties.rejudgeMaxLimit();
+        if (limit < 1 || limit > maxLimit) {
             throw new BusinessException(ErrorCode.INVALID_INPUT,
-                    "limit는 1 이상 " + MAX_REJUDGE_LIMIT + " 이하여야 합니다 (요청값: " + limit + ")");
+                    "limit는 1 이상 " + maxLimit + " 이하여야 합니다 (요청값: " + limit + ")");
         }
     }
 
