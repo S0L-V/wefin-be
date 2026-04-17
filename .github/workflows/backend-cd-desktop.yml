@@ -34,9 +34,14 @@ jobs:
       - name: Build Docker image
         run: docker build -t wefin-backend:desktop .
 
+      - name: Copy files to deploy directory
+        run: |
+          cp docker-compose-desktop.yml ~/wefin/
+          cp -r nginx ~/wefin/
+
       - name: Deploy with docker compose
         run: |
-          cd ${{ github.workspace }}
+          cd ~/wefin
           docker compose -f docker-compose-desktop.yml stop backend || true
           docker compose -f docker-compose-desktop.yml rm -f backend || true
           docker compose -f docker-compose-desktop.yml up -d
