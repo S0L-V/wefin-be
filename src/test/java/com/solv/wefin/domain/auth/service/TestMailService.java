@@ -11,6 +11,6 @@ public class TestMailService implements MailService {
 
     @Override
     public void sendVerificationCode(String to, String code) {
-        // 테스트에서는 실제 메일 발송하지 않음
+        // 테스트 환경에서는 실제 메일 발송하지 않음
     }
 }

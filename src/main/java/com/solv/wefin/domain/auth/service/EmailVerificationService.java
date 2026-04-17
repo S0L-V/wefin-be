@@ -6,6 +6,7 @@ import com.solv.wefin.domain.auth.repository.EmailVerificationRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +30,7 @@ public class EmailVerificationService {
     private static final long RESEND_WINDOW_SECONDS = 600L;
 
     private final EmailVerificationRepository emailVerificationRepository;
-    private final MailService mailService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public void sendVerificationCode(String email, VerificationPurpose purpose) {
@@ -44,7 +45,6 @@ public class EmailVerificationService {
                     .orElse(null);
 
             if (verification != null) {
-
                 if (verification.isLocked(now)) {
                     throw new BusinessException(ErrorCode.AUTH_VERIFICATION_TOO_MANY_ATTEMPTS);
                 }
@@ -73,7 +73,10 @@ public class EmailVerificationService {
 
             verification.recordResend(now);
             emailVerificationRepository.saveAndFlush(verification);
-            mailService.sendVerificationCode(normalizedEmail, code);
+
+            eventPublisher.publishEvent(
+                    new EmailVerificationSendEvent(normalizedEmail, code, purpose)
+            );
 
         } catch (ObjectOptimisticLockingFailureException e) {
             throw new BusinessException(ErrorCode.AUTH_VERIFICATION_CONCURRENT_REQUEST);
