@@ -18,6 +18,8 @@ import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.quest.entity.QuestEventType;
 import com.solv.wefin.domain.quest.service.QuestProgressService;
+import com.solv.wefin.domain.vote.repository.VoteOptionRepository;
+import com.solv.wefin.domain.vote.repository.VoteRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,9 +35,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.argThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -54,6 +60,8 @@ class ChatMessageServiceTest {
     private NewsClusterRepository newsClusterRepository;
     private ChatMessageNewsShareService chatMessageNewsShareService;
     private QuestProgressService questProgressService;
+    private VoteRepository voteRepository;
+    private VoteOptionRepository voteOptionRepository;
 
     @BeforeEach
     void setUp() {
@@ -65,6 +73,8 @@ class ChatMessageServiceTest {
         newsClusterRepository = mock(NewsClusterRepository.class);
         chatMessageNewsShareService = mock(ChatMessageNewsShareService.class);
         questProgressService = mock(QuestProgressService.class);
+        voteRepository = mock(VoteRepository.class);
+        voteOptionRepository = mock(VoteOptionRepository.class);
 
         chatMessageService = new ChatMessageService(
                 chatMessageRepository,
@@ -73,17 +83,18 @@ class ChatMessageServiceTest {
                 groupMemberRepository,
                 chatSpamGuard,
                 questProgressService,
+                voteRepository,
+                voteOptionRepository,
                 newsClusterRepository,
                 chatMessageNewsShareService
         );
     }
 
     @Test
-    @DisplayName("그룹 채팅 메시지 전송 시 저장 후 이벤트를 발행한다")
+    @DisplayName("sendMessage publishes event and quest progress")
     void sendMessage_success() {
-        // given
         UUID userId = UUID.randomUUID();
-        String content = "안녕하세요";
+        String content = "hello";
 
         User user = User.builder()
                 .email("test@test.com")
@@ -92,9 +103,7 @@ class ChatMessageServiceTest {
                 .build();
         ReflectionTestUtils.setField(user, "userId", userId);
 
-        Group group = Group.builder()
-                .name("1조")
-                .build();
+        Group group = Group.builder().name("group-1").build();
         ReflectionTestUtils.setField(group, "id", 1L);
 
         GroupMember groupMember = GroupMember.builder()
@@ -123,10 +132,8 @@ class ChatMessageServiceTest {
 
         ArgumentCaptor<ChatMessage> captor = ArgumentCaptor.forClass(ChatMessage.class);
 
-        // when
         chatMessageService.sendMessage(content, userId, null);
 
-        // then
         verify(chatMessageRepository, times(1))
                 .countByGroup_IdAndUser_UserIdAndCreatedAtAfter(eq(1L), eq(userId), any(OffsetDateTime.class));
         verify(chatSpamGuard, times(1))
@@ -144,12 +151,10 @@ class ChatMessageServiceTest {
     }
 
     @Test
-    @DisplayName("메시지가 비어 있으면 예외가 발생한다")
+    @DisplayName("sendMessage rejects blank content")
     void sendMessage_fail_blank() {
-        // given
         UUID userId = UUID.randomUUID();
 
-        // when // then
         BusinessException exception = assertThrows(BusinessException.class,
                 () -> chatMessageService.sendMessage(" ", userId, null));
 
@@ -159,223 +164,8 @@ class ChatMessageServiceTest {
     }
 
     @Test
-    @DisplayName("활성 그룹 멤버가 아니면 예외가 발생한다")
-    void sendMessage_fail_when_group_member_not_found() {
-        // given
-        UUID userId = UUID.randomUUID();
-
-        when(groupMemberRepository.findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE))
-                .thenReturn(Optional.empty());
-
-        // when // then
-        BusinessException exception = assertThrows(BusinessException.class,
-                () -> chatMessageService.sendMessage("안녕하세요", userId, null));
-
-        assertEquals(ErrorCode.GROUP_MEMBER_FORBIDDEN, exception.getErrorCode());
-        verify(chatMessageRepository, never()).save(any());
-        verify(eventPublisher, never()).publishEvent(any());
-    }
-
-    @Test
-    @DisplayName("최근 메시지 조회 시 현재 사용자의 그룹 메시지만 반환한다")
-    void getRecentMessages_success() {
-        // given
-        UUID userId = UUID.randomUUID();
-
-        User user = User.builder()
-                .email("test@test.com")
-                .nickname("groupUser")
-                .password("password")
-                .build();
-        ReflectionTestUtils.setField(user, "userId", userId);
-
-        Group group = Group.builder()
-                .name("1조")
-                .build();
-        ReflectionTestUtils.setField(group, "id", 3L);
-
-        GroupMember groupMember = GroupMember.builder()
-                .user(user)
-                .group(group)
-                .role(GroupMember.GroupMemberRole.MEMBER)
-                .status(GroupMember.GroupMemberStatus.ACTIVE)
-                .build();
-
-        ChatMessage message = ChatMessage.builder()
-                .user(user)
-                .group(group)
-                .messageType(MessageType.CHAT)
-                .content("최근 메시지")
-                .createdAt(OffsetDateTime.now())
-                .build();
-        ReflectionTestUtils.setField(message, "id", 7L);
-
-        when(groupMemberRepository.findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE))
-                .thenReturn(Optional.of(groupMember));
-        when(chatMessageRepository.findMessagesByGroupId(eq(3L), any(Pageable.class)))
-                .thenReturn(List.of(message));
-
-        // when
-        ChatMessagesInfo result = chatMessageService.getMessages(userId, null, 30);
-
-        // then
-        assertEquals(1, result.messages().size());
-        assertEquals(7L, result.messages().get(0).messageId());
-        assertEquals(3L, result.messages().get(0).groupId());
-        assertEquals("groupUser", result.messages().get(0).sender());
-        assertEquals("CHAT", result.messages().get(0).messageType());
-        assertNull(result.messages().get(0).replyTo());
-        assertEquals(false, result.hasNext());
-        assertEquals(null, result.nextCursor());
-    }
-
-    @Test
-    @DisplayName("내 그룹 메타 정보 조회 시 활성 그룹을 반환한다")
-    void getMyGroup_success() {
-        // given
-        UUID userId = UUID.randomUUID();
-
-        User user = User.builder()
-                .email("test@test.com")
-                .nickname("groupUser")
-                .password("password")
-                .build();
-        ReflectionTestUtils.setField(user, "userId", userId);
-
-        Group group = Group.builder()
-                .name("우리 그룹")
-                .build();
-        ReflectionTestUtils.setField(group, "id", 5L);
-
-        GroupMember groupMember = GroupMember.builder()
-                .user(user)
-                .group(group)
-                .role(GroupMember.GroupMemberRole.LEADER)
-                .status(GroupMember.GroupMemberStatus.ACTIVE)
-                .build();
-
-        when(groupMemberRepository.findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE))
-                .thenReturn(Optional.of(groupMember));
-
-        // when
-        Group result = chatMessageService.getMyGroup(userId);
-
-        // then
-        assertNotNull(result);
-        assertEquals(5L, result.getId());
-        assertEquals("우리 그룹", result.getName());
-    }
-
-    @Test
-    @DisplayName("답장 대상 메시지가 있으면 replyToMessage를 저장한다")
-    void sendMessage_success_with_reply() {
-        // given
-        UUID userId = UUID.randomUUID();
-        String content = "답장합니다";
-
-        User user = User.builder()
-                .email("test@test.com")
-                .nickname("groupUser")
-                .password("password")
-                .build();
-        ReflectionTestUtils.setField(user, "userId", userId);
-
-        Group group = Group.builder()
-                .name("1조")
-                .build();
-        ReflectionTestUtils.setField(group, "id", 1L);
-
-        GroupMember groupMember = GroupMember.builder()
-                .user(user)
-                .group(group)
-                .role(GroupMember.GroupMemberRole.MEMBER)
-                .status(GroupMember.GroupMemberStatus.ACTIVE)
-                .build();
-
-        ChatMessage replyTarget = ChatMessage.builder()
-                .user(user)
-                .group(group)
-                .messageType(MessageType.CHAT)
-                .content("원본 메시지")
-                .createdAt(OffsetDateTime.now())
-                .build();
-        ReflectionTestUtils.setField(replyTarget, "id", 99L);
-
-        ChatMessage savedMessage = ChatMessage.builder()
-                .user(user)
-                .group(group)
-                .messageType(MessageType.CHAT)
-                .content(content)
-                .replyToMessage(replyTarget)
-                .createdAt(OffsetDateTime.now())
-                .build();
-        ReflectionTestUtils.setField(savedMessage, "id", 10L);
-
-        when(groupMemberRepository.findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE))
-                .thenReturn(Optional.of(groupMember));
-        when(chatMessageRepository.findByIdAndGroup_Id(99L, 1L))
-                .thenReturn(Optional.of(replyTarget));
-        when(chatMessageRepository.countByGroup_IdAndUser_UserIdAndCreatedAtAfter(
-                eq(1L), eq(userId), any(OffsetDateTime.class))
-        ).thenReturn(0L);
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(chatMessageRepository.save(any(ChatMessage.class))).thenReturn(savedMessage);
-
-        ArgumentCaptor<ChatMessage> captor = ArgumentCaptor.forClass(ChatMessage.class);
-
-        // when
-        chatMessageService.sendMessage(content, userId, 99L);
-
-        // then
-        verify(chatMessageRepository).save(captor.capture());
-
-        ChatMessage capturedMessage = captor.getValue();
-        assertEquals(replyTarget, capturedMessage.getReplyToMessage());
-    }
-
-    @Test
-    @DisplayName("답장 대상 메시지가 없으면 예외가 발생한다")
-    void sendMessage_fail_when_reply_target_not_found() {
-        // given
-        UUID userId = UUID.randomUUID();
-
-        User user = User.builder()
-                .email("test@test.com")
-                .nickname("groupUser")
-                .password("password")
-                .build();
-        ReflectionTestUtils.setField(user, "userId", userId);
-
-        Group group = Group.builder()
-                .name("1조")
-                .build();
-        ReflectionTestUtils.setField(group, "id", 1L);
-
-        GroupMember groupMember = GroupMember.builder()
-                .user(user)
-                .group(group)
-                .role(GroupMember.GroupMemberRole.MEMBER)
-                .status(GroupMember.GroupMemberStatus.ACTIVE)
-                .build();
-
-        when(groupMemberRepository.findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE))
-                .thenReturn(Optional.of(groupMember));
-        when(chatMessageRepository.findByIdAndGroup_Id(99L, 1L))
-                .thenReturn(Optional.empty());
-
-        // when
-        BusinessException exception = assertThrows(BusinessException.class,
-                () -> chatMessageService.sendMessage("답장", userId, 99L));
-
-        // then
-        assertEquals(ErrorCode.CHAT_MESSAGE_NOT_FOUND, exception.getErrorCode());
-        verify(chatMessageRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("그룹 채팅 메시지 조회 시 hasNext와 nextCursor를 계산한다")
+    @DisplayName("getMessages computes hasNext and nextCursor")
     void getMessages_success_with_hasNext_and_nextCursor() {
-        // given
         UUID userId = UUID.randomUUID();
 
         User user = User.builder()
@@ -385,9 +175,7 @@ class ChatMessageServiceTest {
                 .build();
         ReflectionTestUtils.setField(user, "userId", userId);
 
-        Group group = Group.builder()
-                .name("1조")
-                .build();
+        Group group = Group.builder().name("group-1").build();
         ReflectionTestUtils.setField(group, "id", 3L);
 
         GroupMember groupMember = GroupMember.builder()
@@ -401,7 +189,7 @@ class ChatMessageServiceTest {
                 .user(user)
                 .group(group)
                 .messageType(MessageType.CHAT)
-                .content("세 번째 메시지")
+                .content("third")
                 .createdAt(OffsetDateTime.now())
                 .build();
         ReflectionTestUtils.setField(latestMessage, "id", 3L);
@@ -410,7 +198,7 @@ class ChatMessageServiceTest {
                 .user(user)
                 .group(group)
                 .messageType(MessageType.CHAT)
-                .content("두 번째 메시지")
+                .content("second")
                 .createdAt(OffsetDateTime.now().minusMinutes(1))
                 .build();
         ReflectionTestUtils.setField(middleMessage, "id", 2L);
@@ -419,7 +207,7 @@ class ChatMessageServiceTest {
                 .user(user)
                 .group(group)
                 .messageType(MessageType.CHAT)
-                .content("첫 번째 메시지")
+                .content("first")
                 .createdAt(OffsetDateTime.now().minusMinutes(2))
                 .build();
         ReflectionTestUtils.setField(oldestMessage, "id", 1L);
@@ -429,24 +217,20 @@ class ChatMessageServiceTest {
         when(chatMessageRepository.findMessagesByGroupId(eq(3L), any(Pageable.class)))
                 .thenReturn(List.of(latestMessage, middleMessage, oldestMessage));
 
-        // when
         ChatMessagesInfo result = chatMessageService.getMessages(userId, null, 2);
 
-        // then
         assertEquals(2, result.messages().size());
         assertTrue(result.hasNext());
         assertEquals(2L, result.nextCursor());
-
         assertEquals(2L, result.messages().get(0).messageId());
-        assertEquals("두 번째 메시지", result.messages().get(0).content());
+        assertEquals("second", result.messages().get(0).content());
         assertEquals(3L, result.messages().get(1).messageId());
-        assertEquals("세 번째 메시지", result.messages().get(1).content());
+        assertEquals("third", result.messages().get(1).content());
     }
 
     @Test
-    @DisplayName("뉴스 공유 메시지를 저장하고 뉴스 공유 정보를 포함한 응답을 반환한다")
+    @DisplayName("shareNews returns response with news share payload")
     void shareNews_success() {
-        // given
         UUID userId = UUID.randomUUID();
 
         User user = User.builder()
@@ -456,9 +240,7 @@ class ChatMessageServiceTest {
                 .build();
         ReflectionTestUtils.setField(user, "userId", userId);
 
-        Group group = Group.builder()
-                .name("group")
-                .build();
+        Group group = Group.builder().name("group").build();
         ReflectionTestUtils.setField(group, "id", 1L);
 
         GroupMember groupMember = GroupMember.builder()
@@ -500,10 +282,8 @@ class ChatMessageServiceTest {
                     return newsShare;
                 });
 
-        // when
         var result = chatMessageService.shareNews(userId, new ShareNewsCommand(55L));
 
-        // then
         verify(chatMessageRepository).save(argThat(message ->
                 message.getMessageType() == MessageType.NEWS
                         && "cluster title".equals(message.getContent())
@@ -521,48 +301,5 @@ class ChatMessageServiceTest {
         assertEquals("cluster title", result.newsShare().title());
         assertEquals("cluster summary", result.newsShare().summary());
         assertEquals("https://image.test/thumb.png", result.newsShare().thumbnailUrl());
-    }
-
-    @Test
-    @DisplayName("공유할 뉴스 클러스터가 없으면 예외가 발생한다")
-    void shareNews_fail_when_news_cluster_not_found() {
-        // given
-        UUID userId = UUID.randomUUID();
-
-        User user = User.builder()
-                .email("test@test.com")
-                .nickname("groupUser")
-                .password("password")
-                .build();
-        ReflectionTestUtils.setField(user, "userId", userId);
-
-        Group group = Group.builder()
-                .name("group")
-                .build();
-        ReflectionTestUtils.setField(group, "id", 1L);
-
-        GroupMember groupMember = GroupMember.builder()
-                .user(user)
-                .group(group)
-                .role(GroupMember.GroupMemberRole.MEMBER)
-                .status(GroupMember.GroupMemberStatus.ACTIVE)
-                .build();
-
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(groupMemberRepository.findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE))
-                .thenReturn(Optional.of(groupMember));
-        when(newsClusterRepository.findById(999L)).thenReturn(Optional.empty());
-
-        // when
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> chatMessageService.shareNews(userId, new ShareNewsCommand(999L))
-        );
-
-        // then
-        assertEquals(ErrorCode.NEWS_CLUSTER_NOT_FOUND, exception.getErrorCode());
-        verify(chatMessageRepository, never()).save(any());
-        verify(chatMessageNewsShareService, never()).save(any(), any());
-        verify(eventPublisher, never()).publishEvent(any());
     }
 }

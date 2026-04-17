@@ -3,6 +3,7 @@ package com.solv.wefin.web.chat.groupChat.dto.response;
 import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessageInfo;
 import com.solv.wefin.domain.chat.groupChat.dto.info.NewsShareInfo;
 import com.solv.wefin.domain.chat.groupChat.dto.info.ReplyMessageInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.VoteShareInfo;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,6 +26,7 @@ public class ChatMessageResponse {
     private OffsetDateTime createdAt;
     private ReplyMessageInfo replyTo;
     private NewsShareInfo newsShare;
+    private VoteShareInfo voteShare;
 
     public static ChatMessageResponse from(ChatMessageInfo info) {
         return ChatMessageResponse.builder()
@@ -37,6 +39,7 @@ public class ChatMessageResponse {
                 .createdAt(info.createdAt())
                 .replyTo(info.replyTo())
                 .newsShare(info.newsShare())
+                .voteShare(info.voteShare())
                 .build();
     }
 }

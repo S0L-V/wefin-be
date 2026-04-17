@@ -1,7 +1,9 @@
 package com.solv.wefin.web.chat.groupChat;
 
+import com.solv.wefin.domain.chat.groupChat.dto.command.ShareNewsCommand;
 import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessageInfo;
 import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessagesInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.NewsShareInfo;
 import com.solv.wefin.domain.chat.groupChat.service.ChatMessageService;
 import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.global.config.security.JwtProvider;
@@ -13,9 +15,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.AuthorityUtils;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
@@ -47,9 +49,8 @@ class GroupChatControllerTest {
     private JwtProvider jwtProvider;
 
     @Test
-    @DisplayName("현재 사용자의 그룹 최근 메시지를 응답으로 반환한다")
+    @DisplayName("getRecentMessages returns current group messages")
     void getRecentMessages_success() throws Exception {
-        // given
         UUID userId = UUID.randomUUID();
 
         ChatMessageInfo info = new ChatMessageInfo(
@@ -58,20 +59,16 @@ class GroupChatControllerTest {
                 3L,
                 "CHAT",
                 "groupUser",
-                "안녕하세요",
+                "hello",
                 OffsetDateTime.now(),
+                null,
                 null,
                 null
         );
 
         when(chatMessageService.getMessages(userId, null, 30))
-                .thenReturn(new ChatMessagesInfo(
-                        List.of(info),
-                        null,
-                        false
-                ));
+                .thenReturn(new ChatMessagesInfo(List.of(info), null, false));
 
-        // when // then
         mockMvc.perform(get("/api/chat/group/messages")
                         .with(csrf())
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -84,21 +81,19 @@ class GroupChatControllerTest {
                 .andExpect(jsonPath("$.data.messages[0].messageId").value(1))
                 .andExpect(jsonPath("$.data.messages[0].groupId").value(3))
                 .andExpect(jsonPath("$.data.messages[0].sender").value("groupUser"))
-                .andExpect(jsonPath("$.data.messages[0].content").value("안녕하세요"))
+                .andExpect(jsonPath("$.data.messages[0].content").value("hello"))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
     }
 
     @Test
-    @DisplayName("그룹 멤버가 아니면 최근 메시지 조회 시 403을 반환한다")
+    @DisplayName("getRecentMessages returns 403 for forbidden member")
     void getRecentMessages_fail_when_group_member_forbidden() throws Exception {
-        // given
         UUID userId = UUID.randomUUID();
 
         doThrow(new BusinessException(ErrorCode.GROUP_MEMBER_FORBIDDEN))
                 .when(chatMessageService)
                 .getMessages(userId, null, 30);
 
-        // when // then
         mockMvc.perform(get("/api/chat/group/messages")
                         .with(csrf())
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -112,19 +107,17 @@ class GroupChatControllerTest {
     }
 
     @Test
-    @DisplayName("내 그룹 메타 정보를 반환한다")
+    @DisplayName("getMyGroup returns active group info")
     void getMyGroup_success() throws Exception {
-        // given
         UUID userId = UUID.randomUUID();
 
         Group group = Group.builder()
-                .name("우리 그룹")
+                .name("my-group")
                 .build();
         ReflectionTestUtils.setField(group, "id", 7L);
 
         when(chatMessageService.getMyGroup(userId)).thenReturn(group);
 
-        // when // then
         mockMvc.perform(get("/api/chat/group/me")
                         .with(csrf())
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -135,13 +128,12 @@ class GroupChatControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data.groupId").value(7))
-                .andExpect(jsonPath("$.data.groupName").value("우리 그룹"));
+                .andExpect(jsonPath("$.data.groupName").value("my-group"));
     }
 
     @Test
-    @DisplayName("뉴스 공유 요청을 받으면 성공 응답을 반환한다")
+    @DisplayName("shareNews returns success response")
     void shareNews_success() throws Exception {
-        // given
         UUID userId = UUID.randomUUID();
 
         ChatMessageInfo info = new ChatMessageInfo(
@@ -153,20 +145,17 @@ class GroupChatControllerTest {
                 "",
                 OffsetDateTime.now(),
                 null,
-                new com.solv.wefin.domain.chat.groupChat.dto.info.NewsShareInfo(
+                new NewsShareInfo(
                         55L,
                         "cluster title",
                         "cluster summary",
                         "https://image.test/thumb.png"
-                )
+                ),
+                null
         );
 
-        when(chatMessageService.shareNews(
-                userId,
-                new com.solv.wefin.domain.chat.groupChat.dto.command.ShareNewsCommand(55L)
-        )).thenReturn(info);
+        when(chatMessageService.shareNews(userId, new ShareNewsCommand(55L))).thenReturn(info);
 
-        // when // then
         mockMvc.perform(post("/api/chat/group/news-share")
                         .with(csrf())
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -177,7 +166,7 @@ class GroupChatControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "newsClusterId": 55
+                                  \"newsClusterId\": 55
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -185,17 +174,13 @@ class GroupChatControllerTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 뉴스 클러스터를 공유하면 404를 반환한다")
+    @DisplayName("shareNews returns 404 when cluster is missing")
     void shareNews_fail_when_news_cluster_not_found() throws Exception {
-        // given
         UUID userId = UUID.randomUUID();
 
-        when(chatMessageService.shareNews(
-                userId,
-                new com.solv.wefin.domain.chat.groupChat.dto.command.ShareNewsCommand(999L)
-        )).thenThrow(new BusinessException(ErrorCode.NEWS_CLUSTER_NOT_FOUND));
+        when(chatMessageService.shareNews(userId, new ShareNewsCommand(999L)))
+                .thenThrow(new BusinessException(ErrorCode.NEWS_CLUSTER_NOT_FOUND));
 
-        // when // then
         mockMvc.perform(post("/api/chat/group/news-share")
                         .with(csrf())
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -206,7 +191,7 @@ class GroupChatControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "newsClusterId": 999
+                                  \"newsClusterId\": 999
                                 }
                                 """))
                 .andExpect(status().isNotFound())
