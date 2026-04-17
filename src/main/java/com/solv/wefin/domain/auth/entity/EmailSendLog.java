@@ -61,7 +61,7 @@ public class EmailSendLog extends BaseEntity {
     }
 
     private static String maskCode(String code) {
-        if (code == null || code.length() < VISIBLE_CODE_LENGTH) {
+        if (code == null || code.length() <= VISIBLE_CODE_LENGTH) {
             return "****";
         }
 
