@@ -74,3 +74,4 @@ summary:
 websocket:
   allowed-origins:
     - https://wefin.ai.kr
+    - https://wefin.shinhanacademy.co.kr
