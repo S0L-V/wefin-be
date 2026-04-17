@@ -88,7 +88,7 @@ class ClusterTagAggregatorTest {
 
         assertThat(result.get(1L))
                 .extracting(StockInfo::code)
-                .containsExactly("005930", "000660");
+                .containsExactly("000660", "005930");
     }
 
     // ---------- aggregateMarketTags (TagType.TOPIC 쿼리) ----------
@@ -196,13 +196,13 @@ class ClusterTagAggregatorTest {
                 .containsExactly("연합", "매일경제");
     }
 
-    // ---------- putIfAbsent 고정 동작 ----------
+    // ---------- canonical name 결정적 선택 ----------
 
     @Test
-    @DisplayName("aggregateStocks — 같은 code에 다른 name이 오면 먼저 본 name을 고정한다 (putIfAbsent)")
-    void aggregateStocks_sameCodeDifferentName_keepsFirstSeenName() {
+    @DisplayName("aggregateStocks — 같은 code에 다른 name이 오면 최빈값(동점 시 사전순 최소)을 선택한다")
+    void aggregateStocks_sameCodeDifferentName_selectsCanonicalName() {
         Map<Long, List<Long>> clusterMap = Map.of(1L, List.of(10L, 20L));
-        // articleId 10이 먼저 순회되므로 "삼성전자"가 고정
+        // "삼성전자"×1, "삼전"×1 → 동점, 사전순 최소 "삼성전자" 선택 ('성' < '전')
         given(articleTagRepository.findByNewsArticleIdInAndTagType(any(), eq(TagType.STOCK)))
                 .willReturn(List.of(
                         stockTag(10L, "005930", "삼성전자"),

@@ -159,6 +159,8 @@ public class ClusterTagAggregator {
 
     /**
      * 클러스터별 관련 STOCK 태그(code + name)를 집계한다
+     *
+     * 결정적 선택 정책: {@link #selectCanonicalName} 참고
      */
     public Map<Long, List<StockInfo>> aggregateStocks(Map<Long, List<Long>> clusterArticleMap,
                                                       List<Long> allArticleIds) {
@@ -169,12 +171,11 @@ public class ClusterTagAggregator {
 
         Map<Long, List<StockInfo>> result = new HashMap<>();
         for (var entry : clusterArticleMap.entrySet()) {
-            Map<String, StockInfo> seen = new LinkedHashMap<>();
+            List<NewsArticleTag> clusterTags = new ArrayList<>();
             for (Long articleId : entry.getValue()) {
-                tagsByArticle.getOrDefault(articleId, List.of()).forEach(t ->
-                        seen.putIfAbsent(t.getTagCode(), new StockInfo(t.getTagCode(), t.getTagName())));
+                clusterTags.addAll(tagsByArticle.getOrDefault(articleId, List.of()));
             }
-            result.put(entry.getKey(), List.copyOf(seen.values()));
+            result.put(entry.getKey(), selectCanonicalName(clusterTags, StockInfo::new));
         }
         return result;
     }
