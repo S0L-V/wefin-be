@@ -45,7 +45,18 @@ public class EmailVerificationEventListener {
             );
         }
 
-        emailSendLogRepository.save(emailSendLog);
+        try {
+            emailSendLogRepository.save(emailSendLog);
+        } catch (Exception e) {
+            log.error(
+                    "메일 발송 로그 저장 실패: email={}, purpose={}, status={}, retryCount={}",
+                    maskEmail(event.email()),
+                    event.purpose(),
+                    emailSendLog.getStatus(),
+                    emailSendLog.getRetryCount(),
+                    e
+            );
+        }
     }
 
     private String maskEmail(String email) {
