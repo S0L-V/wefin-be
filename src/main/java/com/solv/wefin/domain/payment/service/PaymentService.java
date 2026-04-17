@@ -2,10 +2,7 @@ package com.solv.wefin.domain.payment.service;
 
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
-import com.solv.wefin.domain.payment.dto.CreatePaymentCommand;
-import com.solv.wefin.domain.payment.dto.PaymentConfirmInfo;
-import com.solv.wefin.domain.payment.dto.PaymentReadyInfo;
-import com.solv.wefin.domain.payment.dto.TossPaymentConfirmResult;
+import com.solv.wefin.domain.payment.dto.*;
 import com.solv.wefin.domain.payment.entity.*;
 import com.solv.wefin.domain.payment.repository.PaymentRepository;
 import com.solv.wefin.domain.payment.repository.SubscriptionPlanRepository;
@@ -218,6 +215,17 @@ public class PaymentService {
         }
 
         return PaymentConfirmInfo.from(payment, savedSubscription);
+    }
+
+    @Transactional(readOnly = true)
+    public MySubscriptionInfo getMySubscription(UUID userId) {
+        Subscription subscription = subscriptionRepository.findByUserUserIdAndStatus(
+                        userId,
+                        SubscriptionStatus.ACTIVE
+                )
+                .orElseThrow(() -> new BusinessException(ErrorCode.ACTIVE_SUBSCRIPTION_NOT_FOUND));
+
+        return MySubscriptionInfo.from(subscription);
     }
 
     private Payment savePaymentWithRetry(
