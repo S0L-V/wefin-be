@@ -86,6 +86,10 @@ summary:
   collect:
     cron: ${SUMMARY_COLLECT_CRON:-}
 
+wefin-news:
+  api:
+    base-url: https://dev-api.wefin.ai.kr
+
 websocket:
   allowed-origins:
     - http://localhost:5173
