@@ -55,6 +55,7 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
     private static final Set<String> MINUTE_PERIOD_CODES = Set.of("1", "5", "15", "30", "60");
     private static final int PERIOD_CANDLE_MAX_PAGES = 4;
     private static final int MINUTE_CANDLE_MAX_PAGES = 5;
+    private static final int MARKET_OPEN_HOUR = 9;
 
     public PriceResponse getPrice(String stockCode) {
         validateStockCode(stockCode);
@@ -273,6 +274,10 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
                 break;
             }
 
+            if (response.output1() != null) {
+                validateRtCode(response.output1().rt_cd());
+            }
+
             List<CandleResponse> pageCandles = response.output2().stream()
                     .map(CandleResponse::from)
                     .toList();
@@ -305,6 +310,10 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
                 break;
             }
 
+            if (response.output1() != null) {
+                validateRtCode(response.output1().rt_cd());
+            }
+
             List<CandleResponse> pageCandles = response.output2().stream()
                     .map(CandleResponse::fromMinute)
                     .toList();
@@ -329,8 +338,8 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
             } else {
                 min--;
             }
-            if (hour < 9) {
-                break; // 장 시작(09:00) 이전이면 더 이상 데이터 없음
+            if (hour < MARKET_OPEN_HOUR) {
+                break;
             }
             inputHour = String.format("%02d%02d00", hour, min);
         }
