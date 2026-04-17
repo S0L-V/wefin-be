@@ -1,6 +1,8 @@
 package com.solv.wefin.web.game.room;
 
 import com.solv.wefin.domain.game.participant.entity.GameParticipant;
+import com.solv.wefin.domain.game.result.dto.GameHistoryInfo;
+import com.solv.wefin.domain.game.result.service.GameResultService;
 import com.solv.wefin.domain.game.room.dto.CreateRoomCommand;
 import com.solv.wefin.domain.game.room.dto.RoomDetailInfo;
 import com.solv.wefin.domain.game.room.dto.RoomListInfo;
@@ -12,6 +14,7 @@ import com.solv.wefin.domain.game.room.service.GameRoomService;
 import com.solv.wefin.domain.group.entity.GroupMember;
 import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.global.common.ApiResponse;
+import com.solv.wefin.global.common.PageInfo;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.game.room.dto.LeaveRoomResponse;
@@ -19,6 +22,9 @@ import com.solv.wefin.web.game.room.dto.request.CreateRoomRequest;
 import com.solv.wefin.web.game.room.dto.response.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -36,6 +42,7 @@ public class
 GameRoomController {
 
     private final GameRoomService gameRoomService;
+    private final GameResultService gameResultService;
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
 
@@ -65,6 +72,34 @@ GameRoomController {
                 r -> RoomListResponse.from(r.room(), r.playerCount())).collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
+
+    /**
+     * 과거 게임 이력 페이징 조회.
+     * 내가 FINISHED한 게임의 결과(수익률/순위/자산)를 최신순으로 반환.
+     * 정렬은 createdAt DESC 고정 — 클라이언트가 정렬을 조작하지 못하게 서버에서 강제.
+     */
+    @GetMapping("/history")
+    public ResponseEntity<ApiResponse<GameHistoryPageResponse>> getHistory(
+            @AuthenticationPrincipal UUID userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Long groupId = getActiveGroupId(userId);
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.max(1, Math.min(size, 50));
+        PageRequest pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Page<GameHistoryInfo> historyPage = gameResultService.getMyGameHistory(groupId, userId, pageable);
+
+        List<GameHistoryResponse> content = historyPage.getContent().stream()
+                .map(GameHistoryResponse::from)
+                .toList();
+
+        GameHistoryPageResponse response = new GameHistoryPageResponse(content, PageInfo.from(historyPage));
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    record GameHistoryPageResponse(List<GameHistoryResponse> content, PageInfo pageInfo) {}
 
     @GetMapping("/{roomId}")
     public ResponseEntity<ApiResponse<RoomDetailResponse>> getRoomDetail(@PathVariable UUID roomId){

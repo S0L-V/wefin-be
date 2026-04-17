@@ -9,10 +9,12 @@ import com.solv.wefin.domain.game.order.repository.GameOrderRepository;
 import com.solv.wefin.domain.game.participant.entity.GameParticipant;
 import com.solv.wefin.domain.game.participant.entity.ParticipantStatus;
 import com.solv.wefin.domain.game.participant.repository.GameParticipantRepository;
+import com.solv.wefin.domain.game.result.dto.GameHistoryInfo;
 import com.solv.wefin.domain.game.result.dto.GameResultInfo;
 import com.solv.wefin.domain.game.result.entity.GameResult;
 import com.solv.wefin.domain.game.result.repository.GameResultRepository;
 import com.solv.wefin.domain.game.room.entity.GameRoom;
+import com.solv.wefin.domain.game.room.entity.RoomStatus;
 import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
 import com.solv.wefin.domain.game.snapshot.dto.SnapshotInfo;
 import com.solv.wefin.domain.game.snapshot.entity.GamePortfolioSnapshot;
@@ -29,8 +31,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,8 +46,10 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.withSettings;
 
 @ExtendWith(MockitoExtension.class)
 class GameResultServiceTest {
@@ -616,6 +626,132 @@ class GameResultServiceTest {
         }
     }
 
+    // === 게임 이력 조회 ===
+
+    private static final PageRequest HISTORY_PAGEABLE =
+            PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+    @Nested
+    @DisplayName("게임 이력 조회 성공")
+    class GameHistorySuccessTests {
+
+        @Test
+        @DisplayName("방 FINISHED — finalRank 실제 순위 반환")
+        void getHistory_roomFinished_returnsActualRank() {
+            // Given — GameRoom/GameParticipant/GameResult를 mock으로 구성
+            // (실제 Entity.create()은 roomId가 null — JPA @GeneratedValue라 persist 전에는 미할당)
+            GameRoom room = mockRoom(ROOM_ID, RoomStatus.FINISHED);
+            GameParticipant me = mockParticipant(USER_A);
+            GameResult result = mockResult(room, me, 2, SEED,
+                    new BigDecimal("11000000"), new BigDecimal("10.00"), 15);
+
+            Page<GameResult> page = new PageImpl<>(List.of(result), HISTORY_PAGEABLE, 1);
+            given(gameResultRepository.findMyHistory(USER_A, GROUP_ID, HISTORY_PAGEABLE))
+                    .willReturn(page);
+            given(gameResultRepository.countByRoomIds(any()))
+                    .willReturn(List.<Object[]>of(new Object[]{ROOM_ID, 3L}));
+
+            // When
+            Page<GameHistoryInfo> historyPage = gameResultService.getMyGameHistory(GROUP_ID, USER_A, HISTORY_PAGEABLE);
+
+            // Then
+            assertThat(historyPage.getContent()).hasSize(1);
+            GameHistoryInfo info = historyPage.getContent().get(0);
+            assertThat(info.roomId()).isEqualTo(ROOM_ID);
+            assertThat(info.roomStatus()).isEqualTo(RoomStatus.FINISHED);
+            assertThat(info.finalRank()).isEqualTo(2);
+            assertThat(info.participantCount()).isEqualTo(3);
+            assertThat(info.seedMoney()).isEqualByComparingTo("10000000");
+            assertThat(info.finalAsset()).isEqualByComparingTo("11000000");
+            assertThat(info.profitRate()).isEqualByComparingTo("10.00");
+            assertThat(info.totalTrades()).isEqualTo(15);
+            assertThat(info.startDate()).isEqualTo(START_DATE);
+            assertThat(info.endDate()).isEqualTo(END_DATE);
+        }
+
+        @Test
+        @DisplayName("방 IN_PROGRESS — finalRank null 매핑 (DB의 0을 노출하지 않음)")
+        void getHistory_roomInProgress_finalRankNull() {
+            // Given — 나만 FINISHED, 방은 아직 IN_PROGRESS
+            GameRoom room = mockRoom(ROOM_ID, RoomStatus.IN_PROGRESS);
+            GameParticipant me = mockParticipant(USER_A);
+            GameResult result = mockResult(room, me, 0, SEED,
+                    new BigDecimal("9500000"), new BigDecimal("-5.00"), 8);
+
+            Page<GameResult> page = new PageImpl<>(List.of(result), HISTORY_PAGEABLE, 1);
+            given(gameResultRepository.findMyHistory(USER_A, GROUP_ID, HISTORY_PAGEABLE))
+                    .willReturn(page);
+            given(gameResultRepository.countByRoomIds(any()))
+                    .willReturn(List.<Object[]>of(new Object[]{ROOM_ID, 1L}));
+
+            // When
+            Page<GameHistoryInfo> historyPage = gameResultService.getMyGameHistory(GROUP_ID, USER_A, HISTORY_PAGEABLE);
+
+            // Then
+            GameHistoryInfo info = historyPage.getContent().get(0);
+            assertThat(info.roomStatus()).isEqualTo(RoomStatus.IN_PROGRESS);
+            assertThat(info.finalRank()).isNull();
+            assertThat(info.participantCount()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("이력 없는 사용자 — 빈 페이지 반환")
+        void getHistory_empty() {
+            // Given
+            Page<GameResult> emptyPage = new PageImpl<>(List.of(), HISTORY_PAGEABLE, 0);
+            given(gameResultRepository.findMyHistory(USER_A, GROUP_ID, HISTORY_PAGEABLE))
+                    .willReturn(emptyPage);
+
+            // When
+            Page<GameHistoryInfo> historyPage = gameResultService.getMyGameHistory(GROUP_ID, USER_A, HISTORY_PAGEABLE);
+
+            // Then
+            assertThat(historyPage.getContent()).isEmpty();
+            assertThat(historyPage.getTotalElements()).isZero();
+        }
+
+        @Test
+        @DisplayName("페이징 메타 정확성 — totalElements, totalPages, hasNext")
+        void getHistory_pagingMeta() {
+            // Given — 총 25건, page=0, size=10 → totalPages=3, hasNext=true
+            GameRoom room = mockRoom(ROOM_ID, RoomStatus.FINISHED);
+            GameParticipant me = mockParticipant(USER_A);
+            GameResult result = mockResult(room, me, 1, SEED,
+                    new BigDecimal("12000000"), new BigDecimal("20.00"), 30);
+
+            Page<GameResult> page = new PageImpl<>(List.of(result), HISTORY_PAGEABLE, 25);
+            given(gameResultRepository.findMyHistory(USER_A, GROUP_ID, HISTORY_PAGEABLE))
+                    .willReturn(page);
+            given(gameResultRepository.countByRoomIds(any()))
+                    .willReturn(List.<Object[]>of(new Object[]{ROOM_ID, 5L}));
+
+            // When
+            Page<GameHistoryInfo> historyPage = gameResultService.getMyGameHistory(GROUP_ID, USER_A, HISTORY_PAGEABLE);
+
+            // Then
+            assertThat(historyPage.getTotalElements()).isEqualTo(25);
+            assertThat(historyPage.getTotalPages()).isEqualTo(3);
+            assertThat(historyPage.hasNext()).isTrue();
+        }
+
+        @Test
+        @DisplayName("다른 그룹 격리 — groupId가 다르면 빈 결과")
+        void getHistory_otherGroup_empty() {
+            // Given — 다른 그룹 ID로 조회하면 Repository가 빈 결과 반환
+            Long otherGroupId = 999L;
+            Page<GameResult> emptyPage = new PageImpl<>(List.of(), HISTORY_PAGEABLE, 0);
+            given(gameResultRepository.findMyHistory(USER_A, otherGroupId, HISTORY_PAGEABLE))
+                    .willReturn(emptyPage);
+
+            // When
+            Page<GameHistoryInfo> historyPage = gameResultService.getMyGameHistory(otherGroupId, USER_A, HISTORY_PAGEABLE);
+
+            // Then
+            assertThat(historyPage.getContent()).isEmpty();
+            assertThat(historyPage.getTotalElements()).isZero();
+        }
+    }
+
     // === 헬퍼 메서드 ===
 
     private GameRoom createStartedRoom() {
@@ -652,6 +788,41 @@ class GameResultServiceTest {
         given(snapshot.getStockValue()).willReturn(stockValue);
         given(snapshot.getProfitRate()).willReturn(profitRate);
         return snapshot;
+    }
+
+    private GameRoom mockRoom(UUID roomId, RoomStatus status) {
+        GameRoom room = mock(GameRoom.class, withSettings().lenient());
+        given(room.getRoomId()).willReturn(roomId);
+        given(room.getStatus()).willReturn(status);
+        given(room.getSeed()).willReturn(SEED);
+        given(room.getPeriodMonth()).willReturn(6);
+        given(room.getMoveDays()).willReturn(7);
+        given(room.getStartDate()).willReturn(START_DATE);
+        given(room.getEndDate()).willReturn(END_DATE);
+        given(room.getGroupId()).willReturn(GROUP_ID);
+        return room;
+    }
+
+    private GameParticipant mockParticipant(UUID userId) {
+        GameParticipant p = mock(GameParticipant.class, withSettings().lenient());
+        given(p.getUserId()).willReturn(userId);
+        given(p.getStatus()).willReturn(ParticipantStatus.FINISHED);
+        return p;
+    }
+
+    private GameResult mockResult(GameRoom room, GameParticipant participant,
+                                   int finalRank, BigDecimal seedMoney,
+                                   BigDecimal finalAsset, BigDecimal profitRate, int totalTrades) {
+        GameResult r = mock(GameResult.class, withSettings().lenient());
+        given(r.getGameRoom()).willReturn(room);
+        given(r.getParticipant()).willReturn(participant);
+        given(r.getFinalRank()).willReturn(finalRank);
+        given(r.getSeedMoney()).willReturn(seedMoney);
+        given(r.getFinalAsset()).willReturn(finalAsset);
+        given(r.getProfitRate()).willReturn(profitRate);
+        given(r.getTotalTrades()).willReturn(totalTrades);
+        given(r.getCreatedAt()).willReturn(OffsetDateTime.now());
+        return r;
     }
 
     private GameOrder mockOrder(UUID orderId, int turnNumber, LocalDate turnDate,

@@ -26,7 +26,6 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -92,21 +91,13 @@ public class GameRoomService {
         return gameRoom;
     }
 
-    // 게임방 목록 조회
+    // 게임방 목록 조회 — 활성방(WAITING/IN_PROGRESS)만 반환.
+    // FINISHED 이력은 GET /api/rooms/history 로 분리됨.
     public List<RoomListInfo> getRooms(Long groupId, UUID userId) {
-        //그룹 활성화된 방
         List<RoomStatus> activeStatuses = List.of(RoomStatus.WAITING, RoomStatus.IN_PROGRESS);
         List<GameRoom> activeRooms = gameRoomRepository.findByGroupIdAndStatusIn(groupId, activeStatuses);
 
-        // 내 과거 기록
-        List<GameRoom> myFinishedRooms = gameRoomRepository.findFinishedRoomsByGroupIdAndUserId((groupId), userId);
-
-        List<GameRoom> rooms = new ArrayList<>();
-        rooms.addAll(activeRooms);
-        rooms.addAll(myFinishedRooms);
-
-        //참가자 수 count
-        return rooms.stream().map(room -> {
+        return activeRooms.stream().map(room -> {
                     int playerCount = gameParticipantRepository.countByGameRoomAndStatus(room, ParticipantStatus.ACTIVE);
                     return new RoomListInfo(room, playerCount);
                 })
