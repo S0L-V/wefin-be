@@ -95,7 +95,13 @@ public class GameAnalysisReportService {
 
                 AnalysisParts parts = analysisReportClient.generateReport(rechecked.context());
 
-                return writeTx.execute(status -> saveReport(rechecked.participantId(), parts));
+                try {
+                    return writeTx.execute(status -> saveReport(rechecked.participantId(), parts));
+                } catch (DataIntegrityViolationException ex) {
+                    log.info("[분석리포트] 동시 INSERT 감지, 별도 TX로 기존 캐시 재조회: participantId={}",
+                            rechecked.participantId());
+                    return readOnlyTx.execute(status -> reloadByParticipantId(rechecked.participantId()));
+                }
             } finally {
                 participantLocks.remove(result.participantId(), lock);
             }
@@ -167,20 +173,13 @@ public class GameAnalysisReportService {
                             "Participant disappeared between transactions: " + participantId);
                 });
 
-        try {
-            GameAnalysisReport saved = analysisReportRepository.save(
-                    GameAnalysisReport.create(
-                            participant,
-                            parts.performance(),
-                            parts.pattern(),
-                            parts.suggestion()));
-            return toInfo(saved);
-        } catch (DataIntegrityViolationException e) {
-            log.info("[분석리포트] 동시 INSERT 감지, 기존 캐시 사용: participantId={}", participantId);
-            return analysisReportRepository.findByParticipant(participant)
-                    .map(this::toInfo)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_GENERATION_FAILED));
-        }
+        GameAnalysisReport saved = analysisReportRepository.save(
+                GameAnalysisReport.create(
+                        participant,
+                        parts.performance(),
+                        parts.pattern(),
+                        parts.suggestion()));
+        return toInfo(saved);
     }
 
     private AnalysisReportInfo toInfo(GameAnalysisReport report) {
@@ -189,6 +188,14 @@ public class GameAnalysisReportService {
                 report.getPattern(),
                 report.getSuggestion(),
                 report.getCreatedAt());
+    }
+
+    private AnalysisReportInfo reloadByParticipantId(UUID participantId) {
+        GameParticipant participant = gameParticipantRepository.findById(participantId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_GENERATION_FAILED));
+        return analysisReportRepository.findByParticipant(participant)
+                .map(this::toInfo)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_GENERATION_FAILED));
     }
 
     private record ContextResult(AnalysisReportInfo cached,

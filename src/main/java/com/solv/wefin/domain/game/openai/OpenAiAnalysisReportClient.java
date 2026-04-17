@@ -69,6 +69,10 @@ public class OpenAiAnalysisReportClient {
         }
 
         String content = response.choices().get(0).message().content();
+        if (content == null || content.isBlank()) {
+            log.error("[분석리포트] OpenAI content 비어있음");
+            throw new BusinessException(ErrorCode.ANALYSIS_GENERATION_FAILED);
+        }
         log.info("[분석리포트] OpenAI 호출 완료");
         return parseReportJson(content);
     }
