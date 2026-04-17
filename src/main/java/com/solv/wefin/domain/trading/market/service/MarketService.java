@@ -54,7 +54,6 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
     private static final Set<String> VALID_PERIOD_CODES = Set.of("D", "W", "M", "Y");
     private static final Set<String> MINUTE_PERIOD_CODES = Set.of("1", "5", "15", "30", "60");
     private static final int PERIOD_CANDLE_MAX_PAGES = 4;
-    private static final int PERIOD_CANDLE_PAGE_DAYS = 100;
     private static final int MINUTE_CANDLE_MAX_PAGES = 5;
 
     public PriceResponse getPrice(String stockCode) {
@@ -248,12 +247,22 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
         return getPeriodCandlesWithPaging(stockCode, start, end, periodCode);
     }
 
+    private int getPageDays(String periodCode) {
+        return switch (periodCode) {
+            case "W" -> 365;   // 주봉: 1년씩 페이징
+            case "M" -> 1095;  // 월봉: 3년씩 페이징
+            case "Y" -> 3650;  // 년봉: 10년씩 페이징
+            default -> 100;    // 일봉: 100일씩 페이징
+        };
+    }
+
     private List<CandleResponse> getPeriodCandlesWithPaging(String stockCode, LocalDate start, LocalDate end, String periodCode) {
         List<CandleResponse> allCandles = new ArrayList<>();
         LocalDate pageEnd = end;
+        int pageDays = getPageDays(periodCode);
 
         for (int page = 0; page < PERIOD_CANDLE_MAX_PAGES && !pageEnd.isBefore(start); page++) {
-            LocalDate pageStart = pageEnd.minusDays(PERIOD_CANDLE_PAGE_DAYS);
+            LocalDate pageStart = pageEnd.minusDays(pageDays);
             if (pageStart.isBefore(start)) {
                 pageStart = start;
             }
