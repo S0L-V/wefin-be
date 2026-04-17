@@ -6,7 +6,10 @@ import com.solv.wefin.domain.trading.market.client.dto.HantuCandleApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuMinuteCandleApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuOrderbookApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuPriceApiResponse;
+import com.solv.wefin.domain.trading.market.client.dto.HantuRankingApiResponse;
 import com.solv.wefin.domain.trading.market.client.dto.HantuRecentTradeApiResponse;
+import com.solv.wefin.domain.trading.market.client.dto.RankingType;
+import com.solv.wefin.domain.trading.market.client.dto.StockRankingItem;
 import com.solv.wefin.domain.trading.market.dto.CandleResponse;
 import com.solv.wefin.domain.trading.market.dto.OrderbookResponse;
 import com.solv.wefin.domain.trading.market.dto.PriceResponse;
@@ -42,6 +45,11 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
     private final ConcurrentHashMap<String, CompletableFuture<PriceResponse>> ongoingRequests = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, PriceResponse> priceCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Long> priceCacheTimestamp = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, List<StockRankingItem>> rankingCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Long> rankingCacheTimestamp = new ConcurrentHashMap<>();
+
+    private static final long RANKING_CACHE_TTL_MS = 10000;
+    private static final long STALE_RANKING_TTL_MS = 3000; // 외부 API 실패 시 stale 캐시 유지 시간
     private static final long CACHE_TTL_MS = 5000; // 5초
     private static final Set<String> VALID_PERIOD_CODES = Set.of("D", "W", "M", "Y");
     private static final Set<String> MINUTE_PERIOD_CODES = Set.of("1", "5", "15", "30", "60");
@@ -121,6 +129,76 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
             priceCacheTimestamp.remove(stockCode);
         }
 
+        return null;
+    }
+
+    public List<StockRankingItem> getStockRanking(RankingType type) {
+
+        String cacheKey = type.name();
+        List<StockRankingItem> cached = getCachedRanking(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+
+        try {
+            HantuRankingApiResponse response = switch (type) {
+                case VOLUME -> hantuMarketClient.fetchVolumeRanking();
+                case AMOUNT -> hantuMarketClient.fetchTradingAmountRanking();
+                case RISING -> hantuMarketClient.fetchChangeRateRanking(true);
+                case FALLING -> hantuMarketClient.fetchChangeRateRanking(false);
+            };
+
+            List<StockRankingItem> items = (response.output() != null)
+                ? response.output().stream().map(StockRankingItem::from).toList()
+                : List.of();
+
+            // FALLING: 한투 API 가 급락 데이터를 정렬 없이 반환 — 서버에서 재정렬 후 순위 재부여
+            // 동률 시 tie-break: 거래량 내림차순(큰 거래 우선) → 종목코드 오름차순(deterministic)
+            if (!items.isEmpty() && type == RankingType.FALLING) {
+                Comparator<StockRankingItem> fallingOrder = Comparator
+                    .comparing(StockRankingItem::changeRate)
+                    .thenComparing(StockRankingItem::volume, Comparator.reverseOrder())
+                    .thenComparing(StockRankingItem::stockCode);
+
+                var sorted = new ArrayList<>(items);
+                sorted.sort(fallingOrder);
+                items = java.util.stream.IntStream.range(0, sorted.size())
+                    .mapToObj(i -> new StockRankingItem(
+                        i + 1, sorted.get(i).stockCode(), sorted.get(i).stockName(),
+                        sorted.get(i).currentPrice(), sorted.get(i).changeRate(),
+                        sorted.get(i).changeAmount(), sorted.get(i).changeSign(),
+                        sorted.get(i).volume(), sorted.get(i).tradingAmount()))
+                    .toList();
+            }
+
+            rankingCache.put(cacheKey, items);
+            rankingCacheTimestamp.put(cacheKey, System.currentTimeMillis());
+
+            return items;
+        } catch (Exception e) {
+            // 실패 시 stale 캐시 있으면 반환 — 네거티브 캐시 효과로 rate limit 폭주 방지
+            // TTL 을 짧게 조정해 장애 복구 시 빠르게 재시도
+            List<StockRankingItem> stale = rankingCache.get(cacheKey);
+            if (stale != null) {
+                log.warn("랭킹 조회 실패 — stale 캐시 반환: type={}", type, e);
+                rankingCacheTimestamp.put(cacheKey,
+                    System.currentTimeMillis() - RANKING_CACHE_TTL_MS + STALE_RANKING_TTL_MS);
+                return stale;
+            }
+            if (e instanceof BusinessException) throw (BusinessException) e;
+            log.error("랭킹 조회 실패: type={}", type, e);
+            throw new BusinessException(ErrorCode.MARKET_API_FAILED);
+        }
+    }
+
+    private List<StockRankingItem> getCachedRanking(String type) {
+        Long cachedTime = rankingCacheTimestamp.get(type);
+        if (cachedTime != null && System.currentTimeMillis() - cachedTime < RANKING_CACHE_TTL_MS) {
+            return rankingCache.get(type);
+        }
+        // TTL 만료 시 캐시는 유지 (stale fallback 용).
+        // 성공 호출이 덮어쓰거나, 실패 시 catch 블록에서 stale 로 반환된다.
+        // 랭킹 타입이 4개뿐이라 메모리 누적 부담 없음.
         return null;
     }
 

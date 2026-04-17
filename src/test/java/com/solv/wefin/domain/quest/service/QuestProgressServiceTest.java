@@ -15,6 +15,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,6 +27,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class QuestProgressServiceTest {
+
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private UserQuestRepository userQuestRepository;
     private QuestProgressService questProgressService;
@@ -138,7 +141,7 @@ class QuestProgressServiceTest {
         when(template.getTargetValue()).thenReturn(targetValue);
         when(template.getReward()).thenReturn(100_000);
 
-        DailyQuest dailyQuest = DailyQuest.create(template, LocalDate.now(), targetValue, 100_000);
+        DailyQuest dailyQuest = DailyQuest.create(template, LocalDate.now(KST), targetValue, 100_000);
         UserQuest userQuest = UserQuest.assign(user, dailyQuest);
         ReflectionTestUtils.setField(userQuest, "progress", progress);
 

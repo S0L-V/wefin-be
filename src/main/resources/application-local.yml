@@ -3,6 +3,21 @@ spring:
     activate:
       on-profile: local
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:wefin_dev}
     username: ${DB_USERNAME:postgres}
@@ -79,6 +94,9 @@ batch:
     clustering-size: ${NEWS_CLUSTERING_BATCH_SIZE:100}
     summary-size: ${NEWS_SUMMARY_BATCH_SIZE:20}
     rejudge-max-limit: ${NEWS_REJUDGE_MAX_LIMIT:100}
+wefin-news:
+  api:
+    base-url: https://dev-api.wefin.ai.kr
 
 websocket:
   allowed-origins:

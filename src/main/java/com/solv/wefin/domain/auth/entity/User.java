@@ -50,4 +50,8 @@ public class User extends BaseEntity {
     public void setHomeGroup(Group homeGroup) {
         this.homeGroup = homeGroup;
     }
+
+    public void changePassword(String password) {
+        this.password = password;
+    }
 }

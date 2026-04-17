@@ -56,6 +56,14 @@ public enum ErrorCode {
     AUTH_EMAIL_DUPLICATED(409, "이미 사용 중인 이메일입니다."),
     AUTH_NICKNAME_DUPLICATED(409, "이미 사용 중인 닉네임입니다."),
     AUTH_VALIDATION_FAILED(400, "잘못된 입력입니다."),
+    AUTH_EMAIL_NOT_VERIFIED(400, "이메일 인증이 완료되지 않았습니다."),
+    AUTH_VERIFICATION_CODE_INVALID(400, "인증코드가 올바르지 않습니다."),
+    AUTH_VERIFICATION_CODE_EXPIRED(400, "인증코드가 만료되었습니다."),
+    AUTH_EMAIL_SEND_FAILED(500, "인증 메일 발송에 실패했습니다."),
+    AUTH_VERIFICATION_TOO_FAST_REQUEST(400, "인증코드 재발송 요청이 너무 빠릅니다."),
+    AUTH_VERIFICATION_TOO_MANY_REQUESTS(400, "인증코드 재발송 횟수를 초과했습니다."),
+    AUTH_VERIFICATION_TOO_MANY_ATTEMPTS(400, "인증 시도 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."),
+    AUTH_VERIFICATION_CONCURRENT_REQUEST(409, "동시에 여러 인증 요청이 처리되어 다시 시도해주세요."),
 
     // Auth - LOGIN
     AUTH_LOGIN_FAILED(401, "이메일 또는 비밀번호가 올바르지 않습니다."),
@@ -67,6 +75,7 @@ public enum ErrorCode {
     PLAN_NOT_FOUND(404, "구독 상품을 찾을 수 없습니다."),
     PLAN_INACTIVE(400, "비활성화된 구독 상품입니다."),
     ACTIVE_SUBSCRIPTION_ALREADY_EXISTS(409, "이미 활성 구독이 존재합니다."),
+    ACTIVE_SUBSCRIPTION_NOT_FOUND(404, "활성 구독 정보를 찾을 수 없습니다."),
     INVALID_PROVIDER(400, "지원하지 않는 결제사입니다."),
     PAYMENT_NOT_FOUND(404, "결제 정보를 찾을 수 없습니다."),
     PAYMENT_OWNERSHIP_MISMATCH(403, "본인의 결제만 처리할 수 있습니다."),
@@ -111,6 +120,8 @@ public enum ErrorCode {
     MARKET_INVALID_PERIOD_CODE(400, "유효하지 않은 기간 옵션입니다."),
     MARKET_INVALID_DATE(400, "조회 시작일자는 종료일자 이전이어야 합니다."),
     MARKET_SUBSCRIPTION_LIMIT_EXCEEDED(400, "실시간 구독 종목은 최대 20개까지 가능합니다."),
+    MARKET_INVALID_REQUEST(400, "유효하지 않은 랭킹 유형입니다."),
+    MARKET_INVALID_INTERVAL(400, "유효하지 않은 분봉 간격입니다. (1m, 5m, 15m 만 지원)"),
 
     // Interest
     INTEREST_ALREADY_EXISTS(400, "이미 등록된 관심사입니다."),
@@ -166,6 +177,14 @@ public enum ErrorCode {
     // GameTurn
     GAME_NOT_STARTED(400, "게임이 시작되지 않았습니다."),
     GAME_ALREADY_FINISHED(400, "이미 종료된 게임입니다."),
+    GAME_NOT_FINISHED(400, "게임이 아직 종료되지 않았습니다."),
+
+    // GameParticipant - 개별 종료
+    PARTICIPANT_ALREADY_FINISHED(400, "이미 게임을 종료한 참가자입니다."),
+    PARTICIPANT_NOT_FINISHED(400, "아직 게임을 종료하지 않은 참가자입니다."),
+
+    // GameAnalysisReport
+    ANALYSIS_GENERATION_FAILED(503, "AI 분석 리포트 생성에 실패했습니다."),
 
     // GameStock
     GAME_STOCK_NOT_FOUND(404, "해당 종목을 찾을 수 없습니다."),
@@ -176,7 +195,21 @@ public enum ErrorCode {
     VOTE_NOT_IN_PROGRESS(400, "진행 중인 투표가 없습니다."),
     VOTE_ALREADY_IN_PROGRESS(409, "이미 투표가 진행 중입니다."),
     // MarketTrend
-    MARKET_TREND_ALREADY_RUNNING(409, "금융 동향 생성이 이미 실행 중입니다.");
+    MARKET_TREND_ALREADY_RUNNING(409, "금융 동향 생성이 이미 실행 중입니다."),
+
+    // DART
+    DART_CORP_CODE_NOT_FOUND(404, "DART 고유번호를 찾을 수 없습니다."),
+    DART_CORP_CODE_FETCH_FAILED(503, "DART 고유번호 조회에 실패했습니다."),
+    DART_COMPANY_NOT_FOUND(404, "DART 기업 정보가 존재하지 않습니다."),
+    DART_COMPANY_FETCH_FAILED(503, "DART 기업 정보 조회에 실패했습니다."),
+    DART_FINANCIAL_NOT_FOUND(404, "DART 재무제표가 존재하지 않습니다."),
+    DART_FINANCIAL_FETCH_FAILED(503, "DART 재무제표 조회에 실패했습니다."),
+    DART_DIVIDEND_NOT_FOUND(404, "DART 배당 정보가 존재하지 않습니다."),
+    DART_DIVIDEND_FETCH_FAILED(503, "DART 배당 정보 조회에 실패했습니다."),
+    DART_DISCLOSURE_FETCH_FAILED(503, "DART 공시 조회에 실패했습니다."),
+
+    // Stock News
+    STOCK_NEWS_FETCH_FAILED(503, "종목 뉴스 조회에 실패했습니다.");
 
     private final int status;
     private final String message;

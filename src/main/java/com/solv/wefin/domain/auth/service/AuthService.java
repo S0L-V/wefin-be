@@ -6,6 +6,7 @@ import com.solv.wefin.domain.auth.dto.SignupInfo;
 import com.solv.wefin.domain.auth.entity.RefreshToken;
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.entity.UserStatus;
+import com.solv.wefin.domain.auth.entity.VerificationPurpose;
 import com.solv.wefin.domain.auth.repository.RefreshTokenRepository;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.group.entity.Group;
@@ -44,6 +45,7 @@ public class AuthService {
     private final GroupService groupService;
     private final JwtProvider jwtProvider;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final EmailVerificationService emailVerificationService;
     private final QuestProgressService questProgressService;
     private final VirtualAccountService virtualAccountService;
     private final UserQuestService userQuestService;
@@ -69,6 +71,9 @@ public class AuthService {
             throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
         }
 
+        emailVerificationService.validateVerifiedEmail(email, VerificationPurpose.SIGNUP);
+
+
         if (userRepository.existsByEmail(email)) {
             throw new BusinessException(ErrorCode.AUTH_EMAIL_DUPLICATED);
         }
@@ -89,6 +94,7 @@ public class AuthService {
             savedUser.setHomeGroup(homeGroup);
 
             virtualAccountService.createAccount(savedUser.getUserId());
+            emailVerificationService.consumeVerifiedEmail(savedUser.getEmail(), VerificationPurpose.SIGNUP);
 
             return new SignupInfo(
                     savedUser.getUserId(),
@@ -99,6 +105,31 @@ public class AuthService {
         } catch (DataIntegrityViolationException e) {
             throw mapConstraintViolation(e);
         }
+    }
+
+    @Transactional
+    public void resetPassword(String email, String newPassword) {
+        if (email == null || newPassword == null) {
+            throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
+        }
+
+        email = email.trim().toLowerCase(Locale.ROOT);
+
+        if (email.isBlank() || newPassword.isBlank()) {
+            throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
+        }
+
+        if (!newPassword.equals(newPassword.trim())) {
+            throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
+        }
+
+        emailVerificationService.validateVerifiedEmail(email, VerificationPurpose.PASSWORD_RESET);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        user.changePassword(passwordEncoder.encode(newPassword));
+        emailVerificationService.consumeVerifiedEmail(user.getEmail(), VerificationPurpose.PASSWORD_RESET);
     }
 
     @Transactional

@@ -4,6 +4,9 @@ import com.solv.wefin.domain.game.holding.entity.GameHolding;
 import com.solv.wefin.domain.game.holding.repository.GameHoldingRepository;
 import com.solv.wefin.domain.game.news.entity.BriefingCache;
 import com.solv.wefin.domain.game.news.repository.BriefingCacheRepository;
+import com.solv.wefin.domain.game.order.repository.GameOrderRepository;
+import com.solv.wefin.domain.game.result.repository.GameResultRepository;
+import com.solv.wefin.domain.game.result.service.GameEndService;
 import com.solv.wefin.domain.game.participant.entity.GameParticipant;
 import com.solv.wefin.domain.game.participant.entity.ParticipantStatus;
 import com.solv.wefin.domain.game.participant.repository.GameParticipantRepository;
@@ -61,6 +64,12 @@ class TurnAdvanceServiceTest {
     private StockDailyRepository stockDailyRepository;
     @Mock
     private GamePortfolioSnapshotRepository snapshotRepository;
+    @Mock
+    private GameOrderRepository gameOrderRepository;
+    @Mock
+    private GameResultRepository gameResultRepository;
+    @Mock
+    private GameEndService gameEndService;
     @Mock
     private BriefingCacheRepository briefingCacheRepository;
     @Mock
@@ -217,6 +226,11 @@ class TurnAdvanceServiceTest {
                     .willReturn(List.of());
             given(stockDailyRepository.findLatestTradeDateOnOrBefore(START_DATE.plusDays(7)))
                     .willReturn(Optional.of(nextTradeDate));
+            given(snapshotRepository.save(any(GamePortfolioSnapshot.class)))
+                    .willAnswer(invocation -> invocation.getArgument(0));
+            given(gameOrderRepository.countByParticipant(participant)).willReturn(0);
+            given(gameResultRepository.save(any()))
+                    .willAnswer(invocation -> invocation.getArgument(0));
 
             // When
             GameTurn result = turnAdvanceService.advanceTurn(TEST_ROOM_ID, TEST_USER_ID);
@@ -227,6 +241,7 @@ class TurnAdvanceServiceTest {
             assertThat(currentTurn.getStatus()).isEqualTo(TurnStatus.COMPLETED);
             verify(gameTurnRepository, never()).save(any(GameTurn.class));
             verify(eventPublisher, never()).publishEvent(any(TurnChangeEvent.class));
+            verify(gameEndService).finalizeRanks(room);
         }
     }
 

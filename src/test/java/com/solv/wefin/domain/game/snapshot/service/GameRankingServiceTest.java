@@ -81,7 +81,7 @@ class GameRankingServiceTest {
                     .willReturn(Optional.of(participantA));
             given(gameTurnRepository.findFirstByGameRoomAndStatusOrderByTurnNumberDesc(room, TurnStatus.COMPLETED))
                     .willReturn(Optional.empty());
-            given(gameParticipantRepository.findByGameRoomAndStatus(room, ParticipantStatus.ACTIVE))
+            given(gameParticipantRepository.findByGameRoomAndStatusIn(room, List.of(ParticipantStatus.ACTIVE, ParticipantStatus.FINISHED)))
                     .willReturn(List.of(participantA, participantB));
 
             User userA = mockUser(USER_A, "재훈");
