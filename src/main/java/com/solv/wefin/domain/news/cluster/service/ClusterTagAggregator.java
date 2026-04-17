@@ -5,6 +5,7 @@ import com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
 import com.solv.wefin.domain.news.article.repository.NewsArticleTagRepository;
 import com.solv.wefin.domain.news.cluster.dto.ArticleSourceInfo;
+import com.solv.wefin.domain.news.cluster.dto.SectorInfo;
 import com.solv.wefin.domain.news.cluster.dto.SourceInfo;
 import com.solv.wefin.domain.news.cluster.dto.StockInfo;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 /**
@@ -79,18 +81,64 @@ public class ClusterTagAggregator {
 
     /**
      * 단일 클러스터용 — 기사 목록의 관련 STOCK 태그를 집계한다
+     *
+     * 결정적 선택 정책: {@link #selectCanonicalName} 참고
      */
     public List<StockInfo> aggregateStocksForCluster(List<Long> articleIds) {
-        if (articleIds.isEmpty()) {
+        if (articleIds == null || articleIds.isEmpty()) {
             return List.of();
         }
-        Map<String, StockInfo> seen = new LinkedHashMap<>();
         List<NewsArticleTag> stockTags = articleTagRepository.findByNewsArticleIdInAndTagType(
                 articleIds, TagType.STOCK);
-        for (NewsArticleTag t : stockTags) {
-            seen.putIfAbsent(t.getTagCode(), new StockInfo(t.getTagCode(), t.getTagName()));
+        return selectCanonicalName(stockTags, StockInfo::new);
+    }
+
+    /**
+     * 단일 클러스터용 — 기사 목록의 관련 SECTOR 태그를 집계한다
+     */
+    public List<SectorInfo> aggregateSectorsForCluster(List<Long> articleIds) {
+        if (articleIds == null || articleIds.isEmpty()) {
+            return List.of();
         }
-        return List.copyOf(seen.values());
+        List<NewsArticleTag> sectorTags = articleTagRepository.findByNewsArticleIdInAndTagType(
+                articleIds, TagType.SECTOR);
+        return selectCanonicalName(sectorTags, SectorInfo::new);
+    }
+
+    /**
+     * tagCode별 대표 tagName을 결정적으로 선택한다
+     *
+     * 동일 tagCode에 여러 tagName이 섞일 수 있다 (AI 태깅 변동, 동의어 등).
+     * DB 조회 순서에 의존하면 호출 시점마다 라벨이 흔들리므로, 아래 정책으로 고정한다.
+     * - tagCode별 대표 tagName: 해당 code의 tagName 중 출현 빈도(최빈값) 최대. 동점 시 사전순 최소
+     * - 출력 리스트 순서: tagCode 사전순
+     *
+     * @param tags    해당 태그 타입의 전체 태그 목록
+     * @param factory (code, name) → 결과 DTO 생성자
+     */
+    private static <T> List<T> selectCanonicalName(List<NewsArticleTag> tags,
+                                                    BiFunction<String, String, T> factory) {
+        if (tags.isEmpty()) {
+            return List.of();
+        }
+        Map<String, Map<String, Long>> countByCodeName = tags.stream()
+                .collect(Collectors.groupingBy(
+                        NewsArticleTag::getTagCode,
+                        Collectors.groupingBy(NewsArticleTag::getTagName, Collectors.counting())));
+
+        return countByCodeName.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(entry -> {
+                    String code = entry.getKey();
+                    String name = entry.getValue().entrySet().stream()
+                            .min(Comparator
+                                    .<Map.Entry<String, Long>, Long>comparing(Map.Entry::getValue).reversed()
+                                    .thenComparing(Map.Entry::getKey))
+                            .orElseThrow()
+                            .getKey();
+                    return factory.apply(code, name);
+                })
+                .toList();
     }
 
     /**
@@ -111,6 +159,8 @@ public class ClusterTagAggregator {
 
     /**
      * 클러스터별 관련 STOCK 태그(code + name)를 집계한다
+     *
+     * 결정적 선택 정책: {@link #selectCanonicalName} 참고
      */
     public Map<Long, List<StockInfo>> aggregateStocks(Map<Long, List<Long>> clusterArticleMap,
                                                       List<Long> allArticleIds) {
@@ -121,12 +171,11 @@ public class ClusterTagAggregator {
 
         Map<Long, List<StockInfo>> result = new HashMap<>();
         for (var entry : clusterArticleMap.entrySet()) {
-            Map<String, StockInfo> seen = new LinkedHashMap<>();
+            List<NewsArticleTag> clusterTags = new ArrayList<>();
             for (Long articleId : entry.getValue()) {
-                tagsByArticle.getOrDefault(articleId, List.of()).forEach(t ->
-                        seen.putIfAbsent(t.getTagCode(), new StockInfo(t.getTagCode(), t.getTagName())));
+                clusterTags.addAll(tagsByArticle.getOrDefault(articleId, List.of()));
             }
-            result.put(entry.getKey(), List.copyOf(seen.values()));
+            result.put(entry.getKey(), selectCanonicalName(clusterTags, StockInfo::new));
         }
         return result;
     }

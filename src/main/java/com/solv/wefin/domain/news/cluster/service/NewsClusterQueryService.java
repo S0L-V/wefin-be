@@ -18,6 +18,7 @@ import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.news.cluster.repository.UserNewsClusterFeedbackRepository;
 import com.solv.wefin.domain.news.cluster.repository.UserNewsClusterReadRepository;
 import com.solv.wefin.domain.news.cluster.dto.ArticleSourceInfo;
+import com.solv.wefin.domain.news.cluster.dto.SectorInfo;
 import com.solv.wefin.domain.news.cluster.dto.SourceInfo;
 import com.solv.wefin.domain.news.cluster.dto.StockInfo;
 import com.solv.wefin.global.error.BusinessException;
@@ -281,8 +282,9 @@ public class NewsClusterQueryService {
                 ? List.of()
                 : tagAggregator.aggregateDetailSources(articleIds, sectionSourceArticleIds);
 
-        // 관련 종목 / 마켓 태그 — 단건 전용 오버로드 사용 (Map 래핑 불필요)
+        // 관련 종목 / 관련 분야 / 마켓 태그 — 단건 전용 오버로드 사용 (Map 래핑 불필요)
         List<StockInfo> stocks = tagAggregator.aggregateStocksForCluster(articleIds);
+        List<SectorInfo> sectors = tagAggregator.aggregateSectorsForCluster(articleIds);
         List<String> marketTags = tagAggregator.aggregateMarketTagsForCluster(articleIds);
 
         // 읽음 여부
@@ -313,7 +315,7 @@ public class NewsClusterQueryService {
         return new ClusterDetailResult(
                 cluster.getId(), cluster.getTitle(), cluster.getSummary(),
                 cluster.getThumbnailUrl(), cluster.getPublishedAt(),
-                cluster.getArticleCount(), sources, stocks, marketTags, isRead,
+                cluster.getArticleCount(), sources, stocks, sectors, marketTags, isRead,
                 feedbackType, sectionDetails, suggestedQuestions, articleContent
         );
     }
@@ -412,6 +414,7 @@ public class NewsClusterQueryService {
             int sourceCount,
             List<ArticleSourceInfo> sources,
             List<StockInfo> relatedStocks,
+            List<SectorInfo> relatedSectors,
             List<String> marketTags,
             boolean isRead,
             String feedbackType,

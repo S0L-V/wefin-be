@@ -8,10 +8,10 @@ import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.news.cluster.service.ClusterMatchingService.MatchResult;
 import com.solv.wefin.domain.news.cluster.service.SuspiciousScoringService.ScoreResult;
 import com.solv.wefin.domain.news.cluster.service.SuspiciousScoringService.Verdict;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -29,7 +29,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ClusteringServiceTest {
 
-    @InjectMocks
     private ClusteringService clusteringService;
 
     @Mock
@@ -49,6 +48,14 @@ class ClusteringServiceTest {
 
     @Mock
     private ClusteringPersistenceService persistenceService;
+
+    @BeforeEach
+    void setUp() {
+        clusteringService = new ClusteringService(
+                newsArticleRepository, newsClusterRepository, articleVectorService,
+                clusterMatchingService, suspiciousScoringService, persistenceService,
+                new com.solv.wefin.domain.news.config.NewsBatchProperties(500, 500, 500, 500, 50, 500));
+    }
 
     private NewsArticle createArticle(Long id) {
         NewsArticle article = NewsArticle.builder()

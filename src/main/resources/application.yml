@@ -30,11 +30,11 @@ openai:
 
 embedding:
   collect:
-    cron: "0 */30 * * * *"
+    cron: ${EMBEDDING_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
 
 tagging:
   collect:
-    cron: "0 */30 * * * *"
+    cron: ${TAGGING_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
 kis:
   app-key: ${KIS_APP_KEY:}
   app-secret: ${KIS_APP_SECRET:}
@@ -62,15 +62,24 @@ clustering:
   merge:
     threshold: 0.85
   collect:
-    cron: "0 */30 * * * *"
+    cron: ${CLUSTERING_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
 
 summary:
   collect:
-    cron: "0 */30 * * * *"
+    cron: ${SUMMARY_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
 
 market:
   trend:
-    cron: "0 */30 * * * *"
+    cron: ${MARKET_TREND_CRON:${MARKET_BATCH_CRON:0 */30 * * * *}}
+
+batch:
+  news:
+    crawl-size: ${NEWS_CRAWL_BATCH_SIZE:500}
+    embedding-size: ${NEWS_EMBEDDING_BATCH_SIZE:500}
+    tagging-size: ${NEWS_TAGGING_BATCH_SIZE:500}
+    clustering-size: ${NEWS_CLUSTERING_BATCH_SIZE:500}
+    summary-size: ${NEWS_SUMMARY_BATCH_SIZE:50}
+    rejudge-max-limit: ${NEWS_REJUDGE_MAX_LIMIT:500}
 
 websocket:
   allowed-origins:

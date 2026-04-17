@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solv.wefin.domain.news.article.entity.NewsArticle;
 import com.solv.wefin.domain.news.article.entity.NewsArticle.RelevanceStatus;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
+import com.solv.wefin.domain.news.config.NewsBatchProperties;
 import com.solv.wefin.domain.news.tagging.client.OpenAiTaggingClient;
 import com.solv.wefin.domain.news.tagging.dto.TaggingResult;
 import com.solv.wefin.domain.news.tagging.service.RelevanceRejudgeService.RejudgeSummary;
@@ -39,11 +40,16 @@ class RelevanceRejudgeServiceTest {
     private RelevancePersistenceService persistenceService;
 
     private RelevanceRejudgeService rejudgeService;
+    private NewsBatchProperties batchProperties;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private static final int TEST_REJUDGE_MAX_LIMIT = 100;
 
     @BeforeEach
     void setUp() {
-        rejudgeService = new RelevanceRejudgeService(newsArticleRepository, openAiTaggingClient, persistenceService);
+        batchProperties = new NewsBatchProperties(500, 500, 500, 500, 50, TEST_REJUDGE_MAX_LIMIT);
+        rejudgeService = new RelevanceRejudgeService(newsArticleRepository, openAiTaggingClient, persistenceService,
+                batchProperties);
     }
 
     @Test
@@ -181,13 +187,13 @@ class RelevanceRejudgeServiceTest {
     }
 
     @Test
-    @DisplayName("rejudgePending — limit 0 이하 또는 500 초과면 BusinessException (400)")
+    @DisplayName("rejudgePending — limit가 0 이하이거나 rejudgeMaxLimit을 초과하면 BusinessException (400)")
     void rejudgePending_invalidLimit_throws() {
         assertThatThrownBy(() -> rejudgeService.rejudgePending(0))
                 .isInstanceOf(BusinessException.class);
         assertThatThrownBy(() -> rejudgeService.rejudgePending(-1))
                 .isInstanceOf(BusinessException.class);
-        assertThatThrownBy(() -> rejudgeService.rejudgePending(501))
+        assertThatThrownBy(() -> rejudgeService.rejudgePending(batchProperties.rejudgeMaxLimit() + 1))
                 .isInstanceOf(BusinessException.class);
     }
 

@@ -24,6 +24,7 @@ import com.solv.wefin.domain.news.cluster.repository.UserNewsClusterReadReposito
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterDetailResult;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterFeedResult;
 import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.web.news.dto.response.ClusterDetailResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -330,6 +331,94 @@ class NewsClusterQueryServiceTest {
         ClusterDetailResult result = queryService.getDetail(1L, null);
 
         assertThat(result.suggestedQuestions()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("상세 조회 — relatedSectors: tagCode별 최빈 tagName 선택, 동점 시 사전순, Response 매핑 포함")
+    void getDetail_relatedSectorsAreDeterministic() {
+        NewsCluster cluster = createCluster(1L, "제목", "요약", OffsetDateTime.now(), 3);
+
+        given(newsClusterRepository.findById(1L)).willReturn(Optional.of(cluster));
+        given(clusterArticleRepository.findByNewsClusterId(1L))
+                .willReturn(List.of(
+                        NewsClusterArticle.create(1L, 100L, 0, false),
+                        NewsClusterArticle.create(1L, 200L, 1, false),
+                        NewsClusterArticle.create(1L, 300L, 2, false)));
+        given(sectionRepository.findByNewsClusterIdOrderBySectionOrderAsc(1L)).willReturn(List.of());
+
+        // SEMI: "반도체/장비"×1, "반도체"×2 → 최빈 "반도체"
+        // AI: "인공지능"×1 → 유일 후보
+        // 출력 순서: tagCode 사전순 → AI, SEMI
+        given(articleTagRepository.findByNewsArticleIdInAndTagType(any(), eq(TagType.STOCK)))
+                .willReturn(List.of());
+        given(articleTagRepository.findByNewsArticleIdInAndTagType(any(), eq(TagType.TOPIC)))
+                .willReturn(List.of());
+        given(articleTagRepository.findByNewsArticleIdInAndTagType(any(), eq(TagType.SECTOR)))
+                .willReturn(List.of(
+                        createTag(100L, TagType.SECTOR, "SEMI", "반도체/장비"),
+                        createTag(200L, TagType.SECTOR, "SEMI", "반도체"),
+                        createTag(300L, TagType.SECTOR, "SEMI", "반도체"),
+                        createTag(200L, TagType.SECTOR, "AI", "인공지능")));
+
+        ClusterDetailResult result = queryService.getDetail(1L, null);
+
+        assertThat(result.relatedSectors())
+                .extracting(s -> s.code())
+                .containsExactly("AI", "SEMI");
+        assertThat(result.relatedSectors())
+                .extracting(s -> s.name())
+                .containsExactly("인공지능", "반도체");
+
+        ClusterDetailResponse response = ClusterDetailResponse.from(result);
+        assertThat(response.relatedSectors())
+                .extracting(r -> r.code())
+                .containsExactly("AI", "SEMI");
+        assertThat(response.relatedSectors())
+                .extracting(r -> r.name())
+                .containsExactly("인공지능", "반도체");
+    }
+
+    @Test
+    @DisplayName("상세 조회 — relatedSectors: SECTOR 태그 0건이면 빈 리스트")
+    void getDetail_relatedSectors_empty() {
+        NewsCluster cluster = createCluster(1L, "제목", "요약", OffsetDateTime.now(), 1);
+
+        given(newsClusterRepository.findById(1L)).willReturn(Optional.of(cluster));
+        given(clusterArticleRepository.findByNewsClusterId(1L)).willReturn(List.of());
+        given(sectionRepository.findByNewsClusterIdOrderBySectionOrderAsc(1L)).willReturn(List.of());
+
+        ClusterDetailResult result = queryService.getDetail(1L, null);
+
+        assertThat(result.relatedSectors()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("상세 조회 — relatedSectors: 최빈값 동점이면 사전순 최소 tagName 선택")
+    void getDetail_relatedSectors_tieBreakByLexicographic() {
+        NewsCluster cluster = createCluster(1L, "제목", "요약", OffsetDateTime.now(), 2);
+
+        given(newsClusterRepository.findById(1L)).willReturn(Optional.of(cluster));
+        given(clusterArticleRepository.findByNewsClusterId(1L))
+                .willReturn(List.of(
+                        NewsClusterArticle.create(1L, 100L, 0, false),
+                        NewsClusterArticle.create(1L, 200L, 1, false)));
+        given(sectionRepository.findByNewsClusterIdOrderBySectionOrderAsc(1L)).willReturn(List.of());
+
+        // BIO: "바이오"×1 vs "바이오/헬스케어"×1 → 동점, 사전순 최소 "바이오" 선택
+        given(articleTagRepository.findByNewsArticleIdInAndTagType(any(), eq(TagType.STOCK)))
+                .willReturn(List.of());
+        given(articleTagRepository.findByNewsArticleIdInAndTagType(any(), eq(TagType.TOPIC)))
+                .willReturn(List.of());
+        given(articleTagRepository.findByNewsArticleIdInAndTagType(any(), eq(TagType.SECTOR)))
+                .willReturn(List.of(
+                        createTag(100L, TagType.SECTOR, "BIO", "바이오/헬스케어"),
+                        createTag(200L, TagType.SECTOR, "BIO", "바이오")));
+
+        ClusterDetailResult result = queryService.getDetail(1L, null);
+
+        assertThat(result.relatedSectors()).hasSize(1);
+        assertThat(result.relatedSectors().get(0).code()).isEqualTo("BIO");
+        assertThat(result.relatedSectors().get(0).name()).isEqualTo("바이오");
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.solv.wefin.domain.news.ingestion.crawler.ArticleContentExtractor;
 import com.solv.wefin.domain.news.article.entity.NewsArticle;
 import com.solv.wefin.domain.news.article.entity.NewsArticle.CrawlStatus;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
+import com.solv.wefin.domain.news.config.NewsBatchProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
@@ -33,13 +34,13 @@ public class ArticleCrawlService {
     private static final String USER_AGENT = "Mozilla/5.0 (compatible; WefinBot/1.0)";
     private static final int ERROR_MESSAGE_MAX_LENGTH = 500;
     private static final int MAX_RETRY = 3;
-    private static final int CRAWL_BATCH_SIZE = 500;
     private static final Set<String> ALLOWED_SCHEMES = Set.of("http", "https");
 
     private final NewsArticleRepository newsArticleRepository;
     private final ArticleCrawlPersistenceService persistenceService;
     private final List<ArticleContentExtractor> extractors;
     private final RestTemplate newsRestTemplate;
+    private final NewsBatchProperties batchProperties;
 
     /**
      * PENDING/FAILED 상태의 기사를 조회하여 원문 HTML을 크롤링하고 본문/썸네일을 저장한다.
@@ -67,7 +68,7 @@ public class ArticleCrawlService {
                 .findByCrawlStatusInAndCrawlRetryCountLessThanOrderByCollectedAtDesc(
                         List.of(CrawlStatus.PENDING, CrawlStatus.FAILED),
                         MAX_RETRY,
-                        PageRequest.of(0, CRAWL_BATCH_SIZE));
+                        PageRequest.of(0, batchProperties.crawlSize()));
     }
 
     private boolean crawlSingleArticle(NewsArticle article) {

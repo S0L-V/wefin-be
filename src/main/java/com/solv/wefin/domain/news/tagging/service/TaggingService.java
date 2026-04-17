@@ -7,6 +7,7 @@ import com.solv.wefin.domain.news.article.entity.NewsArticle.TaggingStatus;
 import com.solv.wefin.domain.news.article.entity.NewsArticleTag;
 import com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType;
 import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
+import com.solv.wefin.domain.news.config.NewsBatchProperties;
 import com.solv.wefin.domain.news.tagging.client.OpenAiTaggingClient;
 import com.solv.wefin.domain.news.tagging.dto.TaggingResult;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +33,6 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class TaggingService {
 
-    private static final int BATCH_SIZE = 500;
     private static final int PROCESS_CHUNK_SIZE = 20;
     private static final int MAX_RETRY = 3;
     private static final int STALE_PROCESSING_MINUTES = 30;
@@ -41,6 +41,7 @@ public class TaggingService {
     private final OpenAiTaggingClient openAiTaggingClient;
     private final TaggingPersistenceService persistenceService;
     private final StockCodeValidator stockCodeValidator;
+    private final NewsBatchProperties batchProperties;
 
     /**
      * 크롤링 완료 + 태깅 미완료 기사를 조회하여 태그를 생성한다.
@@ -80,7 +81,7 @@ public class TaggingService {
                 TaggingStatus.PROCESSING,
                 MAX_RETRY,
                 staleBefore,
-                PageRequest.of(0, BATCH_SIZE));
+                PageRequest.of(0, batchProperties.taggingSize()));
     }
 
     private int[] processChunk(List<NewsArticle> articles, Map<String, String> stockMap) {
