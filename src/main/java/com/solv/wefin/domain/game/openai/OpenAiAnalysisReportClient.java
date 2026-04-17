@@ -85,12 +85,12 @@ public class OpenAiAnalysisReportClient {
             String suggestion = node.path("suggestion").asText("");
 
             if (performance.isBlank() || pattern.isBlank() || suggestion.isBlank()) {
-                log.error("[분석리포트] JSON 필수 필드 누락: {}", json);
+                log.error("[분석리포트] JSON 필수 필드 누락: {}", truncate(json));
                 throw new BusinessException(ErrorCode.ANALYSIS_GENERATION_FAILED);
             }
             return new AnalysisParts(performance, pattern, suggestion);
         } catch (JsonProcessingException e) {
-            log.error("[분석리포트] JSON 파싱 실패: {}", json);
+            log.error("[분석리포트] JSON 파싱 실패: {}", truncate(json));
             throw new BusinessException(ErrorCode.ANALYSIS_GENERATION_FAILED);
         }
     }
@@ -195,6 +195,11 @@ public class OpenAiAnalysisReportClient {
     ) {
         record Message(String role, String content) {}
         record ResponseFormat(String type) {}
+    }
+
+    private static String truncate(String text) {
+        if (text == null) return "null";
+        return text.length() <= 200 ? text : text.substring(0, 200) + "...(truncated)";
     }
 
     record ChatResponse(

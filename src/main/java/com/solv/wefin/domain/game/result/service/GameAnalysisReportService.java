@@ -130,7 +130,8 @@ public class GameAnalysisReportService {
         List<LocalDate> turnDates = turns.stream().map(GameTurn::getTurnDate).distinct().toList();
 
         Map<LocalDate, String> overviewByDate = briefingCacheRepository.findByTargetDateIn(turnDates).stream()
-                .collect(Collectors.toMap(BriefingCache::getTargetDate, BriefingCache::getMarketOverview));
+                .collect(Collectors.toMap(BriefingCache::getTargetDate, BriefingCache::getMarketOverview,
+                        (existing, replacement) -> existing));
 
         List<GameOrder> orders = gameOrderRepository.findByParticipantOrderByTurnNumber(participant);
         Map<LocalDate, List<TradeSummary>> tradesByDate = orders.stream()
