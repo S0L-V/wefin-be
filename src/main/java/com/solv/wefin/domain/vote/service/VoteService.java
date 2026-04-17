@@ -97,6 +97,8 @@ public class VoteService {
     public VoteDetailInfo getVoteDetail(UUID userId, Long voteId) {
         Vote vote = getVote(voteId);
 
+        validateActiveGroupMember(userId, vote.getGroup());
+
         List<VoteOption> options = voteOptionRepository.findAllByVote_VoteIdOrderByIdAsc(voteId);
         List<VoteAnswer> myAnswers = voteAnswerRepository.findAllByVote_VoteIdAndUser_UserId(voteId, userId);
 
@@ -123,6 +125,10 @@ public class VoteService {
     @Transactional
     public VoteResultInfo submitVote(UUID userId, Long voteId, SubmitVoteCommand command) {
         Vote vote = getVote(voteId);
+
+        validateActiveGroupMember(userId, vote.getGroup());
+
+        closeIfExpired(vote);
 
         if (isClosed(vote)) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
@@ -160,6 +166,8 @@ public class VoteService {
 
     public VoteResultInfo getVoteResult(UUID userId, Long voteId) {
         Vote vote = getVote(voteId);
+
+        validateActiveGroupMember(userId, vote.getGroup());
 
         List<VoteOption> options = voteOptionRepository.findAllByVote_VoteIdOrderByIdAsc(voteId);
         List<VoteAnswer> myAnswers = voteAnswerRepository.findAllByVote_VoteIdAndUser_UserId(voteId, userId);
@@ -250,8 +258,29 @@ public class VoteService {
         }
     }
 
+    private void validateActiveGroupMember(UUID userId, Group group) {
+        boolean isActiveMember = groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
+                userId,
+                group,
+                GroupMember.GroupMemberStatus.ACTIVE
+        );
+
+        if (!isActiveMember) {
+            throw new BusinessException(ErrorCode.GROUP_MEMBER_FORBIDDEN);
+        }
+    }
+
     private boolean isClosed(Vote vote) {
         return vote.getStatus() == VoteStatus.CLOSED
                 || (vote.getEndsAt() != null && OffsetDateTime.now().isAfter(vote.getEndsAt()));
     }
+
+    private void closeIfExpired(Vote vote) {
+        if (vote.getStatus() == VoteStatus.OPEN
+                && vote.getEndsAt() != null
+                && OffsetDateTime.now().isAfter(vote.getEndsAt())) {
+            vote.close();
+        }
+    }
+
 }
