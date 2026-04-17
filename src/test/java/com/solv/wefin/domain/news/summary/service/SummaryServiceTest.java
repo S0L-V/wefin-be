@@ -11,10 +11,10 @@ import com.solv.wefin.domain.news.summary.client.OpenAiClientException;
 import com.solv.wefin.domain.news.summary.client.OpenAiSummaryClient;
 import com.solv.wefin.domain.news.summary.dto.SummaryResult;
 import com.solv.wefin.domain.news.summary.dto.SummaryResult.SectionItem;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -30,7 +30,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class SummaryServiceTest {
 
-    @InjectMocks
     private SummaryService summaryService;
 
     @Mock
@@ -50,6 +49,14 @@ class SummaryServiceTest {
 
     @Mock
     private SummaryPersistenceService persistenceService;
+
+    @BeforeEach
+    void setUp() {
+        summaryService = new SummaryService(
+                newsClusterRepository, clusterArticleRepository, newsArticleRepository,
+                openAiSummaryClient, outlierDetectionService, persistenceService,
+                new com.solv.wefin.domain.news.config.NewsBatchProperties(500, 500, 500, 500, 50, 500));
+    }
 
     private NewsCluster createCluster(Long id, int articleCount, SummaryStatus status) {
         float[] vector = {1.0f, 0.0f, 0.0f};

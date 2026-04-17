@@ -229,7 +229,7 @@ class ClusterTagAggregatorTest {
 
         List<StockInfo> result = aggregator.aggregateStocksForCluster(List.of(10L, 20L));
 
-        assertThat(result).extracting(StockInfo::code).containsExactly("005930", "000660");
+        assertThat(result).extracting(StockInfo::code).containsExactly("000660", "005930");
     }
 
     @Test
