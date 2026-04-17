@@ -53,7 +53,7 @@ public class CacheConfig {
                 .build());
 
         manager.registerCustomCache("investorTrend", Caffeine.newBuilder()
-                .expireAfterWrite(10, TimeUnit.MINUTES)
+                .expireAfterWrite(1, TimeUnit.HOURS)
                 .maximumSize(5000)
                 .build());
 
