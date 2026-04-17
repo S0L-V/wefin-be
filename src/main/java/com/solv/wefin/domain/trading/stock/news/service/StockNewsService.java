@@ -17,7 +17,7 @@ public class StockNewsService {
     private final StockService stockService;
     private final WefinNewsClient wefinNewsClient;
 
-    @Cacheable(cacheNames = "stockNews", key = "#stockCode")
+    @Cacheable(cacheNames = "stockNews", key = "#stockCode", unless = "#result.items().isEmpty()")
     public StockNewsInfo getNews(String stockCode) {
         if (!stockService.existsByCode(stockCode)) {
             throw new BusinessException(ErrorCode.MARKET_STOCK_NOT_FOUND);

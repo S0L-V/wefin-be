@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 @Slf4j
 @Component
@@ -45,7 +46,7 @@ public class DartDisclosureClient {
                             .build())
                     .retrieve()
                     .body(DartDisclosureApiResponse.class);
-        } catch (Exception e) {
+        } catch (RestClientException e) {
             log.error("DART list.json 호출 실패: type={}", e.getClass().getSimpleName());
             throw new BusinessException(ErrorCode.DART_DISCLOSURE_FETCH_FAILED);
         }

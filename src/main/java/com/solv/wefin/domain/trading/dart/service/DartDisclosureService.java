@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -39,7 +40,7 @@ public class DartDisclosureService {
                 dartDisclosureClient.fetch(corpCode, bgnDe, endDe, PAGE_COUNT);
 
         if (response.isNoData()) {
-            return new DartDisclosureInfo(java.util.List.of(), 0);
+            return new DartDisclosureInfo(List.of(), 0);
         }
         if (!response.isSuccess()) {
             log.error("DART 공시 에러 응답: status={}, message={}",
