@@ -1,5 +1,7 @@
 package com.solv.wefin.domain.trading.watchlist.service;
 
+import com.solv.wefin.domain.interest.service.ManualInterestLockService;
+import com.solv.wefin.domain.market.trend.service.UserMarketTrendCacheService;
 import com.solv.wefin.domain.trading.market.dto.PriceResponse;
 import com.solv.wefin.domain.trading.market.service.MarketService;
 import com.solv.wefin.domain.trading.stock.entity.Stock;
@@ -22,18 +24,18 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class WatchlistService {
 
-    /** 관심 종목 등록 가중치. 명시적 선호 신호이므로 HELPFUL 피드백(+1) 5회분에 해당 */
-    public static final BigDecimal ADD_WATCHLIST_WEIGHT = new BigDecimal(5);
-    /** 관심 종목 해제 가중치. 등록과 동일 절대값 차감 */
-    public static final BigDecimal DELETE_WATCHLIST_WEIGHT = new BigDecimal(-5);
+    public static final BigDecimal ADD_WATCHLIST_WEIGHT = new BigDecimal(5); // 관심 종목을 수동 등록할 때 부여되는 기본 weight.
+    private static final int MAX_WATCHLIST_SIZE = 10; // 타입별(예: STOCK) 수동 등록 관심사의 최대 개수 제한
 
     private final MarketService marketService;
     private final UserInterestRepository userInterestRepository;
     private final StockRepository stockRepository;
+    private final ManualInterestLockService manualInterestLockService;
+    private final UserMarketTrendCacheService userMarketTrendCacheService;
 
     public List<WatchlistInfo> getStockList(UUID userId) {
         List<UserInterest> interests = userInterestRepository
-                .findByUserIdAndInterestType(userId,  InterestType.STOCK.name());
+                .findByUserIdAndInterestTypeAndManualRegisteredTrue(userId, InterestType.STOCK.name());
 
         return interests.stream()
                 .map(interest -> {
@@ -51,20 +53,28 @@ public class WatchlistService {
             throw new BusinessException(ErrorCode.MARKET_STOCK_NOT_FOUND);
         }
 
-        if (userInterestRepository.existsByUserIdAndInterestTypeAndInterestValue(userId, InterestType.STOCK.name(), stockCode)) {
+        manualInterestLockService.acquire(userId, InterestType.STOCK);
+
+        if (userInterestRepository.existsByUserIdAndInterestTypeAndInterestValueAndManualRegisteredTrue(
+                userId, InterestType.STOCK.name(), stockCode)) {
             throw new BusinessException(ErrorCode.INTEREST_ALREADY_EXISTS);
         }
 
-        if (userInterestRepository.countByUserIdAndInterestType(userId, InterestType.STOCK.name()) >= 10) {
+        if (userInterestRepository.countByUserIdAndInterestTypeAndManualRegisteredTrue(
+                userId, InterestType.STOCK.name()) >= MAX_WATCHLIST_SIZE) {
             throw new BusinessException(ErrorCode.INTEREST_LIMIT_EXCEEDED);
         }
 
-        userInterestRepository.save(UserInterest.create(userId, InterestType.STOCK.name(), stockCode, ADD_WATCHLIST_WEIGHT));
+        userInterestRepository.save(UserInterest.createManual(
+                userId, InterestType.STOCK.name(), stockCode, ADD_WATCHLIST_WEIGHT));
+        // 관심사 변경 시 맞춤 동향 캐시 무효화 → 다음 personalized 호출이 새 watchlist로 AI 재호출
+        userMarketTrendCacheService.invalidateToday(userId);
     }
 
     @Transactional
     public void deleteUserInterest(UUID userId, String stockCode) {
-        userInterestRepository.upsertWeight(userId, InterestType.STOCK.name(), stockCode, DELETE_WATCHLIST_WEIGHT);
-        userInterestRepository.deleteByUserIdAndInterestTypeAndInterestValue(userId, InterestType.STOCK.name(), stockCode);
+        userInterestRepository.deleteByUserIdAndInterestTypeAndInterestValueAndManualRegisteredTrue(
+                userId, InterestType.STOCK.name(), stockCode);
+        userMarketTrendCacheService.invalidateToday(userId);
     }
 }

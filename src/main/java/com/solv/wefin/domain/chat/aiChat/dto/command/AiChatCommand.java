@@ -1,6 +1,7 @@
 package com.solv.wefin.domain.chat.aiChat.dto.command;
 
 public record AiChatCommand(
-        String message
+        String message,
+        Long newsClusterId
 ) {
 }

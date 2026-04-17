@@ -13,10 +13,7 @@ import com.solv.wefin.domain.payment.entity.SubscriptionStatus;
 import com.solv.wefin.domain.payment.repository.PaymentRepository;
 import com.solv.wefin.domain.payment.repository.SubscriptionPlanRepository;
 import com.solv.wefin.domain.payment.repository.SubscriptionRepository;
-import com.solv.wefin.domain.payment.service.PaymentConfirmWriter;
-import com.solv.wefin.domain.payment.service.PaymentService;
-import com.solv.wefin.domain.payment.service.PaymentWriter;
-import com.solv.wefin.domain.payment.service.TossPaymentClient;
+import com.solv.wefin.domain.payment.service.*;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,6 +59,9 @@ class PaymentCreateServiceTest {
 
     @Mock
     private TossPaymentClient tossPaymentClient;
+
+    @Mock
+    private PaymentFailureLogWriter paymentFailureLogWriter;
 
     @InjectMocks
     private PaymentService paymentService;

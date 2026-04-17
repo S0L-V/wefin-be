@@ -7,6 +7,10 @@ import com.solv.wefin.domain.chat.aiChat.dto.command.AiChatCommand;
 import com.solv.wefin.domain.chat.aiChat.dto.info.AiChatInfo;
 import com.solv.wefin.domain.chat.aiChat.dto.info.AiChatMessagesInfo;
 import com.solv.wefin.domain.chat.aiChat.entity.AiChatMessage;
+import com.solv.wefin.domain.news.cluster.entity.ClusterSummarySection;
+import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
+import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionRepository;
+import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.quest.entity.QuestEventType;
 import com.solv.wefin.domain.quest.service.QuestProgressService;
 import com.solv.wefin.global.error.BusinessException;
@@ -18,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,11 +31,19 @@ public class AiChatService {
 
     private static final int MAX_MESSAGE_LENGTH = 1000;
     private static final int MAX_PAGE_SIZE = 100;
+    private static final int MAX_NEWS_CONTEXT_CHARS = 4000;
+    private static final String TRUNCATED_SUFFIX = "\n...(뉴스 요약이 길어 일부 생략되었습니다)";
+    private static final List<NewsCluster.SummaryStatus> AVAILABLE_SUMMARY_STATUSES = List.of(
+            NewsCluster.SummaryStatus.GENERATED,
+            NewsCluster.SummaryStatus.STALE
+    );
 
     private final OpenAiChatClient openAiChatClient;
     private final AiChatMessagePersistenceService aiChatMessagePersistenceService;
     private final UserRepository userRepository;
     private final QuestProgressService questProgressService;
+    private final NewsClusterRepository newsClusterRepository;
+    private final ClusterSummarySectionRepository clusterSummarySectionRepository;
 
     public AiChatMessagesInfo getMessages(UUID userId, Long beforeMessageId, int size) {
         validateUserId(userId);
@@ -65,7 +78,9 @@ public class AiChatService {
 
         List<AiChatMessage> history = aiChatMessagePersistenceService.getRecentHistory(userId);
 
-        String answer = openAiChatClient.ask(history, command.message());
+        String newsContext = buildNewsContext(command.newsClusterId());
+
+        String answer = openAiChatClient.ask(history, command.message(), newsContext);
 
         aiChatMessagePersistenceService.saveUserMessage(user, command.message());
         AiChatMessage aiMessage = aiChatMessagePersistenceService.saveAiMessage(user, answer);
@@ -79,6 +94,52 @@ public class AiChatService {
         return toInfo(aiMessage);
     }
 
+    private String buildNewsContext(Long newsClusterId) {
+        if (newsClusterId == null) {
+            return null;
+        }
+
+        NewsCluster cluster = newsClusterRepository.findByIdAndStatusAndSummaryStatusIn(
+                        newsClusterId,
+                        NewsCluster.ClusterStatus.ACTIVE,
+                        AVAILABLE_SUMMARY_STATUSES
+                )
+                .orElse(null);
+
+        if (cluster == null) {
+            return null;
+        }
+
+        List<ClusterSummarySection> sections =
+                clusterSummarySectionRepository.findByNewsClusterIdOrderBySectionOrderAsc(newsClusterId);
+
+        String sectionText = sections.stream()
+                .map(section -> "- " + section.getHeading() + ": " + section.getBody())
+                .collect(Collectors.joining("\n"));
+
+        String context = """
+                [NEWS_CONTEXT]
+                Title: %s
+                Summary: %s
+                Sections:
+                %s
+                """.formatted(
+                cluster.getTitle(),
+                cluster.getSummary(),
+                sectionText.isBlank() ? "(no section summary)" : sectionText
+        );
+
+        return truncate(context, MAX_NEWS_CONTEXT_CHARS);
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+
+        int endIndex = Math.max(0, maxLength - TRUNCATED_SUFFIX.length());
+        return value.substring(0, endIndex) + TRUNCATED_SUFFIX;
+    }
     private void validateUserId(UUID userId) {
         if (userId == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);

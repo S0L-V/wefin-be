@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,6 +20,8 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 class DailyQuestServiceTest {
+
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private DailyQuestRepository dailyQuestRepository;
     private QuestTemplateRepository questTemplateRepository;
@@ -35,7 +38,7 @@ class DailyQuestServiceTest {
     @DisplayName("오늘의 퀘스트가 이미 있으면 기존 퀘스트를 반환한다")
     void getOrCreateTodayDailyQuests_returns_existing() {
         // given
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(KST);
 
         QuestTemplate template = mock(QuestTemplate.class);
         DailyQuest dailyQuest = DailyQuest.create(template, today, 3, 100);
@@ -57,7 +60,7 @@ class DailyQuestServiceTest {
     @DisplayName("오늘의 퀘스트가 없으면 활성 템플릿 3개로 새로 생성한다")
     void getOrCreateTodayDailyQuests_creates_new() {
         // given
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(KST);
 
         QuestTemplate t1 = mockTemplate(1L, 3, 100);
         QuestTemplate t2 = mockTemplate(2L, 2, 80);
@@ -80,7 +83,7 @@ class DailyQuestServiceTest {
     @DisplayName("활성 템플릿이 3개보다 적으면 예외가 발생한다")
     void getOrCreateTodayDailyQuests_fail_when_templates_not_enough() {
         // given
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(KST);
 
         QuestTemplate t1 = mockTemplate(1L, 3, 100);
         QuestTemplate t2 = mockTemplate(2L, 2, 80);

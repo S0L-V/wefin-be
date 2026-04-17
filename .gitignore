@@ -44,5 +44,4 @@ out/
 .env
 .env.dev
 .env.prod
-.env.desktop
 .DS_Store

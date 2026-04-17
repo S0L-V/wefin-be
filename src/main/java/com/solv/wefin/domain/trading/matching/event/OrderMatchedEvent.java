@@ -1,6 +1,7 @@
 package com.solv.wefin.domain.trading.matching.event;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import com.solv.wefin.domain.trading.order.entity.OrderSide;
@@ -17,20 +18,23 @@ public record OrderMatchedEvent(
 	BigDecimal fee,
 	BigDecimal tax,
 	BigDecimal realizedProfit,
-	BigDecimal balance
+	BigDecimal balance,
+	OffsetDateTime matchedAt
 ) {
-	public static OrderMatchedEvent ofBuy(UUID orderNo, String stockCode,
+	public static OrderMatchedEvent ofBuy(OrderType orderType, UUID orderNo, String stockCode,
 										  String stockName, Integer quantity,
-										  BigDecimal price, BigDecimal fee, BigDecimal balance) {
-		return new OrderMatchedEvent(OrderType.MARKET, orderNo, stockCode, stockName,
-			OrderSide.BUY, quantity, price, fee, BigDecimal.ZERO, BigDecimal.ZERO, balance);
+										  BigDecimal price, BigDecimal fee, BigDecimal balance,
+										  OffsetDateTime matchedAt) {
+		return new OrderMatchedEvent(orderType, orderNo, stockCode, stockName,
+			OrderSide.BUY, quantity, price, fee, BigDecimal.ZERO, BigDecimal.ZERO, balance, matchedAt);
 	}
 
-	public static OrderMatchedEvent ofSell(UUID orderNo, String stockCode,
+	public static OrderMatchedEvent ofSell(OrderType orderType, UUID orderNo, String stockCode,
 										   String stockName, Integer quantity,
 										   BigDecimal price, BigDecimal fee, BigDecimal tax,
-										   BigDecimal realizedProfit, BigDecimal balance) {
-		return new OrderMatchedEvent(OrderType.MARKET, orderNo, stockCode, stockName,
-			OrderSide.SELL, quantity, price, fee, tax, realizedProfit, balance);
+										   BigDecimal realizedProfit, BigDecimal balance,
+										   OffsetDateTime matchedAt) {
+		return new OrderMatchedEvent(orderType, orderNo, stockCode, stockName,
+			OrderSide.SELL, quantity, price, fee, tax, realizedProfit, balance, matchedAt);
 	}
 }

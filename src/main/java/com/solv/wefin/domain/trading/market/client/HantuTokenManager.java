@@ -24,14 +24,14 @@ public class HantuTokenManager {
     private String appSecret;
 
     private final RestClient hantuRestClient;
-    private String accessToken;
-    private LocalDateTime tokenExpiresAt;
+    private volatile String accessToken;
+    private volatile LocalDateTime tokenExpiresAt;
 
     /**
      * 토큰을 반환합니다. (만료됐거나 만료 5분 이내이면 자동 갱신)
      * @return 액세스 토큰 문자열
      */
-    public String getAccessToken() {
+    public synchronized String getAccessToken() {
         if (accessToken == null || tokenExpiresAt == null || tokenExpiresAt.isBefore(LocalDateTime.now().plusMinutes(5))) {
             fetchToken();
         }
@@ -74,7 +74,11 @@ public class HantuTokenManager {
      * 6시간 주기로 토큰을 갱신합니다.
      */
     @Scheduled(fixedRate = 1000 * 60 * 60 * 6)
-    public void refreshToken() {
-        fetchToken();
+    public synchronized void refreshToken() {
+        try {
+            fetchToken();
+        } catch (Exception e) {
+            log.error("한투 토큰 정기 갱신 실패", e);
+        }
     }
 }

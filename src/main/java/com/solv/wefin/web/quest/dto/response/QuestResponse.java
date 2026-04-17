@@ -4,6 +4,7 @@ import com.solv.wefin.domain.quest.entity.UserQuest;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 
 public record QuestResponse(
         Long questId,
@@ -17,10 +18,15 @@ public record QuestResponse(
         Integer targetValue,
         Integer reward,
         LocalDate questDate,
+        OffsetDateTime expiresAt,
         OffsetDateTime startedAt,
         OffsetDateTime completedAt
 ) {
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+
     public static QuestResponse from(UserQuest userQuest) {
+        LocalDate questDate = userQuest.getDailyQuest().getQuestDate();
+
         return new QuestResponse(
                 userQuest.getId(),
                 userQuest.getDailyQuest().getId(),
@@ -32,7 +38,8 @@ public record QuestResponse(
                 userQuest.getProgress(),
                 userQuest.getDailyQuest().getTargetValue(),
                 userQuest.getDailyQuest().getReward(),
-                userQuest.getDailyQuest().getQuestDate(),
+                questDate,
+                questDate.plusDays(1).atStartOfDay(KST).toOffsetDateTime(),
                 userQuest.getStartedAt(),
                 userQuest.getCompletedAt()
         );

@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,12 +20,14 @@ import java.util.UUID;
 @Transactional
 public class QuestProgressService {
 
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+
     private final UserQuestRepository userQuestRepository;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleEvent(UUID userId, QuestEventType eventType) {
         List<UserQuest> todayUserQuests =
-                userQuestRepository.findTodayUserQuestsForUpdate(userId, LocalDate.now());
+                userQuestRepository.findTodayUserQuestsForUpdate(userId, LocalDate.now(KST));
 
         todayUserQuests.stream()
                 .filter(userQuest -> userQuest.getDailyQuest()
@@ -38,7 +41,7 @@ public class QuestProgressService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleProfitRate(UUID userId, BigDecimal profitRate) {
         List<UserQuest> todayUserQuests =
-                userQuestRepository.findTodayUserQuestsForUpdate(userId, LocalDate.now());
+                userQuestRepository.findTodayUserQuestsForUpdate(userId, LocalDate.now(KST));
 
         todayUserQuests.stream()
                 .filter(userQuest -> userQuest.getDailyQuest()
@@ -56,7 +59,7 @@ public class QuestProgressService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleGameRank(UUID userId, int rank) {
         List<UserQuest> todayUserQuests =
-                userQuestRepository.findTodayUserQuestsForUpdate(userId, LocalDate.now());
+                userQuestRepository.findTodayUserQuestsForUpdate(userId, LocalDate.now(KST));
 
         todayUserQuests.stream()
                 .filter(userQuest -> userQuest.getDailyQuest()

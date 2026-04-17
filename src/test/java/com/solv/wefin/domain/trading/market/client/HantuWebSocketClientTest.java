@@ -6,6 +6,7 @@ import com.solv.wefin.domain.trading.market.dto.TradeResponse;
 import com.solv.wefin.domain.trading.market.dto.WebSocketMessageType;
 import com.solv.wefin.domain.trading.market.service.CandleGenerator;
 import com.solv.wefin.domain.trading.market.service.MarketService;
+import com.solv.wefin.domain.trading.matching.service.LimitOrderMatchingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +41,8 @@ class HantuWebSocketClientTest {
     private WebSocketSession session;
     @Mock
     private CandleGenerator candleGenerator;
+    @Mock
+    private LimitOrderMatchingService limitOrderMatchingService;
 
     private HantuWebSocketClient client;
 
@@ -51,7 +54,8 @@ class HantuWebSocketClientTest {
                 objectMapper,
                 messagingTemplate,
                 marketService,
-                candleGenerator
+                candleGenerator,
+                limitOrderMatchingService
         );
     }
 

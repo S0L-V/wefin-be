@@ -7,4 +7,5 @@ public interface StockInfoProvider {
     Stock getStock(Long stockId);
     String getStockName(String stockCode);
     String getMarket(String stockCode);
+    Stock getStockByCode(String stockCode);
 }

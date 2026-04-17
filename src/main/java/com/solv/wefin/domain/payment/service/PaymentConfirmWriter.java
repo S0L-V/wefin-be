@@ -21,6 +21,11 @@ public class PaymentConfirmWriter {
             Subscription subscription
     ) {
         paymentRepository.save(payment);
+
+        if (subscription == null) {
+            return null;
+        }
+
         return subscriptionRepository.save(subscription);
     }
 }

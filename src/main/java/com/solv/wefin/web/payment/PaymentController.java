@@ -1,15 +1,13 @@
 package com.solv.wefin.web.payment;
 
+import com.solv.wefin.domain.payment.dto.MySubscriptionInfo;
 import com.solv.wefin.domain.payment.dto.PaymentConfirmInfo;
 import com.solv.wefin.domain.payment.dto.PaymentReadyInfo;
 import com.solv.wefin.domain.payment.service.PaymentService;
 import com.solv.wefin.global.common.ApiResponse;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
-import com.solv.wefin.web.payment.dto.ConfirmPaymentRequest;
-import com.solv.wefin.web.payment.dto.ConfirmPaymentResponse;
-import com.solv.wefin.web.payment.dto.CreatePaymentRequest;
-import com.solv.wefin.web.payment.dto.CreatePaymentResponse;
+import com.solv.wefin.web.payment.dto.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -58,5 +56,18 @@ public class PaymentController {
         );
 
         return ApiResponse.success(ConfirmPaymentResponse.from(info));
+    }
+
+    @GetMapping("/me/subscription")
+    public ApiResponse<MySubscriptionResponse> getMySubscription(
+            @AuthenticationPrincipal UUID userId
+    ) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.AUTH_UNAUTHORIZED);
+        }
+
+        MySubscriptionInfo info = paymentService.getMySubscription(userId);
+
+        return ApiResponse.success(MySubscriptionResponse.from(info));
     }
 }

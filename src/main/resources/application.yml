@@ -2,6 +2,7 @@ spring:
   application:
     name: wefin
 
+
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
 
@@ -12,6 +13,7 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    out-of-order: true
 
 openai:
   api-key: ${OPENAI_API_KEY:}
@@ -90,3 +92,8 @@ hantu:
 
   ws:
     url: ws://ops.koreainvestment.com:21000
+
+dart:
+  api:
+    base-url: ${DART_BASE_URL:https://opendart.fss.or.kr}
+    key: ${DART_API_KEY:}

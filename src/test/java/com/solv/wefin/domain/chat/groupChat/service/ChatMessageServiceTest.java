@@ -512,6 +512,7 @@ class ChatMessageServiceTest {
         verify(chatMessageNewsShareService).save(savedMessage, newsCluster);
         verify(eventPublisher).publishEvent(any(ChatMessageCreatedEvent.class));
         verify(questProgressService).handleEvent(userId, QuestEventType.SHARE_NEWS);
+        verify(questProgressService).handleEvent(userId, QuestEventType.SEND_GROUP_CHAT);
 
         assertEquals(10L, result.messageId());
         assertEquals("NEWS", result.messageType());

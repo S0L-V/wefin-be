@@ -6,12 +6,16 @@ import com.solv.wefin.domain.auth.dto.SignupInfo;
 import com.solv.wefin.domain.auth.entity.RefreshToken;
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.entity.UserStatus;
+import com.solv.wefin.domain.auth.entity.VerificationPurpose;
 import com.solv.wefin.domain.auth.repository.RefreshTokenRepository;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.domain.quest.entity.QuestEventType;
+import com.solv.wefin.domain.quest.entity.UserQuest;
 import com.solv.wefin.domain.quest.service.QuestProgressService;
+import com.solv.wefin.domain.quest.service.UserQuestService;
+import com.solv.wefin.domain.trading.account.service.VirtualAccountService;
 import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
@@ -41,7 +45,10 @@ public class AuthService {
     private final GroupService groupService;
     private final JwtProvider jwtProvider;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final EmailVerificationService emailVerificationService;
     private final QuestProgressService questProgressService;
+    private final VirtualAccountService virtualAccountService;
+    private final UserQuestService userQuestService;
 
     @Transactional
     public SignupInfo signup(SignupCommand command) {
@@ -64,6 +71,9 @@ public class AuthService {
             throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
         }
 
+        emailVerificationService.validateVerifiedEmail(email, VerificationPurpose.SIGNUP);
+
+
         if (userRepository.existsByEmail(email)) {
             throw new BusinessException(ErrorCode.AUTH_EMAIL_DUPLICATED);
         }
@@ -78,10 +88,13 @@ public class AuthService {
                     .password(passwordEncoder.encode(password))
                     .build();
 
-            User savedUser = userRepository.save(user);
+            User savedUser = userRepository.saveAndFlush(user);
 
             Group homeGroup = groupService.createDefaultGroup(savedUser);
             savedUser.setHomeGroup(homeGroup);
+
+            virtualAccountService.createAccount(savedUser.getUserId());
+            emailVerificationService.consumeVerifiedEmail(savedUser.getEmail(), VerificationPurpose.SIGNUP);
 
             return new SignupInfo(
                     savedUser.getUserId(),
@@ -92,6 +105,31 @@ public class AuthService {
         } catch (DataIntegrityViolationException e) {
             throw mapConstraintViolation(e);
         }
+    }
+
+    @Transactional
+    public void resetPassword(String email, String newPassword) {
+        if (email == null || newPassword == null) {
+            throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
+        }
+
+        email = email.trim().toLowerCase(Locale.ROOT);
+
+        if (email.isBlank() || newPassword.isBlank()) {
+            throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
+        }
+
+        if (!newPassword.equals(newPassword.trim())) {
+            throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
+        }
+
+        emailVerificationService.validateVerifiedEmail(email, VerificationPurpose.PASSWORD_RESET);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        user.changePassword(passwordEncoder.encode(newPassword));
+        emailVerificationService.consumeVerifiedEmail(user.getEmail(), VerificationPurpose.PASSWORD_RESET);
     }
 
     @Transactional
@@ -142,6 +180,8 @@ public class AuthService {
 
         refreshTokenRepository.save(refreshToken);
 
+        userQuestService.getOrIssueTodayUserQuests(user.getUserId());
+
         try {
             questProgressService.handleEvent(user.getUserId(), QuestEventType.LOGIN);
         } catch (RuntimeException e) {
@@ -158,8 +198,22 @@ public class AuthService {
 
     @Transactional
     public String refresh(String refreshToken) {
+        RefreshToken savedToken = getValidRefreshTokenForUpdate(refreshToken);
 
-        // 토큰 유효성 검증
+        return jwtProvider.generateAccessToken(savedToken.getUserId());
+    }
+
+    @Transactional
+    public void logout(UUID userId, String refreshToken) {
+        RefreshToken savedToken = getValidRefreshTokenForUpdate(refreshToken);
+
+        if (!savedToken.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
+        }
+        savedToken.revoke();
+    }
+
+    private RefreshToken getValidRefreshTokenForUpdate(String refreshToken) {
         if (!jwtProvider.isValid(refreshToken) || !"refresh".equals(jwtProvider.getTokenType(refreshToken))) {
             throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
         }
@@ -173,21 +227,18 @@ public class AuthService {
             throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
         }
 
-        RefreshToken savedToken = refreshTokenRepository.findById(userId)
+        RefreshToken savedToken = refreshTokenRepository.findByUserIdForUpdate(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_INVALID_TOKEN));
 
-        // 토큰 일치 여부 확인
         if (!savedToken.getToken().equals(refreshToken) || savedToken.isRevoked()) {
             throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
         }
 
-        // 만료 체크
         if (!savedToken.getExpiresAt().isAfter(OffsetDateTime.now())) {
             throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
         }
 
-        // 새 access token 발급
-        return jwtProvider.generateAccessToken(userId);
+        return savedToken;
     }
 
     private BusinessException mapConstraintViolation(DataIntegrityViolationException e) {

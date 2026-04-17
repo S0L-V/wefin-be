@@ -6,12 +6,15 @@ import com.solv.wefin.domain.auth.dto.SignupInfo;
 import com.solv.wefin.domain.auth.entity.RefreshToken;
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.entity.UserStatus;
+import com.solv.wefin.domain.auth.entity.VerificationPurpose;
 import com.solv.wefin.domain.auth.repository.RefreshTokenRepository;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.domain.quest.entity.QuestEventType;
 import com.solv.wefin.domain.quest.service.QuestProgressService;
+import com.solv.wefin.domain.quest.service.UserQuestService;
+import com.solv.wefin.domain.trading.account.service.VirtualAccountService;
 import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
@@ -38,10 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -62,7 +62,16 @@ class AuthServiceTest {
     private RefreshTokenRepository refreshTokenRepository;
 
     @Mock
+    private EmailVerificationService emailVerificationService;
+
+    @Mock
     private QuestProgressService questProgressService;
+
+    @Mock
+    private VirtualAccountService virtualAccountService;
+
+    @Mock
+    private UserQuestService userQuestService;
 
     @InjectMocks
     private AuthService authService;
@@ -92,7 +101,7 @@ class AuthServiceTest {
 
             ReflectionTestUtils.setField(savedUser, "userId", userId);
 
-            when(userRepository.save(any(User.class))).thenReturn(savedUser);
+            when(userRepository.saveAndFlush(any(User.class))).thenReturn(savedUser);
 
             Group homeGroup = Group.builder()
                     .name("testuser의 그룹")
@@ -105,8 +114,13 @@ class AuthServiceTest {
             );
 
             ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-            verify(userRepository).save(captor.capture());
+            verify(emailVerificationService)
+                    .validateVerifiedEmail("test@example.com", VerificationPurpose.SIGNUP);
+            verify(userRepository).saveAndFlush(captor.capture());
             verify(groupService).createDefaultGroup(savedUser);
+            verify(virtualAccountService).createAccount(userId);
+            verify(emailVerificationService)
+                    .consumeVerifiedEmail("test@example.com", VerificationPurpose.SIGNUP);
 
             User capturedUser = captor.getValue();
 
@@ -122,6 +136,27 @@ class AuthServiceTest {
         }
 
         @Test
+        @DisplayName("이메일 인증이 완료되지 않으면 회원가입에 실패한다")
+        void signup_fail_when_email_not_verified() {
+            doThrow(new BusinessException(ErrorCode.AUTH_EMAIL_NOT_VERIFIED))
+                    .when(emailVerificationService)
+                    .validateVerifiedEmail("test@example.com", VerificationPurpose.SIGNUP);
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.signup(
+                            new SignupCommand("test@example.com", "nickname", "pass1234")
+                    )
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_EMAIL_NOT_VERIFIED);
+            verify(userRepository, never()).existsByEmail(anyString());
+            verify(userRepository, never()).saveAndFlush(any(User.class));
+            verify(groupService, never()).createDefaultGroup(any(User.class));
+            verify(virtualAccountService, never()).createAccount(any(UUID.class));
+        }
+
+        @Test
         @DisplayName("이메일이 중복되면 예외가 발생한다")
         void signup_fail_when_email_duplicated() {
             when(userRepository.existsByEmail("test@example.com")).thenReturn(true);
@@ -134,9 +169,12 @@ class AuthServiceTest {
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_EMAIL_DUPLICATED);
+            verify(emailVerificationService)
+                    .validateVerifiedEmail("test@example.com", VerificationPurpose.SIGNUP);
             verify(userRepository, never()).existsByNickname(anyString());
-            verify(userRepository, never()).save(any(User.class));
+            verify(userRepository, never()).saveAndFlush(any(User.class));
             verify(groupService, never()).createDefaultGroup(any(User.class));
+            verify(virtualAccountService, never()).createAccount(any(UUID.class));
         }
 
         @Test
@@ -153,8 +191,11 @@ class AuthServiceTest {
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_NICKNAME_DUPLICATED);
-            verify(userRepository, never()).save(any(User.class));
+            verify(emailVerificationService)
+                    .validateVerifiedEmail("test@example.com", VerificationPurpose.SIGNUP);
+            verify(userRepository, never()).saveAndFlush(any(User.class));
             verify(groupService, never()).createDefaultGroup(any(User.class));
+            verify(virtualAccountService, never()).createAccount(any(UUID.class));
         }
 
         @Test
@@ -181,6 +222,7 @@ class AuthServiceTest {
 
             verify(userRepository, never()).save(any(User.class));
             verify(groupService, never()).createDefaultGroup(any(User.class));
+            verify(virtualAccountService, never()).createAccount(any(UUID.class));
         }
 
         @Test
@@ -193,7 +235,7 @@ class AuthServiceTest {
             ConstraintViolationException cause =
                     new ConstraintViolationException("constraint violated", new SQLException(), "uk_users_email");
 
-            when(userRepository.save(any(User.class)))
+            when(userRepository.saveAndFlush(any(User.class)))
                     .thenThrow(new DataIntegrityViolationException("db error", cause));
 
             BusinessException exception = assertThrows(
@@ -204,7 +246,10 @@ class AuthServiceTest {
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_EMAIL_DUPLICATED);
+            verify(emailVerificationService)
+                    .validateVerifiedEmail("test@example.com", VerificationPurpose.SIGNUP);
             verify(groupService, never()).createDefaultGroup(any(User.class));
+            verify(virtualAccountService, never()).createAccount(any(UUID.class));
         }
 
         @Test
@@ -217,7 +262,7 @@ class AuthServiceTest {
             ConstraintViolationException cause =
                     new ConstraintViolationException("constraint violated", new SQLException(), "uk_users_nickname");
 
-            when(userRepository.save(any(User.class)))
+            when(userRepository.saveAndFlush(any(User.class)))
                     .thenThrow(new DataIntegrityViolationException("db error", cause));
 
             BusinessException exception = assertThrows(
@@ -228,7 +273,85 @@ class AuthServiceTest {
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_NICKNAME_DUPLICATED);
+            verify(emailVerificationService)
+                    .validateVerifiedEmail("test@example.com", VerificationPurpose.SIGNUP);
             verify(groupService, never()).createDefaultGroup(any(User.class));
+            verify(virtualAccountService, never()).createAccount(any(UUID.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("resetPassword")
+    class ResetPasswordTest {
+
+        @Test
+        @DisplayName("비밀번호 재설정에 성공한다")
+        void resetPassword_success() {
+            String email = "test@example.com";
+            String newPassword = "newpass123";
+
+            UUID userId = UUID.randomUUID();
+
+            User user = User.builder()
+                    .email(email)
+                    .nickname("testuser")
+                    .password("old-password")
+                    .build();
+
+            ReflectionTestUtils.setField(user, "userId", userId);
+
+            when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+            when(passwordEncoder.encode(newPassword)).thenReturn("encoded-password");
+
+            authService.resetPassword(email, newPassword);
+
+            verify(emailVerificationService)
+                    .validateVerifiedEmail(email, VerificationPurpose.PASSWORD_RESET);
+            verify(emailVerificationService)
+                    .consumeVerifiedEmail(email, VerificationPurpose.PASSWORD_RESET);
+
+            assertThat(user.getPassword()).isEqualTo("encoded-password");
+        }
+
+        @Test
+        @DisplayName("이메일 인증이 안 되어 있으면 실패한다")
+        void resetPassword_fail_when_not_verified() {
+            String email = "test@example.com";
+
+            doThrow(new BusinessException(ErrorCode.AUTH_EMAIL_NOT_VERIFIED))
+                    .when(emailVerificationService)
+                    .validateVerifiedEmail(email, VerificationPurpose.PASSWORD_RESET);
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.resetPassword(email, "newpass123")
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_EMAIL_NOT_VERIFIED);
+            verify(userRepository, never()).findByEmail(anyString());
+        }
+
+        @Test
+        @DisplayName("사용자가 존재하지 않으면 실패한다")
+        void resetPassword_fail_when_user_not_found() {
+            String email = "test@example.com";
+
+            // 인증은 통과된 상태
+            doNothing()
+                    .when(emailVerificationService)
+                    .validateVerifiedEmail(email, VerificationPurpose.PASSWORD_RESET);
+
+            when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.resetPassword(email, "newpass123")
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
+
+            verify(emailVerificationService)
+                    .validateVerifiedEmail(email, VerificationPurpose.PASSWORD_RESET);
         }
     }
 
@@ -276,6 +399,7 @@ class AuthServiceTest {
                     () -> assertThat(savedToken.isRevoked()).isFalse()
             );
             verify(questProgressService).handleEvent(userId, QuestEventType.LOGIN);
+            verify(userQuestService).getOrIssueTodayUserQuests(userId);
         }
 
         @Test
@@ -306,6 +430,8 @@ class AuthServiceTest {
 
             verify(refreshTokenRepository).save(any(RefreshToken.class));
             verify(questProgressService).handleEvent(userId, QuestEventType.LOGIN);
+            verify(userQuestService).getOrIssueTodayUserQuests(userId);
+
             assertAll(
                     () -> assertThat(result.userId()).isEqualTo(userId),
                     () -> assertThat(result.nickname()).isEqualTo("testuser"),
@@ -399,178 +525,6 @@ class AuthServiceTest {
 
             verify(userRepository, never()).findByEmail(anyString());
             verify(refreshTokenRepository, never()).save(any(RefreshToken.class));
-        }
-    }
-
-    @Nested
-    @DisplayName("refresh")
-    class RefreshTest {
-
-        private User activeUser(UUID userId) {
-            User user = User.builder().build();
-            ReflectionTestUtils.setField(user, "userId", userId);
-            ReflectionTestUtils.setField(user, "status", UserStatus.ACTIVE);
-            return user;
-        }
-
-        @Test
-        @DisplayName("유효한 refresh token이면 새 access token을 발급한다")
-        void refresh_success() {
-            UUID userId = UUID.randomUUID();
-            OffsetDateTime expiresAt = OffsetDateTime.now().plusDays(14);
-
-            RefreshToken savedToken = RefreshToken.builder()
-                    .userId(userId)
-                    .token("refresh-token")
-                    .expiresAt(expiresAt)
-                    .build();
-
-            when(jwtProvider.isValid("refresh-token")).thenReturn(true);
-            when(jwtProvider.getTokenType("refresh-token")).thenReturn("refresh");
-            when(jwtProvider.getUserId("refresh-token")).thenReturn(userId);
-            when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId)));
-            when(refreshTokenRepository.findById(userId)).thenReturn(Optional.of(savedToken));
-            when(jwtProvider.generateAccessToken(userId)).thenReturn("new-access-token");
-
-            String result = authService.refresh("refresh-token");
-
-            assertThat(result).isEqualTo("new-access-token");
-            verify(jwtProvider).generateAccessToken(userId);
-        }
-
-        @Test
-        @DisplayName("토큰이 유효하지 않으면 AUTH_INVALID_TOKEN 예외가 발생한다")
-        void refresh_fail_when_token_invalid() {
-            when(jwtProvider.isValid("invalid-token")).thenReturn(false);
-
-            BusinessException exception = assertThrows(
-                    BusinessException.class,
-                    () -> authService.refresh("invalid-token")
-            );
-
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_INVALID_TOKEN);
-            verify(userRepository, never()).findById(any(UUID.class));
-            verify(refreshTokenRepository, never()).findById(any(UUID.class));
-            verify(jwtProvider, never()).generateAccessToken(any(UUID.class));
-        }
-
-        @Test
-        @DisplayName("refresh 토큰 타입이 아니면 AUTH_INVALID_TOKEN 예외가 발생한다")
-        void refresh_fail_when_token_type_is_not_refresh() {
-            when(jwtProvider.isValid("access-token")).thenReturn(true);
-            when(jwtProvider.getTokenType("access-token")).thenReturn("access");
-
-            BusinessException exception = assertThrows(
-                    BusinessException.class,
-                    () -> authService.refresh("access-token")
-            );
-
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_INVALID_TOKEN);
-            verify(userRepository, never()).findById(any(UUID.class));
-            verify(refreshTokenRepository, never()).findById(any(UUID.class));
-            verify(jwtProvider, never()).generateAccessToken(any(UUID.class));
-        }
-
-        @Test
-        @DisplayName("DB에 저장된 refresh token이 없으면 AUTH_INVALID_TOKEN 예외가 발생한다")
-        void refresh_fail_when_saved_token_not_found() {
-            UUID userId = UUID.randomUUID();
-
-            when(jwtProvider.isValid("refresh-token")).thenReturn(true);
-            when(jwtProvider.getTokenType("refresh-token")).thenReturn("refresh");
-            when(jwtProvider.getUserId("refresh-token")).thenReturn(userId);
-            when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId)));
-            when(refreshTokenRepository.findById(userId)).thenReturn(Optional.empty());
-
-            BusinessException exception = assertThrows(
-                    BusinessException.class,
-                    () -> authService.refresh("refresh-token")
-            );
-
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_INVALID_TOKEN);
-            verify(jwtProvider, never()).generateAccessToken(any(UUID.class));
-        }
-
-        @Test
-        @DisplayName("DB에 저장된 토큰 값과 다르면 AUTH_INVALID_TOKEN 예외가 발생한다")
-        void refresh_fail_when_token_not_matched() {
-            UUID userId = UUID.randomUUID();
-            OffsetDateTime expiresAt = OffsetDateTime.now().plusDays(14);
-
-            RefreshToken savedToken = RefreshToken.builder()
-                    .userId(userId)
-                    .token("different-token")
-                    .expiresAt(expiresAt)
-                    .build();
-
-            when(jwtProvider.isValid("refresh-token")).thenReturn(true);
-            when(jwtProvider.getTokenType("refresh-token")).thenReturn("refresh");
-            when(jwtProvider.getUserId("refresh-token")).thenReturn(userId);
-            when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId)));
-            when(refreshTokenRepository.findById(userId)).thenReturn(Optional.of(savedToken));
-
-            BusinessException exception = assertThrows(
-                    BusinessException.class,
-                    () -> authService.refresh("refresh-token")
-            );
-
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_INVALID_TOKEN);
-            verify(jwtProvider, never()).generateAccessToken(any(UUID.class));
-        }
-
-        @Test
-        @DisplayName("revoked 된 토큰이면 AUTH_INVALID_TOKEN 예외가 발생한다")
-        void refresh_fail_when_token_revoked() {
-            UUID userId = UUID.randomUUID();
-            OffsetDateTime expiresAt = OffsetDateTime.now().plusDays(14);
-
-            RefreshToken savedToken = RefreshToken.builder()
-                    .userId(userId)
-                    .token("refresh-token")
-                    .expiresAt(expiresAt)
-                    .build();
-            ReflectionTestUtils.setField(savedToken, "revoked", true);
-
-            when(jwtProvider.isValid("refresh-token")).thenReturn(true);
-            when(jwtProvider.getTokenType("refresh-token")).thenReturn("refresh");
-            when(jwtProvider.getUserId("refresh-token")).thenReturn(userId);
-            when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId)));
-            when(refreshTokenRepository.findById(userId)).thenReturn(Optional.of(savedToken));
-
-            BusinessException exception = assertThrows(
-                    BusinessException.class,
-                    () -> authService.refresh("refresh-token")
-            );
-
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_INVALID_TOKEN);
-            verify(jwtProvider, never()).generateAccessToken(any(UUID.class));
-        }
-
-        @Test
-        @DisplayName("만료된 refresh token이면 AUTH_INVALID_TOKEN 예외가 발생한다")
-        void refresh_fail_when_token_expired() {
-            UUID userId = UUID.randomUUID();
-            OffsetDateTime expiresAt = OffsetDateTime.now().minusMinutes(1);
-
-            RefreshToken savedToken = RefreshToken.builder()
-                    .userId(userId)
-                    .token("refresh-token")
-                    .expiresAt(expiresAt)
-                    .build();
-
-            when(jwtProvider.isValid("refresh-token")).thenReturn(true);
-            when(jwtProvider.getTokenType("refresh-token")).thenReturn("refresh");
-            when(jwtProvider.getUserId("refresh-token")).thenReturn(userId);
-            when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId)));
-            when(refreshTokenRepository.findById(userId)).thenReturn(Optional.of(savedToken));
-
-            BusinessException exception = assertThrows(
-                    BusinessException.class,
-                    () -> authService.refresh("refresh-token")
-            );
-
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_INVALID_TOKEN);
-            verify(jwtProvider, never()).generateAccessToken(any(UUID.class));
         }
     }
 }

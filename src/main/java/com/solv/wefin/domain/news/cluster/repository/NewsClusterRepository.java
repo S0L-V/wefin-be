@@ -45,6 +45,11 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
             ClusterStatus status,
             java.util.Collection<SummaryStatus> summaryStatuses);
 
+    Optional<NewsCluster> findByIdAndStatusAndSummaryStatusIn(
+            Long id,
+            ClusterStatus status,
+            java.util.Collection<SummaryStatus> summaryStatuses);
+
     /**
      * 특정 상태이면서, 마지막 갱신 시각이 기준 시각 이전인 클러스터를 조회한다.
      */
@@ -100,6 +105,43 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
             @Param("status") ClusterStatus status,
             @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
             @Param("cutoff") OffsetDateTime cutoff,
+            Pageable pageable);
+
+    /**
+     * 맞춤 금융 동향용 — 최근 특정 시각 이후 발행된 클러스터 중 사용자 관심사(STOCK/SECTOR/TOPIC) 와
+     * 하나라도 매칭되는 클러스터를 최신순으로 조회한다.
+     *
+     * 매칭 조건은 {@code NewsClusterArticle} → {@code NewsArticleTag} EXISTS 서브쿼리로 표현하며,
+     * 세 타입은 OR 결합. 빈 코드 리스트는 JPQL {@code IN ()} 에러를 내므로 호출 측에서 sentinel
+     * (실제로 매칭되지 않을 빈 문자열 등)을 넣어 조건을 비활성화해야 한다
+     */
+    @Query("SELECT DISTINCT c FROM NewsCluster c " +
+            "WHERE c.status = :status " +
+            "AND c.summaryStatus IN :summaryStatuses " +
+            "AND c.title IS NOT NULL " +
+            "AND c.publishedAt IS NOT NULL " +
+            "AND c.publishedAt >= :cutoff " +
+            "AND EXISTS (" +
+            "    SELECT 1 FROM NewsClusterArticle nca " +
+            "    JOIN NewsArticleTag t ON t.newsArticleId = nca.newsArticleId " +
+            "    WHERE nca.newsClusterId = c.id " +
+            "    AND (" +
+            "        (t.tagType = :stockType AND t.tagCode IN :stockCodes) " +
+            "     OR (t.tagType = :sectorType AND t.tagCode IN :sectorCodes) " +
+            "     OR (t.tagType = :topicType AND t.tagCode IN :topicCodes)" +
+            "    )" +
+            ") " +
+            "ORDER BY c.publishedAt DESC, c.id DESC")
+    List<NewsCluster> findPersonalizedClusters(
+            @Param("status") ClusterStatus status,
+            @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
+            @Param("cutoff") OffsetDateTime cutoff,
+            @Param("stockType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType stockType,
+            @Param("stockCodes") List<String> stockCodes,
+            @Param("sectorType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType sectorType,
+            @Param("sectorCodes") List<String> sectorCodes,
+            @Param("topicType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType topicType,
+            @Param("topicCodes") List<String> topicCodes,
             Pageable pageable);
 
     // --- 피드 목록: updatedAt 정렬 ---

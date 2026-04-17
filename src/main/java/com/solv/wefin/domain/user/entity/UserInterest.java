@@ -17,8 +17,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "user_interest",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_user_interest_user_type_value",
-                columnNames = {"user_id", "interest_type", "interest_value"}))
+                name = "uk_user_interest_user_type_value_manual",
+                columnNames = {"user_id", "interest_type", "interest_value", "manual_registered"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserInterest {
@@ -40,6 +40,9 @@ public class UserInterest {
     @Column(name = "weight", precision = 5, scale = 2)
     private BigDecimal weight;
 
+    @Column(name = "manual_registered", nullable = false)
+    private boolean manualRegistered; //사용자가 명시적으로 등록한 관심사 여부
+
     @Column(name = "created_at")
     private OffsetDateTime createdAt;
 
@@ -56,14 +59,17 @@ public class UserInterest {
     }
 
     /**
-     * 새 관심사를 생성한다 (피드백에 의한 자동 생성)
+     * 사용자가 명시적으로 등록한 관심사를 생성한다.
+     *
+     * Watchlist(STOCK) 및 Interest API(SECTOR/TOPIC)의 저장 경로에서 사용한다
      */
-    public static UserInterest create(UUID userId, String interestType, String interestValue, BigDecimal weight) {
+    public static UserInterest createManual(UUID userId, String interestType, String interestValue, BigDecimal weight) {
         UserInterest interest = new UserInterest();
         interest.userId = userId;
         interest.interestType = interestType;
         interest.interestValue = interestValue;
         interest.weight = weight;
+        interest.manualRegistered = true;
         return interest;
     }
 }

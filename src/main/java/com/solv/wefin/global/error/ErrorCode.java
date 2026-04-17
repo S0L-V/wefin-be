@@ -56,6 +56,14 @@ public enum ErrorCode {
     AUTH_EMAIL_DUPLICATED(409, "이미 사용 중인 이메일입니다."),
     AUTH_NICKNAME_DUPLICATED(409, "이미 사용 중인 닉네임입니다."),
     AUTH_VALIDATION_FAILED(400, "잘못된 입력입니다."),
+    AUTH_EMAIL_NOT_VERIFIED(400, "이메일 인증이 완료되지 않았습니다."),
+    AUTH_VERIFICATION_CODE_INVALID(400, "인증코드가 올바르지 않습니다."),
+    AUTH_VERIFICATION_CODE_EXPIRED(400, "인증코드가 만료되었습니다."),
+    AUTH_EMAIL_SEND_FAILED(500, "인증 메일 발송에 실패했습니다."),
+    AUTH_VERIFICATION_TOO_FAST_REQUEST(400, "인증코드 재발송 요청이 너무 빠릅니다."),
+    AUTH_VERIFICATION_TOO_MANY_REQUESTS(400, "인증코드 재발송 횟수를 초과했습니다."),
+    AUTH_VERIFICATION_TOO_MANY_ATTEMPTS(400, "인증 시도 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."),
+    AUTH_VERIFICATION_CONCURRENT_REQUEST(409, "동시에 여러 인증 요청이 처리되어 다시 시도해주세요."),
 
     // Auth - LOGIN
     AUTH_LOGIN_FAILED(401, "이메일 또는 비밀번호가 올바르지 않습니다."),
@@ -67,12 +75,20 @@ public enum ErrorCode {
     PLAN_NOT_FOUND(404, "구독 상품을 찾을 수 없습니다."),
     PLAN_INACTIVE(400, "비활성화된 구독 상품입니다."),
     ACTIVE_SUBSCRIPTION_ALREADY_EXISTS(409, "이미 활성 구독이 존재합니다."),
+    ACTIVE_SUBSCRIPTION_NOT_FOUND(404, "활성 구독 정보를 찾을 수 없습니다."),
     INVALID_PROVIDER(400, "지원하지 않는 결제사입니다."),
     PAYMENT_NOT_FOUND(404, "결제 정보를 찾을 수 없습니다."),
     PAYMENT_OWNERSHIP_MISMATCH(403, "본인의 결제만 처리할 수 있습니다."),
     PAYMENT_NOT_READY(400, "승인 가능한 결제 상태가 아닙니다."),
     PAYMENT_AMOUNT_MISMATCH(400, "결제 금액이 일치하지 않습니다."),
     PAYMENT_CONFIRM_FAILED(502, "토스 결제 승인에 실패했습니다."),
+    PAYMENT_ALREADY_CONFIRMED(409, "이미 승인된 결제입니다."),
+    PAYMENT_CANCELED(400, "사용자가 결제를 취소했습니다."),
+    PAYMENT_CANCEL_FAILED(502, "토스 결제 취소에 실패했습니다."),
+    PAYMENT_CONFIRM_TIMEOUT(504, "토스 결제 승인 요청 시간이 초과되었습니다."),
+    PAYMENT_CONFIRM_BAD_REQUEST(400, "토스 결제 승인 요청이 올바르지 않습니다."),
+    PAYMENT_CONFIRM_UNAUTHORIZED(502, "토스 결제 승인 인증에 실패했습니다."),
+    PAYMENT_CANCEL_TIMEOUT(504, "토스 결제 취소 요청 시간이 초과되었습니다."),
 
     // Order - BUY
     ORDER_INSUFFICIENT_BALANCE(400, "예수금이 부족합니다."),
@@ -90,6 +106,7 @@ public enum ErrorCode {
     ORDER_NOT_FOUND(404, "주문을 찾을 수 없습니다."),
     ORDER_ALREADY_CANCELLED(400, "이미 취소된 주문입니다."),
     ORDER_NOT_MODIFIABLE(400, "수정 가능한 상태가 아닙니다."),
+    ORDER_PARTIAL_NOT_MODIFIABLE(400, "부분 체결된 주문은 수정할 수 없습니다. 취소 후 재주문해주세요."),
     ORDER_OWNERSHIP_MISMATCH(403, "소유권이 일치하지 않습니다."),
     ORDER_NOT_CANCELLABLE(400, "주문을 취소할 수 없습니다."),
 
@@ -103,10 +120,13 @@ public enum ErrorCode {
     MARKET_INVALID_PERIOD_CODE(400, "유효하지 않은 기간 옵션입니다."),
     MARKET_INVALID_DATE(400, "조회 시작일자는 종료일자 이전이어야 합니다."),
     MARKET_SUBSCRIPTION_LIMIT_EXCEEDED(400, "실시간 구독 종목은 최대 20개까지 가능합니다."),
+    MARKET_INVALID_REQUEST(400, "유효하지 않은 랭킹 유형입니다."),
+    MARKET_INVALID_INTERVAL(400, "유효하지 않은 분봉 간격입니다. (1m, 5m, 15m 만 지원)"),
 
     // Interest
-    INTEREST_ALREADY_EXISTS(400, "이미 등록된 관심종목입니다."),
-    INTEREST_LIMIT_EXCEEDED(400, "관심종목은 최대 10개까지 등록할 수 있습니다."),
+    INTEREST_ALREADY_EXISTS(400, "이미 등록된 관심사입니다."),
+    INTEREST_LIMIT_EXCEEDED(400, "관심사는 타입별로 최대 10개까지 등록할 수 있습니다."),
+    INTEREST_TAG_NOT_FOUND(404, "등록할 수 없는 관심사입니다."),
 
     // Embedding
     EMBEDDING_ARTICLE_NOT_FOUND(500, "임베딩 대상 기사를 찾을 수 없습니다."),
@@ -157,6 +177,11 @@ public enum ErrorCode {
     // GameTurn
     GAME_NOT_STARTED(400, "게임이 시작되지 않았습니다."),
     GAME_ALREADY_FINISHED(400, "이미 종료된 게임입니다."),
+    GAME_NOT_FINISHED(400, "게임이 아직 종료되지 않았습니다."),
+
+    // GameParticipant - 개별 종료
+    PARTICIPANT_ALREADY_FINISHED(400, "이미 게임을 종료한 참가자입니다."),
+    PARTICIPANT_NOT_FINISHED(400, "아직 게임을 종료하지 않은 참가자입니다."),
 
     // GameStock
     GAME_STOCK_NOT_FOUND(404, "해당 종목을 찾을 수 없습니다."),
@@ -167,7 +192,17 @@ public enum ErrorCode {
     VOTE_NOT_IN_PROGRESS(400, "진행 중인 투표가 없습니다."),
     VOTE_ALREADY_IN_PROGRESS(409, "이미 투표가 진행 중입니다."),
     // MarketTrend
-    MARKET_TREND_ALREADY_RUNNING(409, "금융 동향 생성이 이미 실행 중입니다.");
+    MARKET_TREND_ALREADY_RUNNING(409, "금융 동향 생성이 이미 실행 중입니다."),
+
+    // DART
+    DART_CORP_CODE_NOT_FOUND(404, "DART 고유번호를 찾을 수 없습니다."),
+    DART_CORP_CODE_FETCH_FAILED(503, "DART 고유번호 조회에 실패했습니다."),
+    DART_COMPANY_NOT_FOUND(404, "DART 기업 정보가 존재하지 않습니다."),
+    DART_COMPANY_FETCH_FAILED(503, "DART 기업 정보 조회에 실패했습니다."),
+    DART_FINANCIAL_NOT_FOUND(404, "DART 재무제표가 존재하지 않습니다."),
+    DART_FINANCIAL_FETCH_FAILED(503, "DART 재무제표 조회에 실패했습니다."),
+    DART_DIVIDEND_NOT_FOUND(404, "DART 배당 정보가 존재하지 않습니다."),
+    DART_DIVIDEND_FETCH_FAILED(503, "DART 배당 정보 조회에 실패했습니다.");
 
     private final int status;
     private final String message;
