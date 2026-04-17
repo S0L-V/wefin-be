@@ -36,14 +36,19 @@ public class EmailVerificationService {
         try {
             String normalizedEmail = normalizeEmail(email);
             String code = generateCode();
-            OffsetDateTime expiresAt = OffsetDateTime.now().plusMinutes(EXPIRE_MINUTES);
             OffsetDateTime now = OffsetDateTime.now();
+            OffsetDateTime expiresAt = now.plusMinutes(EXPIRE_MINUTES);
 
             EmailVerification verification = emailVerificationRepository
                     .findByEmailAndPurpose(normalizedEmail, purpose)
                     .orElse(null);
 
             if (verification != null) {
+
+                if (verification.isLocked(now)) {
+                    throw new BusinessException(ErrorCode.AUTH_VERIFICATION_TOO_MANY_ATTEMPTS);
+                }
+
                 if (verification.isResendTooSoon(now, RESEND_COOLDOWN_SECONDS)) {
                     throw new BusinessException(ErrorCode.AUTH_VERIFICATION_TOO_FAST_REQUEST);
                 }
