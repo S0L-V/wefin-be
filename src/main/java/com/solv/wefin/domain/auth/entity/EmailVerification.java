@@ -46,6 +46,25 @@ public class EmailVerification extends BaseEntity {
     @Column(name = "expires_at", nullable = false)
     private OffsetDateTime expiresAt;
 
+    @Column(name = "attempt_count", nullable = false)
+    private int attemptCount;
+
+    @Column(name = "resend_count", nullable = false)
+    private int resendCount;
+
+    @Column(name = "locked_until")
+    private OffsetDateTime lockedUntil;
+
+    @Column(name = "last_sent_at")
+    private OffsetDateTime lastSentAt;
+
+    @Column(name = "resend_window_started_at")
+    private OffsetDateTime resendWindowStartedAt;
+
+    @Version
+    @Column(name = "version")
+    private Long version;
+
     @Builder
     public EmailVerification(String email,
                              VerificationPurpose purpose,
@@ -56,16 +75,26 @@ public class EmailVerification extends BaseEntity {
         this.verificationCode = verificationCode;
         this.expiresAt = expiresAt;
         this.verified = false;
+        this.attemptCount = 0;
+        this.resendCount = 0;
+        this.lockedUntil = null;
+        this.lastSentAt = null;
+        this.resendWindowStartedAt = null;
     }
 
     public void renew(String verificationCode, OffsetDateTime expiresAt) {
         this.verificationCode = verificationCode;
         this.expiresAt = expiresAt;
         this.verified = false;
+
+        this.attemptCount = 0;
+        this.lockedUntil = null;
     }
 
     public void verify() {
         this.verified = true;
+        this.resendCount = 0;
+        this.resendWindowStartedAt = null;
     }
 
     public void consume() {
@@ -81,5 +110,40 @@ public class EmailVerification extends BaseEntity {
                 this.verificationCode.getBytes(StandardCharsets.UTF_8),
                 code.getBytes(StandardCharsets.UTF_8)
         );
+    }
+
+    public void increaseAttempt() {
+        this.attemptCount++;
+    }
+
+    public void resetAttempt() {
+        this.attemptCount = 0;
+    }
+
+    public void lock(OffsetDateTime until) {
+        this.lockedUntil = until;
+    }
+
+    public boolean isLocked(OffsetDateTime now) {
+        return lockedUntil != null && now.isBefore(lockedUntil);
+    }
+
+    public boolean isResendWindowExpired(OffsetDateTime now, long windowSeconds) {
+        return resendWindowStartedAt == null
+                || !resendWindowStartedAt.plusSeconds(windowSeconds).isAfter(now);
+    }
+
+    public void resetResendWindow(OffsetDateTime now) {
+        this.resendWindowStartedAt = now;
+        this.resendCount = 0;
+    }
+
+    public void recordResend(OffsetDateTime now) {
+        this.lastSentAt = now;
+        this.resendCount++;
+    }
+
+    public boolean isResendTooSoon(OffsetDateTime now, long cooldownSeconds) {
+        return lastSentAt != null && lastSentAt.plusSeconds(cooldownSeconds).isAfter(now);
     }
 }
