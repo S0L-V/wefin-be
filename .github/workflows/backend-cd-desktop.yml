@@ -42,9 +42,9 @@ jobs:
       - name: Deploy with docker compose
         run: |
           cd ~/wefin
-          docker compose -f docker-compose-desktop.yml stop backend || true
-          docker compose -f docker-compose-desktop.yml rm -f backend || true
-          docker compose -f docker-compose-desktop.yml up -d
+          docker compose --env-file .env.desktop -f docker-compose-desktop.yml stop backend || true
+          docker compose --env-file .env.desktop -f docker-compose-desktop.yml rm -f backend || true
+          docker compose --env-file .env.desktop -f docker-compose-desktop.yml up -d
 
       - name: Verify deployment
         run: |
