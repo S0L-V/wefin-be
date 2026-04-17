@@ -52,6 +52,11 @@ public class CacheConfig {
                 .maximumSize(5000)
                 .build());
 
+        manager.registerCustomCache("investorTrend", Caffeine.newBuilder()
+                .expireAfterWrite(1, TimeUnit.HOURS)
+                .maximumSize(5000)
+                .build());
+
         manager.registerCustomCache("dartDisclosure", Caffeine.newBuilder()
                 .expireAfterWrite(30, TimeUnit.MINUTES)
                 .maximumSize(5000)

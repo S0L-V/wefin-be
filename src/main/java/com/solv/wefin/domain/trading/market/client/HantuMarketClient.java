@@ -153,6 +153,26 @@ public class HantuMarketClient {
     }
 
     /**
+     * 종목별 투자자(외국인/기관/개인) 일별 순매수 동향을 조회합니다.
+     * 최근 약 30영업일 데이터가 리스트로 반환됩니다 (최신일 앞).
+     * @param stockCode 종목코드
+     */
+    public HantuInvestorTrendApiResponse fetchInvestorTrend(String stockCode) {
+        return hantuRestClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/uapi/domestic-stock/v1/quotations/inquire-investor")
+                        .queryParam("FID_COND_MRKT_DIV_CODE", "J")
+                        .queryParam("FID_INPUT_ISCD", stockCode)
+                        .build())
+                .header("authorization", "Bearer " + hantuTokenManager.getAccessToken())
+                .header("appkey", appKey)
+                .header("appsecret", appSecret)
+                .header("tr_id", "FHKST01010900")
+                .header("custtype", "P")
+                .retrieve().body(HantuInvestorTrendApiResponse.class);
+    }
+
+    /**
      * 국내 주식 거래량 순위를 조회
      */
     public HantuRankingApiResponse fetchVolumeRanking() {
