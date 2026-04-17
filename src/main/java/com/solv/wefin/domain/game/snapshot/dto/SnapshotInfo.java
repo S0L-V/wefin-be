@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record SnapshotInfo(
-        int turnNumber,
+        Integer turnNumber,
         LocalDate turnDate,
         BigDecimal totalAsset,
         BigDecimal cash,

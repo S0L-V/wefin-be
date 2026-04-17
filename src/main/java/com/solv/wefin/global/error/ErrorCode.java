@@ -178,6 +178,9 @@ public enum ErrorCode {
     PARTICIPANT_ALREADY_FINISHED(400, "이미 게임을 종료한 참가자입니다."),
     PARTICIPANT_NOT_FINISHED(400, "아직 게임을 종료하지 않은 참가자입니다."),
 
+    // GameAnalysisReport
+    ANALYSIS_GENERATION_FAILED(503, "AI 분석 리포트 생성에 실패했습니다."),
+
     // GameStock
     GAME_STOCK_NOT_FOUND(404, "해당 종목을 찾을 수 없습니다."),
     GAME_STOCK_PRICE_NOT_FOUND(404, "해당 날짜의 주가 데이터가 없습니다."),
