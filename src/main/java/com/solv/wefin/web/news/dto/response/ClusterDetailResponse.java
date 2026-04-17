@@ -3,6 +3,7 @@ package com.solv.wefin.web.news.dto.response;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterDetailResult;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.SectionDetail;
 import com.solv.wefin.domain.news.cluster.dto.ArticleSourceInfo;
+import com.solv.wefin.domain.news.cluster.dto.SectorInfo;
 import com.solv.wefin.domain.news.cluster.dto.StockInfo;
 
 import java.time.OffsetDateTime;
@@ -22,6 +23,7 @@ public record ClusterDetailResponse(
         int sourceCount,
         List<ArticleSourceResponse> sources,
         List<StockResponse> relatedStocks,
+        List<SectorResponse> relatedSectors,
         List<String> marketTags,
         boolean isRead,
         String feedbackType,
@@ -42,6 +44,10 @@ public record ClusterDetailResponse(
                 .map(StockResponse::from)
                 .toList();
 
+        List<SectorResponse> sectors = result.relatedSectors().stream()
+                .map(SectorResponse::from)
+                .toList();
+
         List<SectionResponse> sections = result.sections().stream()
                 .map(SectionResponse::from)
                 .toList();
@@ -49,7 +55,7 @@ public record ClusterDetailResponse(
         return new ClusterDetailResponse(
                 result.clusterId(), result.title(), result.summary(),
                 result.thumbnailUrl(), result.publishedAt(),
-                result.sourceCount(), sources, stocks, result.marketTags(),
+                result.sourceCount(), sources, stocks, sectors, result.marketTags(),
                 result.isRead(), result.feedbackType(), sections,
                 result.suggestedQuestions(), result.articleContent()
         );
@@ -58,6 +64,12 @@ public record ClusterDetailResponse(
     public record StockResponse(String code, String name) {
         public static StockResponse from(StockInfo stock) {
             return new StockResponse(stock.code(), stock.name());
+        }
+    }
+
+    public record SectorResponse(String code, String name) {
+        public static SectorResponse from(SectorInfo sector) {
+            return new SectorResponse(sector.code(), sector.name());
         }
     }
 
