@@ -25,6 +25,8 @@ public class EmailVerificationEventListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleSendEmail(EmailVerificationSendEvent event) {
+        OffsetDateTime now = OffsetDateTime.now();
+
         EmailSendLog emailSendLog = EmailSendLog.builder()
                 .email(event.email())
                 .purpose(event.purpose())
@@ -33,14 +35,14 @@ public class EmailVerificationEventListener {
 
         try {
             mailService.sendVerificationCode(event.email(), event.code());
-            emailSendLog.markSuccess(OffsetDateTime.now());
+            emailSendLog.markSuccess(now);
         } catch (Exception e) {
-            emailSendLog.markFail(OffsetDateTime.now());
+            emailSendLog.markFail(now);
             log.error(
-                    "메일 발송 실패 (after commit): email={}, purpose={}, retryCount={}",
+                    "메일 발송 실패 (after commit): email={}, purpose={}, attemptCount={}",
                     maskEmail(event.email()),
                     event.purpose(),
-                    emailSendLog.getRetryCount(),
+                    emailSendLog.getAttemptCount(),
                     e
             );
         }
@@ -49,11 +51,11 @@ public class EmailVerificationEventListener {
             emailSendLogRepository.save(emailSendLog);
         } catch (Exception e) {
             log.error(
-                    "메일 발송 로그 저장 실패: email={}, purpose={}, status={}, retryCount={}",
+                    "메일 발송 로그 저장 실패: email={}, purpose={}, status={}, attemptCount={}",
                     maskEmail(event.email()),
                     event.purpose(),
                     emailSendLog.getStatus(),
-                    emailSendLog.getRetryCount(),
+                    emailSendLog.getAttemptCount(),
                     e
             );
         }

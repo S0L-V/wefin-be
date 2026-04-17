@@ -36,7 +36,7 @@ public class EmailSendLog extends BaseEntity {
     private EmailSendStatus status;
 
     @Column(nullable = false)
-    private int retryCount;
+    private int attemptCount;
 
     private OffsetDateTime lastTriedAt;
 
@@ -46,7 +46,7 @@ public class EmailSendLog extends BaseEntity {
         this.purpose = purpose;
         this.code = maskCode(code);
         this.status = EmailSendStatus.PENDING;
-        this.retryCount = 0;
+        this.attemptCount = 1; // 최초 시도
     }
 
     public void markSuccess(OffsetDateTime now) {
@@ -56,7 +56,6 @@ public class EmailSendLog extends BaseEntity {
 
     public void markFail(OffsetDateTime now) {
         this.status = EmailSendStatus.FAIL;
-        this.retryCount++;
         this.lastTriedAt = now;
     }
 

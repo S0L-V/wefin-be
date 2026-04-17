@@ -9,7 +9,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 class EmailVerificationEventListenerTest {
 
@@ -45,13 +48,13 @@ class EmailVerificationEventListenerTest {
         assertThat(savedLog.getPurpose()).isEqualTo(VerificationPurpose.SIGNUP);
         assertThat(savedLog.getCode()).isEqualTo("****56");
         assertThat(savedLog.getStatus()).isEqualTo(EmailSendStatus.SUCCESS);
-        assertThat(savedLog.getRetryCount()).isEqualTo(0);
+        assertThat(savedLog.getAttemptCount()).isEqualTo(1);
         assertThat(savedLog.getLastTriedAt()).isNotNull();
     }
 
     @Test
     @DisplayName("메일 발송 중 예외가 발생해도 예외를 전파하지 않고 실패 로그를 저장한다")
-    void handleSendEmail_ignore_exception() {
+    void handleSendEmail_fail_but_save_log() {
         // given
         EmailVerificationSendEvent event =
                 new EmailVerificationSendEvent(
@@ -68,7 +71,7 @@ class EmailVerificationEventListenerTest {
                 .sendVerificationCode("test@example.com", "123456");
 
         // when
-        listener.handleSendEmail(event);
+        assertDoesNotThrow(() -> listener.handleSendEmail(event));
 
         // then
         verify(mailService).sendVerificationCode("test@example.com", "123456");
@@ -79,7 +82,31 @@ class EmailVerificationEventListenerTest {
         assertThat(savedLog.getPurpose()).isEqualTo(VerificationPurpose.SIGNUP);
         assertThat(savedLog.getCode()).isEqualTo("****56");
         assertThat(savedLog.getStatus()).isEqualTo(EmailSendStatus.FAIL);
-        assertThat(savedLog.getRetryCount()).isEqualTo(1);
+        assertThat(savedLog.getAttemptCount()).isEqualTo(1);
         assertThat(savedLog.getLastTriedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("로그 저장 중 예외가 발생해도 예외를 전파하지 않는다")
+    void handleSendEmail_ignore_log_save_exception() {
+        // given
+        EmailVerificationSendEvent event =
+                new EmailVerificationSendEvent(
+                        "test@example.com",
+                        "123456",
+                        VerificationPurpose.SIGNUP
+                );
+
+        doThrow(new RuntimeException("log save fail"))
+                .when(emailSendLogRepository)
+                .save(org.mockito.ArgumentMatchers.any(EmailSendLog.class));
+
+        // when
+        assertDoesNotThrow(() -> listener.handleSendEmail(event));
+
+        // then
+        verify(mailService).sendVerificationCode("test@example.com", "123456");
+        verify(emailSendLogRepository)
+                .save(org.mockito.ArgumentMatchers.any(EmailSendLog.class));
     }
 }
