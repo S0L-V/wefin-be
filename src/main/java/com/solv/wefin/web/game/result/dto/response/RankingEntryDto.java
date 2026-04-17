@@ -12,18 +12,21 @@ public class RankingEntryDto {
 
     private int rank;
     private String userName;
-    private BigDecimal seedMoney;
     private BigDecimal finalAsset;
-    private BigDecimal profitRate;
-    private int totalTrades;
+
+    /**
+     * 본인 행 표시 여부.
+     * Boolean wrapper 로 선언하여 Lombok 이 getIsMine() 게터를 만들도록 한다.
+     * primitive boolean + 'is' prefix 필드는 isMine() 게터가 생성되어
+     * Jackson 이 JSON 키를 "mine" 으로 직렬화하는 문제를 회피한다.
+     */
+    private Boolean isMine;
 
     public static RankingEntryDto from(GameResultInfo.RankingEntry entry) {
         return new RankingEntryDto(
                 entry.rank(),
                 entry.userName(),
-                entry.seedMoney(),
                 entry.finalAsset(),
-                entry.profitRate(),
-                entry.totalTrades());
+                entry.isMine());
     }
 }

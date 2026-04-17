@@ -177,6 +177,35 @@ class DartFinancialServiceTest {
     }
 
     @Test
+    void 영업이익은_금융지주의_ifrs_표준_account_id도_매칭() {
+        // given — 신한지주 패턴: dart_OperatingIncomeLoss 없고 ifrs-full_ProfitLossFromOperatingActivities 사용
+        given(dartCorpCodeService.getCorpCode("055550")).willReturn("00382199");
+        DartFinancialApiResponse response = new DartFinancialApiResponse("000", "정상", List.of(
+                item("ifrs-full_Assets", "500000000000000", "480000000000000", "450000000000000"),
+                item("ifrs-full_Liabilities", "450000000000000", "430000000000000", "400000000000000"),
+                item("ifrs-full_Equity", "50000000000000", "50000000000000", "50000000000000"),
+                // dart_OperatingIncomeLoss 없음 — IFRS 표준 영업이익만
+                new DartFinancialItem("IS", "ifrs-full_ProfitLossFromOperatingActivities",
+                        "영업이익", "제 24 기", "5000000000000",
+                        "제 23 기", "4500000000000",
+                        "제 22 기", "4000000000000",
+                        "KRW"),
+                item("ifrs-full_ProfitLoss", "4000000000000", "3500000000000", "3000000000000")
+        ));
+        given(dartFinancialClient.fetch(eq("00382199"), anyString(), anyString(), anyString()))
+                .willReturn(response);
+
+        // when
+        DartFinancialSummary result = dartFinancialService.getFinancialSummary("055550");
+
+        // then — IFRS 영업이익이 매핑됨
+        assertThat(result.currentPeriod().operatingIncome())
+                .isEqualByComparingTo(new BigDecimal("5000000000000"));
+        assertThat(result.currentPeriod().netIncome())
+                .isEqualByComparingTo(new BigDecimal("4000000000000"));
+    }
+
+    @Test
     void 핵심_6개_계정이_하나도_매칭안되면_NOT_FOUND() {
         // given — list는 비어있지 않지만 6개 account_id 중 하나도 매칭 안 됨
         given(dartCorpCodeService.getCorpCode("005930")).willReturn("00126380");

@@ -6,6 +6,7 @@ import com.solv.wefin.domain.game.room.entity.GameRoom;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface GameResultRepository extends JpaRepository<GameResult, UUID> {
@@ -15,4 +16,6 @@ public interface GameResultRepository extends JpaRepository<GameResult, UUID> {
     List<GameResult> findByGameRoomOrderByFinalAssetDescCreatedAtAsc(GameRoom gameRoom);
 
     boolean existsByGameRoomAndParticipant(GameRoom gameRoom, GameParticipant participant);
+
+    Optional<GameResult> findByParticipant(GameParticipant participant);
 }

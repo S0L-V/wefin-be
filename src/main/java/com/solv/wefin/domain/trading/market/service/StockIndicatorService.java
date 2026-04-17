@@ -64,6 +64,7 @@ public class StockIndicatorService {
     private BigDecimal calculateRoe(String stockCode) {
         try {
             DartFinancialSummary summary = dartFinancialService.getFinancialSummary(stockCode);
+            if (summary == null) return null;
             DartFinancialPeriod current = summary.currentPeriod();
             if (current == null) return null;
 

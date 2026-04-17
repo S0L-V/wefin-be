@@ -13,4 +13,14 @@ public class OpenAiProperties {
     private String model = "gpt-4o-mini";
     private int maxTokens = 1500;
     private double temperature = 0.7;
+
+    private Report report = new Report();
+
+    @Getter
+    @Setter
+    public static class Report {
+        private String model = "gpt-4o";
+        private int maxTokens = 1500;
+        private double temperature = 0.7;
+    }
 }

@@ -167,6 +167,70 @@ class DartDividendServiceTest {
     }
 
     @Test
+    void 배당성향은_연결_접두어와_null_stock_knd도_매칭() {
+        // given — 삼성전자 실제 DART 응답 패턴 재현: "(연결)현금배당성향(%)" + stock_knd null
+        given(dartCorpCodeService.getCorpCode("005930")).willReturn("00126380");
+        DartDividendApiResponse samsungLike = new DartDividendApiResponse("000", "정상", List.of(
+                item("주당 현금배당금(원)", "보통주", "1,444"),
+                item("현금배당수익률(%)", "보통주", "1.50"),
+                item("(연결)현금배당성향(%)", null, "25.10")
+        ));
+        given(dartDividendClient.fetch(eq("00126380"), anyString(), anyString()))
+                .willReturn(samsungLike);
+
+        // when
+        DartDividendInfo result = dartDividendService.getDividend("005930");
+
+        // then
+        assertThat(result.dividendPerShare()).isEqualByComparingTo(new BigDecimal("1444"));
+        assertThat(result.dividendYieldRate()).isEqualByComparingTo(new BigDecimal("1.50"));
+        assertThat(result.payoutRatio()).isEqualByComparingTo(new BigDecimal("25.10"));
+    }
+
+    @Test
+    void 배당성향은_별도_접두어_버전도_매칭() {
+        // given — "(별도)현금배당성향(%)" 변형
+        given(dartCorpCodeService.getCorpCode("005930")).willReturn("00126380");
+        DartDividendApiResponse response = new DartDividendApiResponse("000", "정상", List.of(
+                item("주당 현금배당금(원)", "보통주", "1,000"),
+                item("현금배당수익률(%)", "보통주", "2.0"),
+                item("(별도)현금배당성향(%)", null, "30.5")
+        ));
+        given(dartDividendClient.fetch(eq("00126380"), anyString(), anyString()))
+                .willReturn(response);
+
+        // when
+        DartDividendInfo result = dartDividendService.getDividend("005930");
+
+        // then
+        assertThat(result.payoutRatio()).isEqualByComparingTo(new BigDecimal("30.5"));
+    }
+
+    @Test
+    void stock_knd가_모든_row에서_null이면_첫번째_매칭을_보통주로_취급() {
+        // given — 셀트리온 실제 DART 응답 패턴: stock_knd 필드 자체 없음(null)
+        // 같은 category가 두 번 나타나면 첫 번째는 보통 보통주, 두 번째는 우선주(배당 없으면 "-")
+        given(dartCorpCodeService.getCorpCode("068270")).willReturn("00413046");
+        DartDividendApiResponse celltrionLike = new DartDividendApiResponse("000", "정상", List.of(
+                new DartDividendItem("주당 현금배당금(원)", null, "750", null, null),
+                new DartDividendItem("주당 현금배당금(원)", null, "-", null, null),
+                new DartDividendItem("현금배당수익률(%)", null, "0.40", null, null),
+                new DartDividendItem("현금배당수익률(%)", null, "-", null, null),
+                new DartDividendItem("(연결)현금배당성향(%)", null, "15.92", null, null)
+        ));
+        given(dartDividendClient.fetch(eq("00413046"), anyString(), anyString()))
+                .willReturn(celltrionLike);
+
+        // when
+        DartDividendInfo result = dartDividendService.getDividend("068270");
+
+        // then — 보통주 명시 없어도 첫 번째 매칭으로 보통주 값 추출
+        assertThat(result.dividendPerShare()).isEqualByComparingTo(new BigDecimal("750"));
+        assertThat(result.dividendYieldRate()).isEqualByComparingTo(new BigDecimal("0.40"));
+        assertThat(result.payoutRatio()).isEqualByComparingTo(new BigDecimal("15.92"));
+    }
+
+    @Test
     void corpCode_미존재시_예외_전파() {
         // given
         given(dartCorpCodeService.getCorpCode("999999"))

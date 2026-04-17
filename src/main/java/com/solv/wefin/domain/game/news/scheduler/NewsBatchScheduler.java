@@ -20,7 +20,7 @@ public class NewsBatchScheduler {
      * 약 3일이면 전체 기간(2020~2024, 1,825일) 완료.
      * 수집 완료 후에는 이미 처리된 날짜를 건너뛰므로 추가 부하 없음.
      */
-    @Scheduled(cron = "0 0 4 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 43 4 * * *", zone = "Asia/Seoul")
     public void collectMorning() {
         runBatch("04:00");
     }
@@ -30,7 +30,7 @@ public class NewsBatchScheduler {
         runBatch("12:00");
     }
 
-    @Scheduled(cron = "0 0 19 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 7 * * *", zone = "Asia/Seoul")
     public void collectEvening() {
         runBatch("19:00");
     }
