@@ -37,8 +37,9 @@ jobs:
       - name: Deploy with docker compose
         run: |
           cd ${{ github.workspace }}
-          docker compose -f docker-compose-desktop.yml down || true
-          docker compose -f docker-compose-desktop.yml up -d backend
+          docker compose -f docker-compose-desktop.yml stop backend || true
+          docker compose -f docker-compose-desktop.yml rm -f backend || true
+          docker compose -f docker-compose-desktop.yml up -d
 
       - name: Verify deployment
         run: |
