@@ -174,6 +174,11 @@ class VoteServiceTest {
         ReflectionTestUtils.setField(savedAnswer, "id", 401L);
 
         given(voteRepository.findById(5L)).willReturn(Optional.of(vote));
+        given(groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
+                userId,
+                vote.getGroup(),
+                GroupMember.GroupMemberStatus.ACTIVE
+        )).willReturn(true);
         given(voteOptionRepository.findAllByIdIn(List.of(102L))).willReturn(List.of(secondOption));
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(voteAnswerRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));
@@ -211,6 +216,11 @@ class VoteServiceTest {
         ReflectionTestUtils.setField(savedAnswer, "id", 301L);
 
         given(voteRepository.findById(7L)).willReturn(Optional.of(vote));
+        given(groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
+                userId,
+                vote.getGroup(),
+                GroupMember.GroupMemberStatus.ACTIVE
+        )).willReturn(true);
         given(voteOptionRepository.findAllByIdIn(List.of(201L))).willReturn(List.of(firstOption));
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(voteAnswerRepository.saveAll(any())).willAnswer(invocation -> invocation.getArgument(0));

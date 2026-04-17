@@ -48,6 +48,7 @@ public class VoteService {
     @Transactional
     public VoteInfo createVote(UUID userId, CreateVoteCommand command) {
         validateCreateCommand(command);
+        OffsetDateTime now = OffsetDateTime.now();
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -65,7 +66,7 @@ public class VoteService {
             throw new BusinessException(ErrorCode.GROUP_MEMBER_FORBIDDEN);
         }
 
-        OffsetDateTime endsAt = OffsetDateTime.now().plusHours(command.durationHours());
+        OffsetDateTime endsAt = now.plusHours(command.durationHours());
 
         Vote vote = Vote.create(
                 group,
@@ -96,6 +97,7 @@ public class VoteService {
 
     public VoteDetailInfo getVoteDetail(UUID userId, Long voteId) {
         Vote vote = getVote(voteId);
+        OffsetDateTime now = OffsetDateTime.now();
 
         validateActiveGroupMember(userId, vote.getGroup());
 
@@ -116,7 +118,7 @@ public class VoteService {
                 vote.getStatus(),
                 vote.getMaxSelectCount(),
                 vote.getEndsAt(),
-                isClosed(vote),
+                isClosed(vote, now),
                 optionInfos,
                 myOptionIds
         );
@@ -125,13 +127,14 @@ public class VoteService {
     @Transactional
     public VoteResultInfo submitVote(UUID userId, Long voteId, SubmitVoteCommand command) {
         Vote vote = getVote(voteId);
+        OffsetDateTime now = OffsetDateTime.now();
 
         validateActiveGroupMember(userId, vote.getGroup());
 
-        closeIfExpired(vote);
+        closeIfExpired(vote, now);
 
-        if (isClosed(vote)) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        if (isClosed(vote, now)) {
+            throw new BusinessException(ErrorCode.VOTE_CLOSED);
         }
 
         validateSubmitCommand(command, vote.getMaxSelectCount());
@@ -139,14 +142,14 @@ public class VoteService {
         List<VoteOption> options = voteOptionRepository.findAllByIdIn(command.optionIds());
 
         if (options.size() != command.optionIds().size()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT);
+            throw new BusinessException(ErrorCode.VOTE_OPTION_INVALID);
         }
 
         boolean allBelongToVote = options.stream()
                 .allMatch(option -> option.getVote().getVoteId().equals(voteId));
 
         if (!allBelongToVote) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT);
+            throw new BusinessException(ErrorCode.VOTE_OPTION_INVALID);
         }
 
         User user = userRepository.findById(userId)
@@ -166,6 +169,7 @@ public class VoteService {
 
     public VoteResultInfo getVoteResult(UUID userId, Long voteId) {
         Vote vote = getVote(voteId);
+        OffsetDateTime now = OffsetDateTime.now();
 
         validateActiveGroupMember(userId, vote.getGroup());
 
@@ -204,7 +208,7 @@ public class VoteService {
                 vote.getStatus(),
                 vote.getMaxSelectCount(),
                 vote.getEndsAt(),
-                isClosed(vote),
+                isClosed(vote, now),
                 participantCount,
                 optionResults
         );
@@ -212,7 +216,7 @@ public class VoteService {
 
     private Vote getVote(Long voteId) {
         return voteRepository.findById(voteId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT));
+                .orElseThrow(() -> new BusinessException(ErrorCode.VOTE_NOT_FOUND));
     }
 
     private void validateCreateCommand(CreateVoteCommand command) {
@@ -245,16 +249,16 @@ public class VoteService {
 
     private void validateSubmitCommand(SubmitVoteCommand command, int maxSelectCount) {
         if (command.optionIds() == null || command.optionIds().isEmpty()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT);
+            throw new BusinessException(ErrorCode.VOTE_OPTION_INVALID);
         }
 
         if (command.optionIds().size() > maxSelectCount) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT);
+            throw new BusinessException(ErrorCode.VOTE_MAX_SELECT_EXCEEDED);
         }
 
         long distinctCount = command.optionIds().stream().distinct().count();
         if (distinctCount != command.optionIds().size()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT);
+            throw new BusinessException(ErrorCode.VOTE_OPTION_INVALID);
         }
     }
 
@@ -270,15 +274,15 @@ public class VoteService {
         }
     }
 
-    private boolean isClosed(Vote vote) {
+    private boolean isClosed(Vote vote, OffsetDateTime now) {
         return vote.getStatus() == VoteStatus.CLOSED
-                || (vote.getEndsAt() != null && OffsetDateTime.now().isAfter(vote.getEndsAt()));
+                || (vote.getEndsAt() != null && now.isAfter(vote.getEndsAt()));
     }
 
-    private void closeIfExpired(Vote vote) {
+    private void closeIfExpired(Vote vote, OffsetDateTime now) {
         if (vote.getStatus() == VoteStatus.OPEN
                 && vote.getEndsAt() != null
-                && OffsetDateTime.now().isAfter(vote.getEndsAt())) {
+                && now.isAfter(vote.getEndsAt())) {
             vote.close();
         }
     }

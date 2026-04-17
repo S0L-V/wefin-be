@@ -175,6 +175,11 @@ public enum ErrorCode {
     VOTE_ALREADY_CAST(409, "이미 투표하였습니다."),
     VOTE_NOT_IN_PROGRESS(400, "진행 중인 투표가 없습니다."),
     VOTE_ALREADY_IN_PROGRESS(409, "이미 투표가 진행 중입니다."),
+    VOTE_NOT_FOUND(404, "Vote not found."),
+    VOTE_CLOSED(409, "Vote is already closed."),
+    VOTE_OPTION_INVALID(400, "Invalid vote option."),
+    VOTE_MAX_SELECT_EXCEEDED(400, "Maximum selectable option count exceeded."),
+
     // MarketTrend
     MARKET_TREND_ALREADY_RUNNING(409, "금융 동향 생성이 이미 실행 중입니다.");
 
