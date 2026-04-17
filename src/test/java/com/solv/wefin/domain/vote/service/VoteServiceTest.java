@@ -4,6 +4,8 @@ import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.chat.groupChat.service.ChatMessageService;
 import com.solv.wefin.domain.group.entity.Group;
+import com.solv.wefin.domain.group.entity.GroupMember;
+import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.domain.group.repository.GroupRepository;
 import com.solv.wefin.domain.vote.dto.command.CreateVoteCommand;
 import com.solv.wefin.domain.vote.dto.command.SubmitVoteCommand;
@@ -15,6 +17,8 @@ import com.solv.wefin.domain.vote.entity.VoteOption;
 import com.solv.wefin.domain.vote.repository.VoteAnswerRepository;
 import com.solv.wefin.domain.vote.repository.VoteOptionRepository;
 import com.solv.wefin.domain.vote.repository.VoteRepository;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,9 +33,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,6 +54,8 @@ class VoteServiceTest {
     @Mock
     private GroupRepository groupRepository;
     @Mock
+    private GroupMemberRepository groupMemberRepository;
+    @Mock
     private ChatMessageService chatMessageService;
 
     private VoteService voteService;
@@ -60,6 +68,7 @@ class VoteServiceTest {
                 voteAnswerRepository,
                 userRepository,
                 groupRepository,
+                groupMemberRepository,
                 chatMessageService
         );
     }
@@ -80,6 +89,11 @@ class VoteServiceTest {
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(groupRepository.findById(1L)).willReturn(Optional.of(group));
+        given(groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
+                userId,
+                group,
+                GroupMember.GroupMemberStatus.ACTIVE
+        )).willReturn(true);
         given(voteRepository.save(any(Vote.class))).willAnswer(invocation -> {
             Vote vote = invocation.getArgument(0);
             ReflectionTestUtils.setField(vote, "voteId", 10L);
@@ -95,6 +109,57 @@ class VoteServiceTest {
         verify(voteRepository).save(any(Vote.class));
         verify(voteOptionRepository).saveAll(any());
         verify(chatMessageService).shareVote(eq(userId), any(Vote.class));
+    }
+
+    @Test
+    @DisplayName("createVote fails when user is not an active group member")
+    void createVote_fail_when_user_is_not_active_member() {
+        UUID userId = UUID.randomUUID();
+        User user = createUser(userId);
+        Group group = createGroup(1L);
+        CreateVoteCommand command = new CreateVoteCommand(
+                1L,
+                "Lunch menu vote",
+                List.of("Chicken", "Pizza"),
+                1,
+                1L
+        );
+
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(groupRepository.findById(1L)).willReturn(Optional.of(group));
+        given(groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
+                userId,
+                group,
+                GroupMember.GroupMemberStatus.ACTIVE
+        )).willReturn(false);
+
+        assertThatThrownBy(() -> voteService.createVote(userId, command))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_MEMBER_FORBIDDEN);
+
+        verify(voteRepository, never()).save(any(Vote.class));
+        verify(voteOptionRepository, never()).saveAll(any());
+        verify(chatMessageService, never()).shareVote(any(), any());
+    }
+
+    @Test
+    @DisplayName("createVote fails when options contain duplicates after trimming")
+    void createVote_fail_when_options_are_duplicated() {
+        UUID userId = UUID.randomUUID();
+        CreateVoteCommand command = new CreateVoteCommand(
+                1L,
+                "Lunch menu vote",
+                List.of("Chicken", " Chicken "),
+                1,
+                1L
+        );
+
+        assertThatThrownBy(() -> voteService.createVote(userId, command))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+
+        verify(userRepository, never()).findById(any());
+        verify(voteRepository, never()).save(any(Vote.class));
     }
 
     @Test

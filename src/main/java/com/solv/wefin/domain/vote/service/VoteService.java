@@ -4,6 +4,8 @@ import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.chat.groupChat.service.ChatMessageService;
 import com.solv.wefin.domain.group.entity.Group;
+import com.solv.wefin.domain.group.entity.GroupMember;
+import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.domain.group.repository.GroupRepository;
 import com.solv.wefin.domain.vote.dto.command.CreateVoteCommand;
 import com.solv.wefin.domain.vote.dto.command.SubmitVoteCommand;
@@ -40,6 +42,7 @@ public class VoteService {
     private final VoteAnswerRepository voteAnswerRepository;
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
+    private final GroupMemberRepository groupMemberRepository;
     private final ChatMessageService chatMessageService;
 
     @Transactional
@@ -51,6 +54,16 @@ public class VoteService {
 
         Group group = groupRepository.findById(command.groupId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
+
+        boolean isActiveMember = groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
+                userId,
+                group,
+                GroupMember.GroupMemberStatus.ACTIVE
+        );
+
+        if (!isActiveMember) {
+            throw new BusinessException(ErrorCode.GROUP_MEMBER_FORBIDDEN);
+        }
 
         OffsetDateTime endsAt = OffsetDateTime.now().plusHours(command.durationHours());
 
@@ -65,7 +78,7 @@ public class VoteService {
         voteRepository.save(vote);
 
         List<VoteOption> options = command.options().stream()
-                .map(optionText -> VoteOption.create(vote, optionText))
+                .map(optionText -> VoteOption.create(vote, optionText.trim()))
                 .toList();
 
         voteOptionRepository.saveAll(options);
@@ -190,11 +203,8 @@ public class VoteService {
     }
 
     private Vote getVote(Long voteId) {
-        Vote vote = voteRepository.findById(voteId)
+        return voteRepository.findById(voteId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT));
-
-        closeIfExpired(vote);
-        return vote;
     }
 
     private void validateCreateCommand(CreateVoteCommand command) {
@@ -203,6 +213,16 @@ public class VoteService {
         }
 
         if (command.options() == null || command.options().size() < 2) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+
+        long normalizedOptionCount = command.options().stream()
+                .map(option -> option == null ? "" : option.trim())
+                .filter(option -> !option.isBlank())
+                .distinct()
+                .count();
+
+        if (normalizedOptionCount != command.options().size()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
 
@@ -231,14 +251,7 @@ public class VoteService {
     }
 
     private boolean isClosed(Vote vote) {
-        return vote.getStatus() == VoteStatus.CLOSED;
-    }
-
-    private void closeIfExpired(Vote vote) {
-        if (vote.getStatus() == VoteStatus.OPEN
-                && vote.getEndsAt() != null
-                && OffsetDateTime.now().isAfter(vote.getEndsAt())) {
-            vote.close();
-        }
+        return vote.getStatus() == VoteStatus.CLOSED
+                || (vote.getEndsAt() != null && OffsetDateTime.now().isAfter(vote.getEndsAt()));
     }
 }
