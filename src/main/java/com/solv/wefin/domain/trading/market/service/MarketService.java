@@ -53,6 +53,9 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
     private static final long CACHE_TTL_MS = 5000; // 5초
     private static final Set<String> VALID_PERIOD_CODES = Set.of("D", "W", "M", "Y");
     private static final Set<String> MINUTE_PERIOD_CODES = Set.of("1", "5", "15", "30", "60");
+    private static final int PERIOD_CANDLE_MAX_PAGES = 4;
+    private static final int PERIOD_CANDLE_PAGE_DAYS = 100;
+    private static final int MINUTE_CANDLE_MAX_PAGES = 5;
 
     public PriceResponse getPrice(String stockCode) {
         validateStockCode(stockCode);
@@ -242,56 +245,98 @@ public class MarketService implements MarketPriceProvider, ExchangeRateProvider 
             throw new BusinessException(ErrorCode.MARKET_INVALID_PERIOD_CODE);
         }
 
-        HantuCandleApiResponse response = hantuMarketClient.fetchPeriodPrice(stockCode, start, end, periodCode);
-        log.info("캔들 API 응답: {}", response);
+        return getPeriodCandlesWithPaging(stockCode, start, end, periodCode);
+    }
 
-        if (response == null) {
-            return List.of();
-        }
+    private List<CandleResponse> getPeriodCandlesWithPaging(String stockCode, LocalDate start, LocalDate end, String periodCode) {
+        List<CandleResponse> allCandles = new ArrayList<>();
+        LocalDate pageEnd = end;
 
-        if (response.output1() != null) {
-            validateRtCode(response.output1().rt_cd());
-        }
+        for (int page = 0; page < PERIOD_CANDLE_MAX_PAGES && !pageEnd.isBefore(start); page++) {
+            LocalDate pageStart = pageEnd.minusDays(PERIOD_CANDLE_PAGE_DAYS);
+            if (pageStart.isBefore(start)) {
+                pageStart = start;
+            }
 
-        if (response.output2() == null) {
-            return List.of();
-        }
+            HantuCandleApiResponse response = hantuMarketClient.fetchPeriodPrice(stockCode, pageStart, pageEnd, periodCode);
 
-        return response.output2().stream()
+            if (response == null || response.output2() == null || response.output2().isEmpty()) {
+                break;
+            }
+
+            List<CandleResponse> pageCandles = response.output2().stream()
                     .map(CandleResponse::from)
                     .toList();
+            allCandles.addAll(pageCandles);
+
+            // 다음 페이지: 이번 응답의 가장 오래된 날짜 - 1일
+            LocalDate oldestDate = pageCandles.stream()
+                    .map(c -> c.date().toLocalDate())
+                    .min(LocalDate::compareTo)
+                    .orElse(pageStart);
+            pageEnd = oldestDate.minusDays(1);
+        }
+
+        // date 기준 중복 제거 + 오름차순 정렬
+        LinkedHashMap<LocalDateTime, CandleResponse> deduped = new LinkedHashMap<>();
+        allCandles.stream()
+                .sorted(Comparator.comparing(CandleResponse::date))
+                .forEach(c -> deduped.putIfAbsent(c.date(), c));
+        return new ArrayList<>(deduped.values());
     }
 
     private List<CandleResponse> getMinuteCandles(String stockCode, int periodMinutes) {
-        // 현재 KST 시간 기준으로 분봉 조회 (역순으로 반환됨)
+        List<CandleResponse> allOneMinuteCandles = new ArrayList<>();
         String inputHour = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("HHmmss"));
-        HantuMinuteCandleApiResponse response = hantuMarketClient.fetchMinutePrice(stockCode, inputHour);
-        log.info("분봉 API 응답: {}", response);
 
-        if (response == null) {
-            return List.of();
+        for (int page = 0; page < MINUTE_CANDLE_MAX_PAGES; page++) {
+            HantuMinuteCandleApiResponse response = hantuMarketClient.fetchMinutePrice(stockCode, inputHour);
+
+            if (response == null || response.output2() == null || response.output2().isEmpty()) {
+                break;
+            }
+
+            List<CandleResponse> pageCandles = response.output2().stream()
+                    .map(CandleResponse::fromMinute)
+                    .toList();
+            allOneMinuteCandles.addAll(pageCandles);
+
+            // 다음 페이지: 이번 응답의 가장 오래된 시간 - 1분
+            String oldestHour = response.output2().stream()
+                    .map(HantuMinuteCandleApiResponse.Output2::stck_cntg_hour)
+                    .min(String::compareTo)
+                    .orElse(null);
+
+            if (oldestHour == null) {
+                break;
+            }
+
+            // 가장 오래된 시간에서 1분 빼서 다음 페이지 요청 (중복 방지)
+            int hour = Integer.parseInt(oldestHour.substring(0, 2));
+            int min = Integer.parseInt(oldestHour.substring(2, 4));
+            if (min == 0) {
+                hour--;
+                min = 59;
+            } else {
+                min--;
+            }
+            if (hour < 9) {
+                break; // 장 시작(09:00) 이전이면 더 이상 데이터 없음
+            }
+            inputHour = String.format("%02d%02d00", hour, min);
         }
 
-        if (response.output1() != null) {
-            validateRtCode(response.output1().rt_cd());
-        }
-
-        if (response.output2() == null) {
-            return List.of();
-        }
-
-        // 한투 API가 내림차순(최신→과거)으로 반환하므로 오름차순 정렬
-        List<CandleResponse> oneMinuteCandles = response.output2().stream()
-                .map(CandleResponse::fromMinute)
+        // date 기준 중복 제거 + 오름차순 정렬
+        LinkedHashMap<LocalDateTime, CandleResponse> deduped = new LinkedHashMap<>();
+        allOneMinuteCandles.stream()
                 .sorted(Comparator.comparing(CandleResponse::date))
-                .toList();
+                .forEach(c -> deduped.putIfAbsent(c.date(), c));
+        List<CandleResponse> oneMinuteCandles = new ArrayList<>(deduped.values());
 
-        // 1분봉이면 그대로 반환
         if (periodMinutes == 1) {
             return oneMinuteCandles;
         }
 
-        // N분봉 집계
         return aggregateCandles(oneMinuteCandles, periodMinutes);
     }
 
