@@ -36,6 +36,13 @@ public class ChatMessage {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ref_type", length = 20)
+    private RefType refType;
+
+    @Column(name = "ref_id")
+    private Long refId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reply_to_message_id")
     private ChatMessage replyToMessage;
@@ -47,11 +54,13 @@ public class ChatMessage {
     private OffsetDateTime createdAt;
 
     @Builder
-    public ChatMessage(User user, Group group, MessageType messageType, String content, ChatMessage replyToMessage, OffsetDateTime createdAt) {
+    public ChatMessage(User user, Group group, MessageType messageType, String content, RefType refType, Long refId, ChatMessage replyToMessage, OffsetDateTime createdAt) {
         this.user = user;
         this.group = group;
         this.messageType = messageType;
         this.content = content;
+        this.refType = refType;
+        this.refId = refId;
         this.replyToMessage = replyToMessage;
         this.createdAt = createdAt;
     }
@@ -62,6 +71,8 @@ public class ChatMessage {
                 .group(group)
                 .messageType(MessageType.CHAT)
                 .content(content)
+                .refType(null)
+                .refId(null)
                 .replyToMessage(replyToMessage)
                 .createdAt(OffsetDateTime.now())
                 .build();
@@ -73,6 +84,21 @@ public class ChatMessage {
                 .group(group)
                 .messageType(MessageType.NEWS)
                 .content(title)
+                .refType(null)
+                .refId(null)
+                .replyToMessage(null)
+                .createdAt(OffsetDateTime.now())
+                .build();
+    }
+
+    public static ChatMessage createVoteMessage(User user, Group group, String content, Long voteId) {
+        return ChatMessage.builder()
+                .user(user)
+                .group(group)
+                .messageType(MessageType.CHAT)
+                .content(content)
+                .refType(RefType.VOTE)
+                .refId(voteId)
                 .replyToMessage(null)
                 .createdAt(OffsetDateTime.now())
                 .build();
