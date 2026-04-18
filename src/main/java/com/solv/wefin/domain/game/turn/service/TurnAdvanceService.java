@@ -271,11 +271,20 @@ public class TurnAdvanceService {
     /**
      * 다음 거래일을 계산한다.
      * 현재 날짜 + moveDays 후, 비거래일이면 가장 가까운 이전 거래일로 보정.
+     * 단, currentDate 이후의 거래일만 반환하여 무한 루프를 방지한다.
      */
     private LocalDate calculateNextTradeDate(LocalDate currentDate, int moveDays) {
         LocalDate targetDate = currentDate.plusDays(moveDays);
 
-        return stockDailyRepository.findLatestTradeDateOnOrBefore(targetDate)
+        LocalDate nextTradeDate = stockDailyRepository.findLatestTradeDateOnOrBefore(targetDate)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GAME_STOCK_PRICE_NOT_FOUND));
+
+        // 보정 결과가 현재 날짜 이하면 currentDate 다음 날부터 재탐색
+        if (!nextTradeDate.isAfter(currentDate)) {
+            nextTradeDate = stockDailyRepository.findEarliestTradeDateAfter(currentDate)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.GAME_STOCK_PRICE_NOT_FOUND));
+        }
+
+        return nextTradeDate;
     }
 }
