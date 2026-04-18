@@ -158,37 +158,31 @@ class GameRoomServiceTest {
     // === API 2: 게임방 목록 조회 테스트 ===
 
     @Test
-    @DisplayName("게임방 목록 조회 — 활성방 + 내 완료방 조회")
+    @DisplayName("게임방 목록 조회 — 활성방만 반환 (FINISHED는 history API로 분리)")
     void getRooms() {
-        // Given — 활성방 1개, 내 완료방 1개
+        // Given — 활성방 1개
         GameRoom activeRoom = createGameRoom();
-        GameRoom finishedRoom = createGameRoom();
         given(gameRoomRepository.findByGroupIdAndStatusIn(eq(TEST_GROUP_ID), anyList()))
                 .willReturn(List.of(activeRoom));
-        given(gameRoomRepository.findFinishedRoomsByGroupIdAndUserId(TEST_GROUP_ID, TEST_USER_ID))
-                .willReturn(List.of(finishedRoom));
         given(gameParticipantRepository.countByGameRoomAndStatus(any(GameRoom.class), eq(ParticipantStatus.ACTIVE)))
                 .willReturn(1);
 
         // When
         List<RoomListInfo> result = gameRoomService.getRooms(TEST_GROUP_ID, TEST_USER_ID);
 
-        // Then — 2개 반환 (활성 1 + 완료 1)
-        assertThat(result).hasSize(2);
+        // Then — 활성방 1개만 반환
+        assertThat(result).hasSize(1);
         assertThat(result.get(0).room()).isEqualTo(activeRoom);
         assertThat(result.get(0).playerCount()).isEqualTo(1);
 
         verify(gameRoomRepository).findByGroupIdAndStatusIn(eq(TEST_GROUP_ID), anyList());
-        verify(gameRoomRepository).findFinishedRoomsByGroupIdAndUserId(TEST_GROUP_ID, TEST_USER_ID);
     }
 
     @Test
     @DisplayName("게임방 목록 조회 — 결과 없으면 빈 리스트 반환")
     void getRooms_empty() {
-        // Given — 활성방 없음, 완료방 없음
+        // Given — 활성방 없음
         given(gameRoomRepository.findByGroupIdAndStatusIn(eq(TEST_GROUP_ID), anyList()))
-                .willReturn(Collections.emptyList());
-        given(gameRoomRepository.findFinishedRoomsByGroupIdAndUserId(TEST_GROUP_ID, TEST_USER_ID))
                 .willReturn(Collections.emptyList());
 
         // When

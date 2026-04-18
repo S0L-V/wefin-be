@@ -6,6 +6,7 @@ import com.solv.wefin.domain.game.order.repository.GameOrderRepository;
 import com.solv.wefin.domain.game.participant.entity.GameParticipant;
 import com.solv.wefin.domain.game.participant.entity.ParticipantStatus;
 import com.solv.wefin.domain.game.participant.repository.GameParticipantRepository;
+import com.solv.wefin.domain.game.result.dto.GameHistoryInfo;
 import com.solv.wefin.domain.game.result.dto.GameResultInfo;
 import com.solv.wefin.domain.game.result.entity.GameResult;
 import com.solv.wefin.domain.game.result.repository.GameResultRepository;
@@ -17,6 +18,8 @@ import com.solv.wefin.domain.game.snapshot.repository.GamePortfolioSnapshotRepos
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -176,6 +179,61 @@ public class GameResultService {
                         o.getFee(),
                         o.getTax()))
                 .toList();
+    }
+
+    /**
+     * 내가 참여해서 FINISHED한 게임 이력 페이징 조회.
+     * 쿼리 기준: game_result (방 나가기(LEFT)는 GameResult 미생성 → 자연스럽게 제외).
+     *
+     * finalRank 매핑 정책:
+     * - 방 FINISHED → 실제 순위 (GameEndService.finalizeRanks()로 확정된 값)
+     * - 방 IN_PROGRESS → null (DB의 0은 "미확정"이므로 클라이언트에 노출하지 않음)
+     *
+     * participantCount: 해당 방의 GameResult 개수 = 완주자 수 (LEFT 제외).
+     */
+    public Page<GameHistoryInfo> getMyGameHistory(Long groupId, UUID userId, Pageable pageable) {
+
+        // 1. 내 이력 페이징 조회 (JOIN FETCH GameRoom, GameParticipant)
+        Page<GameResult> resultPage = gameResultRepository.findMyHistory(userId, groupId, pageable);
+
+        if (resultPage.isEmpty()) {
+            return resultPage.map(r -> null); // 빈 페이지 그대로 반환
+        }
+
+        // 2. 방별 완주자 수 일괄 집계 (N+1 방지)
+        List<UUID> roomIds = resultPage.getContent().stream()
+                .map(r -> r.getGameRoom().getRoomId())
+                .distinct()
+                .toList();
+
+        Map<UUID, Long> participantCountMap = gameResultRepository.countByRoomIds(roomIds).stream()
+                .collect(Collectors.toMap(
+                        row -> (UUID) row[0],
+                        row -> (Long) row[1]));
+
+        // 3. GameResult → GameHistoryInfo 변환
+        return resultPage.map(r -> {
+            GameRoom room = r.getGameRoom();
+            boolean roomFinished = room.getStatus() == RoomStatus.FINISHED;
+            Integer finalRank = roomFinished ? r.getFinalRank() : null;
+            int participantCount = participantCountMap
+                    .getOrDefault(room.getRoomId(), 0L).intValue();
+
+            return new GameHistoryInfo(
+                    room.getRoomId(),
+                    room.getStatus(),
+                    r.getSeedMoney(),
+                    room.getPeriodMonth(),
+                    room.getMoveDays(),
+                    room.getStartDate(),
+                    room.getEndDate(),
+                    participantCount,
+                    r.getFinalAsset(),
+                    r.getProfitRate(),
+                    finalRank,
+                    r.getTotalTrades(),
+                    r.getCreatedAt());
+        });
     }
 
     private Map<UUID, String> buildNicknameMap(List<UUID> userIds) {
