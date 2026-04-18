@@ -122,4 +122,22 @@ public class AuthController {
 
         return ApiResponse.success(null);
     }
+
+    @PostMapping("/password/change")
+    public ApiResponse<Void> changePassword(
+            Authentication authentication,
+            @RequestBody @Valid ChangePasswordRequest request
+    ) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UUID userId)) {
+            throw new BusinessException(ErrorCode.AUTH_UNAUTHORIZED);
+        }
+
+        authService.changePassword(
+                userId,
+                request.getCurrentPassword(),
+                request.getNewPassword()
+        );
+
+        return ApiResponse.success(null);
+    }
 }

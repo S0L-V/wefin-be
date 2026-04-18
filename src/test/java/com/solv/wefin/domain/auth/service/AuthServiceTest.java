@@ -527,4 +527,119 @@ class AuthServiceTest {
             verify(refreshTokenRepository, never()).save(any(RefreshToken.class));
         }
     }
+
+    @Nested
+    @DisplayName("changePassword")
+    class ChangePasswordTest {
+
+        @Test
+        @DisplayName("비밀번호 변경에 성공한다")
+        void changePassword_success() {
+            UUID userId = UUID.randomUUID();
+
+            User user = User.builder()
+                    .email("test@example.com")
+                    .nickname("testuser")
+                    .password("encoded-old-password")
+                    .build();
+
+            ReflectionTestUtils.setField(user, "userId", userId);
+
+            when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+            when(passwordEncoder.matches("oldpass123", "encoded-old-password")).thenReturn(true);
+            when(passwordEncoder.matches("newpass123", "encoded-old-password")).thenReturn(false);
+            when(passwordEncoder.encode("newpass123")).thenReturn("encoded-new-password");
+
+            authService.changePassword(userId, "oldpass123", "newpass123");
+
+            assertThat(user.getPassword()).isEqualTo("encoded-new-password");
+            verify(passwordEncoder).encode("newpass123");
+        }
+
+        @Test
+        @DisplayName("현재 비밀번호가 일치하지 않으면 실패한다")
+        void changePassword_fail_when_password_mismatch() {
+            UUID userId = UUID.randomUUID();
+
+            User user = User.builder()
+                    .email("test@example.com")
+                    .nickname("testuser")
+                    .password("encoded-old-password")
+                    .build();
+
+            ReflectionTestUtils.setField(user, "userId", userId);
+
+            when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+            when(passwordEncoder.matches("wrongpass", "encoded-old-password")).thenReturn(false);
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.changePassword(userId, "wrongpass", "newpass123")
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_PASSWORD_MISMATCH);
+        }
+
+        @Test
+        @DisplayName("새 비밀번호가 기존과 같으면 실패한다")
+        void changePassword_fail_when_same_password() {
+            UUID userId = UUID.randomUUID();
+
+            User user = User.builder()
+                    .email("test@example.com")
+                    .nickname("testuser")
+                    .password("encoded-old-password")
+                    .build();
+
+            ReflectionTestUtils.setField(user, "userId", userId);
+
+            when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+            when(passwordEncoder.matches("oldpass123", "encoded-old-password")).thenReturn(true);
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.changePassword(userId, "oldpass123", "oldpass123")
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_PASSWORD_SAME_AS_OLD);
+        }
+
+        @Test
+        @DisplayName("사용자가 존재하지 않으면 실패한다")
+        void changePassword_fail_when_user_not_found() {
+            UUID userId = UUID.randomUUID();
+
+            when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.changePassword(userId, "oldpass123", "newpass123")
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("입력값이 null 또는 blank면 validation 실패한다")
+        void changePassword_fail_when_invalid_input() {
+            UUID userId = UUID.randomUUID();
+
+            BusinessException nullException = assertThrows(
+                    BusinessException.class,
+                    () -> authService.changePassword(userId, null, "newpass123")
+            );
+
+            BusinessException blankException = assertThrows(
+                    BusinessException.class,
+                    () -> authService.changePassword(userId, "   ", "newpass123")
+            );
+
+            assertAll(
+                    () -> assertThat(nullException.getErrorCode()).isEqualTo(ErrorCode.AUTH_VALIDATION_FAILED),
+                    () -> assertThat(blankException.getErrorCode()).isEqualTo(ErrorCode.AUTH_VALIDATION_FAILED)
+            );
+
+            verify(userRepository, never()).findById(any());
+        }
+    }
 }

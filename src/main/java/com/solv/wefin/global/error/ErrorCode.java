@@ -71,6 +71,10 @@ public enum ErrorCode {
     AUTH_INVALID_TOKEN(401, "유효하지 않은 인증 토큰입니다."),
     AUTH_UNAUTHORIZED(401, "인증이 필요합니다."),
 
+    // Auth - PASSWORD
+    AUTH_PASSWORD_MISMATCH(400, "현재 비밀번호가 일치하지 않습니다."),
+    AUTH_PASSWORD_SAME_AS_OLD(400, "새 비밀번호는 기존 비밀번호와 달라야 합니다."),
+
     // Payment
     PLAN_NOT_FOUND(404, "구독 상품을 찾을 수 없습니다."),
     PLAN_INACTIVE(400, "비활성화된 구독 상품입니다."),
