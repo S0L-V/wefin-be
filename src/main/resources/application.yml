@@ -2,5 +2,107 @@ spring:
   application:
     name: wefin
 
+
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
+
+  jackson:
+    generator:
+      write-bigdecimal-as-plain: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    out-of-order: true
+
+openai:
+  api-key: ${OPENAI_API_KEY:}
+  embedding:
+    model: text-embedding-3-small
+    version: v1
+  tagging:
+    model: gpt-4o-mini
+  chat:
+    url: https://api.openai.com/v1/chat/completions
+    model: gpt-4o-mini
+  summary:
+    model: gpt-4o-mini
+
+embedding:
+  collect:
+    cron: ${EMBEDDING_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
+
+tagging:
+  collect:
+    cron: ${TAGGING_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
+kis:
+  app-key: ${KIS_APP_KEY:}
+  app-secret: ${KIS_APP_SECRET:}
+  base-url: ${KIS_BASE_URL:https://openapi.koreainvestment.com:9443}
+
+
+clustering:
+  threshold: 0.80
+  sample-k: 5
+  penalty:
+    category-mismatch: 15
+    stocks-no-overlap: 20
+  score:
+    reject-cutoff: 70
+    suspicious-cutoff: 80
+  outlier:
+    similarity-threshold: 0.70
+    hard-threshold: 0.55
+    broad-topic-blacklist:
+      - ECONOMY
+      - MARKET
+      - INDUSTRY
+      - POLITICS
+      - SOCIETY
+  merge:
+    threshold: 0.85
+  collect:
+    cron: ${CLUSTERING_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
+
+summary:
+  collect:
+    cron: ${SUMMARY_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
+
+market:
+  trend:
+    cron: ${MARKET_TREND_CRON:${MARKET_BATCH_CRON:0 */30 * * * *}}
+
+batch:
+  news:
+    crawl-size: ${NEWS_CRAWL_BATCH_SIZE:500}
+    embedding-size: ${NEWS_EMBEDDING_BATCH_SIZE:500}
+    tagging-size: ${NEWS_TAGGING_BATCH_SIZE:500}
+    clustering-size: ${NEWS_CLUSTERING_BATCH_SIZE:500}
+    summary-size: ${NEWS_SUMMARY_BATCH_SIZE:50}
+    rejudge-max-limit: ${NEWS_REJUDGE_MAX_LIMIT:500}
+
+websocket:
+  allowed-origins:
+    - http://localhost:5173
+    - http://localhost:5174
+
+jwt:
+  secret: ${JWT_SECRET:wefin-test-jwt-secret-key-1234567890}
+
+toss:
+  secret-key: ${TOSS_SECRET_KEY:}
+  base-url: ${TOSS_BASE_URL:https://api.tosspayments.com}
+
+hantu:
+  api:
+    baseUrl: https://openapi.koreainvestment.com:9443
+    appkey: ${HANTU_APPKEY:}
+    appsecret: ${HANTU_APPSECRET:}
+
+  ws:
+    url: ws://ops.koreainvestment.com:21000
+
+dart:
+  api:
+    base-url: ${DART_BASE_URL:https://opendart.fss.or.kr}
+    key: ${DART_API_KEY:}

@@ -36,7 +36,13 @@ out/
 ### VS Code ###
 .vscode/
 
+### Claude ###
+.claude/
+*.md
+
 ### .env ###
 .env
 .env.dev
 .env.prod
+.env.desktop
+.DS_Store

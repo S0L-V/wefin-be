@@ -1,0 +1,326 @@
+package com.solv.wefin.web.payment;
+
+import com.solv.wefin.domain.payment.dto.MySubscriptionInfo;
+import com.solv.wefin.domain.payment.dto.PaymentConfirmInfo;
+import com.solv.wefin.domain.payment.dto.PaymentReadyInfo;
+import com.solv.wefin.domain.payment.entity.BillingCycle;
+import com.solv.wefin.domain.payment.entity.SubscriptionStatus;
+import com.solv.wefin.domain.payment.service.PaymentService;
+import com.solv.wefin.global.config.SecurityConfig;
+import com.solv.wefin.global.config.security.JwtAuthenticationEntryPoint;
+import com.solv.wefin.global.config.security.JwtAuthenticationFilter;
+import com.solv.wefin.global.config.security.JwtProvider;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(PaymentController.class)
+@Import({
+        SecurityConfig.class,
+        JwtAuthenticationFilter.class,
+        JwtAuthenticationEntryPoint.class
+})
+class PaymentControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private PaymentService paymentService;
+
+    @MockitoBean
+    private JwtProvider jwtProvider;
+
+    @Test
+    @DisplayName("결제 준비 생성 요청에 성공한다")
+    void createPayment_success() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        PaymentReadyInfo info = new PaymentReadyInfo(
+                1L,
+                "ORDER-20260408-AB12CD34",
+                1L,
+                "프리미엄 월간 이용권",
+                "MONTHLY",
+                new BigDecimal("9900"),
+                "TOSS",
+                "READY",
+                OffsetDateTime.parse("2026-04-08T21:30:00+09:00")
+        );
+
+        given(paymentService.createPayment(eq(userId), any()))
+                .willReturn(info);
+
+        String requestBody = """
+                {
+                  "planId": 1,
+                  "provider": "TOSS"
+                }
+                """;
+
+        mockMvc.perform(post("/api/payments")
+                        .with(authentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        userId,
+                                        null,
+                                        java.util.List.of()
+                                )
+                        ))
+                        .contentType(APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.paymentId").value(1))
+                .andExpect(jsonPath("$.data.orderId").value("ORDER-20260408-AB12CD34"))
+                .andExpect(jsonPath("$.data.planId").value(1))
+                .andExpect(jsonPath("$.data.planName").value("프리미엄 월간 이용권"))
+                .andExpect(jsonPath("$.data.billingCycle").value("MONTHLY"))
+                .andExpect(jsonPath("$.data.amount").value(9900))
+                .andExpect(jsonPath("$.data.provider").value("TOSS"))
+                .andExpect(jsonPath("$.data.status").value("READY"))
+                .andExpect(jsonPath("$.data.requestedAt").exists());
+    }
+
+    @Test
+    @DisplayName("planId가 없으면 400을 반환한다")
+    void createPayment_fail_whenPlanIdIsNull() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        String requestBody = """
+                {
+                  "provider": "TOSS"
+                }
+                """;
+
+        mockMvc.perform(post("/api/payments")
+                        .with(authentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        userId,
+                                        null,
+                                        java.util.List.of()
+                                )
+                        ))
+                        .contentType(APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("provider가 비어 있으면 400을 반환한다")
+    void createPayment_fail_whenProviderIsBlank() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        String requestBody = """
+                {
+                  "planId": 1,
+                  "provider": ""
+                }
+                """;
+
+        mockMvc.perform(post("/api/payments")
+                        .with(authentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        userId,
+                                        null,
+                                        java.util.List.of()
+                                )
+                        ))
+                        .contentType(APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("결제 승인 요청에 성공한다")
+    void confirmPayment_success() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        PaymentConfirmInfo info = new PaymentConfirmInfo(
+                1L,
+                "ORDER-20260414-12345",
+                1L,
+                "프리미엄 월간 이용권",
+                "MONTHLY",
+                new BigDecimal("9900"),
+                "TOSS",
+                "PAID",
+                "pay_test_123",
+                now,
+                now,
+                now.plusMonths(1)
+        );
+
+        given(paymentService.confirmPayment(
+                eq(userId),
+                eq("pay_test_123"),
+                eq("ORDER-20260414-12345"),
+                eq(new BigDecimal("9900"))
+        )).willReturn(info);
+
+        String requestBody = """
+                {
+                  "paymentKey": "pay_test_123",
+                  "orderId": "ORDER-20260414-12345",
+                  "amount": 9900
+                }
+                """;
+
+        mockMvc.perform(post("/api/payments/confirm")
+                        .with(authentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        userId,
+                                        null,
+                                        java.util.List.of()
+                                )
+                        ))
+                        .contentType(APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.paymentId").value(1))
+                .andExpect(jsonPath("$.data.orderId").value("ORDER-20260414-12345"))
+                .andExpect(jsonPath("$.data.status").value("PAID"))
+                .andExpect(jsonPath("$.data.providerPaymentKey").value("pay_test_123"));
+    }
+
+    @Test
+    @DisplayName("결제 승인 실패 시 에러 응답을 반환한다")
+    void confirmPayment_fail_whenServiceThrowsException() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        given(paymentService.confirmPayment(
+                eq(userId),
+                eq("pay_test_123"),
+                eq("ORDER-123"),
+                eq(new BigDecimal("9900"))
+        )).willThrow(new BusinessException(ErrorCode.PAYMENT_CONFIRM_FAILED));
+
+        String requestBody = """
+            {
+              "paymentKey": "pay_test_123",
+              "orderId": "ORDER-123",
+              "amount": 9900
+            }
+            """;
+
+        mockMvc.perform(post("/api/payments/confirm")
+                        .with(authentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        userId,
+                                        null,
+                                        java.util.List.of()
+                                )
+                        ))
+                        .contentType(APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.code").value("PAYMENT_CONFIRM_FAILED"));
+    }
+
+    @Test
+    @DisplayName("paymentKey가 없으면 400을 반환한다")
+    void confirmPayment_fail_whenPaymentKeyIsBlank() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        String requestBody = """
+                {
+                  "paymentKey": "",
+                  "orderId": "ORDER-20260414-12345",
+                  "amount": 9900
+                }
+                """;
+
+        mockMvc.perform(post("/api/payments/confirm")
+                        .with(authentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        userId,
+                                        null,
+                                        java.util.List.of()
+                                )
+                        ))
+                        .contentType(APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("내 활성 구독 조회에 성공한다")
+    void getMySubscription_success() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        MySubscriptionInfo info = new MySubscriptionInfo(
+                1L,
+                "프로 플랜",
+                new BigDecimal("9900"),
+                BillingCycle.MONTHLY,
+                "무제한 AI 기능과 고급 분석 도구를 제공합니다.",
+                SubscriptionStatus.ACTIVE,
+                true,
+                OffsetDateTime.parse("2026-04-17T10:00:00+09:00"),
+                OffsetDateTime.parse("2026-05-17T10:00:00+09:00")
+        );
+
+        given(paymentService.getMySubscription(eq(userId)))
+                .willReturn(info);
+
+        mockMvc.perform(get("/api/payments/me/subscription")
+                        .with(authentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        userId,
+                                        null,
+                                        java.util.List.of()
+                                )
+                        )))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.planId").value(1))
+                .andExpect(jsonPath("$.data.planName").value("프로 플랜"))
+                .andExpect(jsonPath("$.data.price").value(9900))
+                .andExpect(jsonPath("$.data.billingCycle").value("MONTHLY"))
+                .andExpect(jsonPath("$.data.description").value("무제한 AI 기능과 고급 분석 도구를 제공합니다."))
+                .andExpect(jsonPath("$.data.subscriptionStatus").value("ACTIVE"))
+                .andExpect(jsonPath("$.data.active").value(true))
+                .andExpect(jsonPath("$.data.startedAt").exists())
+                .andExpect(jsonPath("$.data.expiredAt").exists());
+    }
+
+    @Test
+    @DisplayName("활성 구독이 없으면 404를 반환한다")
+    void getMySubscription_fail_whenActiveSubscriptionNotFound() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        given(paymentService.getMySubscription(eq(userId)))
+                .willThrow(new BusinessException(ErrorCode.ACTIVE_SUBSCRIPTION_NOT_FOUND));
+
+        mockMvc.perform(get("/api/payments/me/subscription")
+                        .with(authentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        userId,
+                                        null,
+                                        java.util.List.of()
+                                )
+                        )))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ACTIVE_SUBSCRIPTION_NOT_FOUND"));
+    }
+}

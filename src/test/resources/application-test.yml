@@ -1,17 +1,72 @@
 spring:
-  datasource:
-    url: jdbc:h2:mem:wefin-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
 
 ai:
   server:
     url: http://localhost:8000
 
 jwt:
-  secret: test-secret-key
+  secret: ${JWT_SECRET:wefin-test-jwt-secret-key-1234567890}
+
+news:
+  naver:
+    client-id: test-client-id
+    client-secret: test-client-secret
+    display: 10
+  collect:
+    cron: "-"
+
+market:
+  bok:
+    api-key: test-bok-key
+    base-url: https://ecos.bok.or.kr/api
+  collect:
+    cron: "-"
+  trend:
+    cron: "-"
+
+openai:
+  api-key: test-openai-key
+  embedding:
+    model: text-embedding-3-small
+    version: v1
+  tagging:
+    model: gpt-4o-mini
+  chat:
+    model: gpt-4o-mini
+  summary:
+    model: gpt-4o-mini
+
+embedding:
+  collect:
+    cron: "-"
+
+tagging:
+  collect:
+    cron: "-"
+
+clustering:
+  threshold: 0.80
+  sample-k: 5
+  penalty:
+    category-mismatch: 15
+    stocks-no-overlap: 20
+  score:
+    reject-cutoff: 70
+    suspicious-cutoff: 80
+  collect:
+    cron: "-"
+
+summary:
+  collect:
+    cron: "-"
