@@ -19,7 +19,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -61,7 +60,6 @@ class GroupJoinServiceTest {
         @Test
         @DisplayName("초대 코드로 SHARED 그룹에 정상 참여한다")
         void joinGroup_success() throws Exception {
-            // given
             UUID userId = UUID.randomUUID();
             UUID inviteCode = UUID.randomUUID();
 
@@ -113,16 +111,14 @@ class GroupJoinServiceTest {
             when(groupMemberRepository.save(any(GroupMember.class)))
                     .thenReturn(newMember);
 
-            // when
             GroupMemberInfo result = groupService.joinGroup(userId, inviteCode);
 
-            // then
             assertAll(
                     () -> assertThat(result.groupId()).isEqualTo(1L),
                     () -> assertThat(result.groupName()).isEqualTo("공유 그룹"),
                     () -> assertThat(result.role()).isEqualTo("MEMBER"),
                     () -> assertThat(currentActiveHomeMember.isActive()).isFalse(),
-                    () -> assertThat(invite.getStatus()).isEqualTo(GroupInvite.InviteStatus.ACCEPTED)
+                    () -> assertThat(invite.getStatus()).isEqualTo(GroupInvite.InviteStatus.PENDING)
             );
 
             verify(groupMemberRepository).flush();
@@ -132,7 +128,6 @@ class GroupJoinServiceTest {
         @Test
         @DisplayName("기존 멤버십이 있으면 재활성화한다")
         void joinGroup_success_when_membership_exists() throws Exception {
-            // given
             UUID userId = UUID.randomUUID();
             UUID inviteCode = UUID.randomUUID();
 
@@ -182,17 +177,15 @@ class GroupJoinServiceTest {
             when(groupMemberRepository.findByUser_UserIdAndGroup_Id(userId, targetGroup.getId()))
                     .thenReturn(Optional.of(existingMembership));
 
-            // when
             GroupMemberInfo result = groupService.joinGroup(userId, inviteCode);
 
-            // then
             assertAll(
                     () -> assertThat(result.groupId()).isEqualTo(1L),
                     () -> assertThat(result.groupName()).isEqualTo("공유 그룹"),
                     () -> assertThat(result.role()).isEqualTo("MEMBER"),
                     () -> assertThat(currentActiveHomeMember.isActive()).isFalse(),
                     () -> assertThat(existingMembership.isActive()).isTrue(),
-                    () -> assertThat(invite.getStatus()).isEqualTo(GroupInvite.InviteStatus.ACCEPTED)
+                    () -> assertThat(invite.getStatus()).isEqualTo(GroupInvite.InviteStatus.PENDING)
             );
 
             verify(groupMemberRepository).flush();
@@ -202,7 +195,6 @@ class GroupJoinServiceTest {
         @Test
         @DisplayName("홈 그룹에는 참여할 수 없다")
         void joinGroup_fail_when_home_group() throws Exception {
-            // given
             UUID userId = UUID.randomUUID();
             UUID inviteCode = UUID.randomUUID();
 
@@ -224,13 +216,11 @@ class GroupJoinServiceTest {
             when(groupRepository.findByIdForUpdate(homeGroup.getId()))
                     .thenReturn(Optional.of(homeGroup));
 
-            // when
             BusinessException exception = assertThrows(
                     BusinessException.class,
                     () -> groupService.joinGroup(userId, inviteCode)
             );
 
-            // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_HOME_JOIN_NOT_ALLOWED);
 
             verify(groupMemberRepository, never()).findByUser_UserIdAndStatus(any(), any());
@@ -243,7 +233,6 @@ class GroupJoinServiceTest {
         @Test
         @DisplayName("이미 같은 그룹에 ACTIVE 상태로 참여 중이면 예외가 발생한다")
         void joinGroup_fail_when_already_joined() throws Exception {
-            // given
             UUID userId = UUID.randomUUID();
             UUID inviteCode = UUID.randomUUID();
 
@@ -277,13 +266,11 @@ class GroupJoinServiceTest {
                     GroupMember.GroupMemberStatus.ACTIVE
             )).thenReturn(Optional.of(currentActiveMember));
 
-            // when
             BusinessException exception = assertThrows(
                     BusinessException.class,
                     () -> groupService.joinGroup(userId, inviteCode)
             );
 
-            // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_ALREADY_JOINED);
 
             verify(groupMemberRepository, never()).countByGroupAndStatus(any(), any());
@@ -295,7 +282,6 @@ class GroupJoinServiceTest {
         @Test
         @DisplayName("정원이 가득 찬 그룹은 참여할 수 없다")
         void joinGroup_fail_when_group_full() throws Exception {
-            // given
             UUID userId = UUID.randomUUID();
             UUID inviteCode = UUID.randomUUID();
 
@@ -335,13 +321,11 @@ class GroupJoinServiceTest {
                     GroupMember.GroupMemberStatus.ACTIVE
             )).thenReturn(6L);
 
-            // when
             BusinessException exception = assertThrows(
                     BusinessException.class,
                     () -> groupService.joinGroup(userId, inviteCode)
             );
 
-            // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_FULL);
 
             verify(groupMemberRepository, never()).findByUser_UserIdAndGroup_Id(any(), anyLong());
@@ -352,7 +336,6 @@ class GroupJoinServiceTest {
         @Test
         @DisplayName("만료된 초대 코드는 사용할 수 없다")
         void joinGroup_fail_when_invite_expired() throws Exception {
-            // given
             UUID userId = UUID.randomUUID();
             UUID inviteCode = UUID.randomUUID();
 
@@ -372,67 +355,29 @@ class GroupJoinServiceTest {
             when(groupInviteRepository.findByInviteCode(inviteCode))
                     .thenReturn(Optional.of(invite));
 
-            // when
             BusinessException exception = assertThrows(
                     BusinessException.class,
                     () -> groupService.joinGroup(userId, inviteCode)
             );
 
-            // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_INVITE_EXPIRED);
-            verify(groupMemberRepository, never()).flush();
-        }
-
-        @Test
-        @DisplayName("이미 사용된 초대 코드는 사용할 수 없다")
-        void joinGroup_fail_when_invite_already_used() throws Exception {
-            // given
-            UUID userId = UUID.randomUUID();
-            UUID inviteCode = UUID.randomUUID();
-
-            Group targetGroup = createGroup(1L, "공유 그룹", GroupType.SHARED);
-            var user = createUser(userId, "test@test.com", "유저", "pw");
-
-            GroupInvite invite = createGroupInvite(
-                    10L,
-                    targetGroup,
-                    user,
-                    inviteCode,
-                    GroupInvite.InviteStatus.PENDING
-            );
-            invite.markAccepted();
-
-            when(groupInviteRepository.findByInviteCode(inviteCode))
-                    .thenReturn(Optional.of(invite));
-
-            // when
-            BusinessException exception = assertThrows(
-                    BusinessException.class,
-                    () -> groupService.joinGroup(userId, inviteCode)
-            );
-
-            // then
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_INVITE_ALREADY_USED);
             verify(groupMemberRepository, never()).flush();
         }
 
         @Test
         @DisplayName("존재하지 않는 초대 코드는 예외가 발생한다")
         void joinGroup_fail_when_invite_not_found() {
-            // given
             UUID userId = UUID.randomUUID();
             UUID inviteCode = UUID.randomUUID();
 
             when(groupInviteRepository.findByInviteCode(inviteCode))
                     .thenReturn(Optional.empty());
 
-            // when
             BusinessException exception = assertThrows(
                     BusinessException.class,
                     () -> groupService.joinGroup(userId, inviteCode)
             );
 
-            // then
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_INVITE_NOT_FOUND);
             verify(groupMemberRepository, never()).flush();
         }

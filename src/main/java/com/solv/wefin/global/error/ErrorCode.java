@@ -18,7 +18,6 @@ public enum ErrorCode {
     GROUP_INVITE_FORBIDDEN(403, "해당 그룹의 초대 코드를 생성할 권한이 없습니다."),
     GROUP_INVITE_NOT_FOUND(404, "초대 코드를 찾을 수 없습니다."),
     GROUP_INVITE_EXPIRED(400, "만료된 초대 코드입니다."),
-    GROUP_INVITE_ALREADY_USED(400, "이미 사용된 초대 코드입니다."),
     GROUP_FULL(400, "그룹 인원이 가득 찼습니다."),
     GROUP_ALREADY_JOINED(409, "이미 참여한 그룹입니다."),
     GROUP_HOME_INVITE_NOT_ALLOWED(400, "홈 그룹에는 초대 코드를 생성할 수 없습니다."),

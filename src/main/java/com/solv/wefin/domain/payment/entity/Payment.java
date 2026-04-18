@@ -104,9 +104,10 @@ public class Payment extends BaseEntity {
         this.failureReason = failureReason;
     }
 
-    public void markCanceled() {
+    public void markCanceled(String failureReason) {
         this.status = PaymentStatus.CANCELED;
         this.failedAt = OffsetDateTime.now();
+        this.failureReason = failureReason;
     }
 
     public boolean isReady() {

@@ -122,10 +122,17 @@ public class GroupService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        GroupInvite invite = GroupInvite.create(group, user);
-        GroupInvite saved = groupInviteRepository.save(invite);
+        OffsetDateTime now = OffsetDateTime.now();
 
-        return GroupInviteInfo.from(saved);
+        GroupInvite invite = groupInviteRepository
+                .findFirstByGroupAndStatusAndExpiredAtAfterOrderByCreatedAtDesc(
+                        group,
+                        GroupInvite.InviteStatus.PENDING,
+                        now
+                )
+                .orElseGet(() -> groupInviteRepository.save(GroupInvite.create(group, user)));
+
+        return GroupInviteInfo.from(invite);
     }
 
     @Transactional
@@ -135,16 +142,9 @@ public class GroupService {
 
         OffsetDateTime now = OffsetDateTime.now();
 
-        if (invite.getExpiredAt().isBefore(now)) {
+        if (invite.isExpired(now)) {
+            invite.expire();
             throw new BusinessException(ErrorCode.GROUP_INVITE_EXPIRED);
-        }
-
-        if (invite.getStatus() == GroupInvite.InviteStatus.EXPIRED) {
-            throw new BusinessException(ErrorCode.GROUP_INVITE_EXPIRED);
-        }
-
-        if (invite.getStatus() == GroupInvite.InviteStatus.ACCEPTED) {
-            throw new BusinessException(ErrorCode.GROUP_INVITE_ALREADY_USED);
         }
 
         User user = getUserForMembershipTransition(userId);
@@ -185,14 +185,12 @@ public class GroupService {
 
         if (targetMembership != null) {
             targetMembership.activate();
-            invite.markAccepted();
             return GroupMemberInfo.from(targetMembership);
         }
 
         GroupMember newMember = GroupMember.createMember(user, targetGroup);
         groupMemberRepository.save(newMember);
 
-        invite.markAccepted();
         return GroupMemberInfo.from(newMember);
     }
 
