@@ -23,6 +23,7 @@ import com.solv.wefin.domain.game.turn.entity.TurnStatus;
 import com.solv.wefin.domain.game.turn.repository.GameTurnRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
+import com.solv.wefin.domain.game.turn.event.GameFinishedEvent;
 import com.solv.wefin.domain.game.turn.event.TurnChangeEvent;
 import com.solv.wefin.domain.game.turn.event.TurnChangeEvent.SnapshotData;
 import lombok.RequiredArgsConstructor;
@@ -105,6 +106,7 @@ public class TurnAdvanceService {
             forceEndAllActive(gameRoom, snapshots);
             gameRoom.finish();
             log.info("[턴 전환] 게임 종료: roomId={}, 마지막 턴={}", roomId, currentTurn.getTurnNumber());
+            eventPublisher.publishEvent(new GameFinishedEvent(roomId));
             return null;
         }
 
@@ -245,6 +247,25 @@ public class TurnAdvanceService {
 
         // 전원(기존 FINISHED + 방금 FINISHED) 순위 확정
         gameEndService.finalizeRanks(gameRoom);
+    }
+
+    /**
+     * 게임의 총 턴 수를 계산한다.
+     * startDate부터 endDate까지 moveDays 간격으로 거래일을 이동하며 카운트.
+     */
+    @Transactional(readOnly = true)
+    public int calculateTotalTurns(LocalDate startDate, LocalDate endDate, int moveDays) {
+        int turns = 1; // 첫 턴 포함
+        LocalDate current = startDate;
+
+        while (true) {
+            LocalDate next = calculateNextTradeDate(current, moveDays);
+            if (next.isAfter(endDate)) break;
+            turns++;
+            current = next;
+        }
+
+        return turns;
     }
 
     /**

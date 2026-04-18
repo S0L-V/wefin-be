@@ -11,6 +11,7 @@ import com.solv.wefin.domain.game.room.entity.GameRoom;
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.game.room.service.GameRoomService;
+import com.solv.wefin.domain.game.turn.service.TurnAdvanceService;
 import com.solv.wefin.domain.group.entity.GroupMember;
 import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.global.common.ApiResponse;
@@ -43,6 +44,7 @@ GameRoomController {
 
     private final GameRoomService gameRoomService;
     private final GameResultService gameResultService;
+    private final TurnAdvanceService turnAdvanceService;
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
 
@@ -115,7 +117,11 @@ GameRoomController {
                 p -> ParticipantDetailDto.from(p, nicknameMap.getOrDefault(p.getUserId(), "알 수 없음"))
         ).collect(Collectors.toList());
 
-        RoomDetailResponse response = RoomDetailResponse.from(detail.room(), participantDtos);
+        GameRoom room = detail.room();
+        int totalTurns = turnAdvanceService.calculateTotalTurns(
+                room.getStartDate(), room.getEndDate(), room.getMoveDays());
+
+        RoomDetailResponse response = RoomDetailResponse.from(room, participantDtos, totalTurns);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
