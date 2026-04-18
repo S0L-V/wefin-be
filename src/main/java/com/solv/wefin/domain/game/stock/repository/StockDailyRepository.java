@@ -43,7 +43,7 @@ public interface StockDailyRepository extends JpaRepository<StockDaily, UUID> {
     @Query("SELECT sd FROM StockDaily sd " +
             "JOIN FETCH sd.stockInfo si " +
             "WHERE sd.tradeDate = :tradeDate " +
-            "AND (si.stockName LIKE :keyword ESCAPE '\\' OR si.symbol LIKE :keyword ESCAPE '\\') " +
+            "AND (LOWER(si.stockName) LIKE :keyword ESCAPE '\\' OR LOWER(si.symbol) LIKE :keyword ESCAPE '\\') " +
             "ORDER BY si.stockName ASC")
     List<StockDaily> searchByKeywordAndTradeDate(@Param("keyword") String keyword,
                                                  @Param("tradeDate") LocalDate tradeDate,
