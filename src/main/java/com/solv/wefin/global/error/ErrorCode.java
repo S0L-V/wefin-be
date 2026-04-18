@@ -214,7 +214,10 @@ public enum ErrorCode {
     DART_DISCLOSURE_FETCH_FAILED(503, "DART 공시 조회에 실패했습니다."),
 
     // Stock News
-    STOCK_NEWS_FETCH_FAILED(503, "종목 뉴스 조회에 실패했습니다.");
+    STOCK_NEWS_FETCH_FAILED(503, "종목 뉴스 조회에 실패했습니다."),
+
+    // Recommendation
+    RECOMMENDATION_REFRESH_LIMIT_EXCEEDED(429, "하루에 더 불러오기는 5회까지 가능합니다.");
 
     private final int status;
     private final String message;

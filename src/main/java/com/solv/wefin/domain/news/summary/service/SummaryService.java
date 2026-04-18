@@ -9,6 +9,7 @@ import com.solv.wefin.domain.news.cluster.entity.NewsClusterArticle;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.news.config.NewsBatchProperties;
+import com.solv.wefin.domain.news.summary.client.OpenAiClientException;
 import com.solv.wefin.domain.news.summary.client.OpenAiSummaryClient;
 import com.solv.wefin.domain.news.summary.dto.SummaryResult;
 import com.solv.wefin.global.error.BusinessException;
@@ -150,11 +151,11 @@ public class SummaryService {
     }
 
     /**
-     * 단독 클러스터(기사 1건)는 AI로 본문을 요약한다.
+     * 단독 클러스터(기사 1건)는 AI로 본문을 구조화된 브리핑으로 요약한다
      *
-     * 크롤링된 원문에는 광고, 기자 서명 등 노이즈가 포함되어 있으므로
-     * AI가 핵심 내용만 추출하여 title + summary를 생성한다.
-     * AI 호출 실패 시 기존 fallback(제목 클렌징 + 기사 요약 그대로 사용)으로 처리한다
+     * 복수 클러스터와 동일하게 sections(전망/동향 등) 구조로 생성하며,
+     * 추천 질문도 프롬프트에서 함께 생성한다.
+     * AI 호출 실패 시 기존 fallback(제목 클렌징 + 기사 요약, sections 없음)으로 처리한다
      *
      * @param cluster 요약 대상 클러스터
      * @param expectedArticleIds 조회 시점의 기사 ID 목록 (기사 집합 변경 감지용)
@@ -169,11 +170,8 @@ public class SummaryService {
         }
 
         var article = articleOpt.get();
-        String title;
-        String summary;
-        boolean aiSummarySucceeded = false;
 
-        // 본문이 있으면 AI 요약, 없으면 기존 fallback
+        // 본문이 있으면 AI 요약 (sections 포함), 없으면 기존 fallback (sections 없음)
         if (article.getContent() != null && !article.getContent().isBlank()) {
             try {
                 SummaryResult result = openAiSummaryClient.generateSingleArticleSummary(
@@ -181,41 +179,51 @@ public class SummaryService {
                 boolean hasAiLeadSummary = result.getLeadSummary() != null
                         && !result.getLeadSummary().isBlank();
 
-                if (hasAiLeadSummary) {
-                    title = result.getTitle() != null && !result.getTitle().isBlank()
+                if (hasAiLeadSummary && result.hasSections()) {
+                    String title = result.getTitle() != null && !result.getTitle().isBlank()
                             ? result.getTitle() : resolveTitle(article);
-                    summary = result.getLeadSummary();
-                    aiSummarySucceeded = true;
-                    log.info("단독 클러스터 AI 요약 성공 — clusterId: {}, articleId: {}",
-                            cluster.getId(), articleId);
+
+                    // 단일 기사이므로 sourceArticleIndices=[1]이 유일한 유효값
+                    int articleCount = 1;
+                    boolean hasValidSection = result.getSections().stream()
+                            .anyMatch(s -> s.isValid() && hasValidSourceIndex(s, articleCount));
+
+                    if (hasValidSection) {
+                        log.info("단독 클러스터 AI 요약(sections) 성공 — clusterId: {}, articleId: {}",
+                                cluster.getId(), articleId);
+                        persistenceService.markGeneratedWithSections(cluster.getId(), title,
+                                result.getLeadSummary(), result.getSections(),
+                                result.getSuggestedQuestions(), expectedArticleIds);
+                        return true;
+                    }
+
+                    log.warn("단독 클러스터 AI 응답에 유효 섹션 없음, fallback — clusterId: {}",
+                            cluster.getId());
+                } else if (hasAiLeadSummary) {
+                    // sections 없이 leadSummary만 있는 경우 (이전 프롬프트 캐시 등)
+                    String title = result.getTitle() != null && !result.getTitle().isBlank()
+                            ? result.getTitle() : resolveTitle(article);
+                    List<String> questions = openAiSummaryClient.generateQuestions(title, result.getLeadSummary());
+                    persistenceService.markGeneratedSingle(cluster.getId(), title,
+                            result.getLeadSummary(), questions, expectedArticleIds);
+                    return true;
                 } else {
-                    // AI가 응답했지만 lead summary가 비어있음 → fallback과 동일하게 취급
-                    // (질문 생성 입력이 기사 원문/제목이 되어 할루시네이션 위험)
                     log.warn("단독 클러스터 AI 요약 응답에 lead summary 없음, fallback 사용 — clusterId: {}",
                             cluster.getId());
-                    title = resolveTitle(article);
-                    summary = resolveSummaryFallback(article, title);
                 }
+            } catch (OpenAiClientException e) {
+                // 재시도 가능 오류(429/5xx) — propagate하여 상위에서 markFailed 처리
+                throw e;
             } catch (Exception e) {
                 log.warn("단독 클러스터 AI 요약 실패, fallback 사용 — clusterId: {}",
                         cluster.getId(), e);
-                title = resolveTitle(article);
-                summary = resolveSummaryFallback(article, title);
             }
-        } else {
-            title = resolveTitle(article);
-            summary = resolveSummaryFallback(article, title);
         }
 
-        // 추천 질문 생성은 AI 요약이 성공한 경우에만 수행 (fallback 입력으로 질문을 만들면
-        // 할루시네이션 가능성이 크므로 스킵). 재시도 가능 오류(429/5xx)는 propagate되어
-        // 바깥 catch에서 markFailed 처리 후 다음 배치에서 재시도된다
-        List<String> questions = aiSummarySucceeded
-                ? openAiSummaryClient.generateQuestions(title, summary)
-                : List.of();
-
-        // 요약 + 질문을 같은 트랜잭션으로 저장 (CAS 검증 + 쓰기 락으로 원자적으로 처리)
-        persistenceService.markGeneratedSingle(cluster.getId(), title, summary, questions, expectedArticleIds);
+        // fallback: AI 실패 또는 본문 없음 → sections 없이 저장
+        String title = resolveTitle(article);
+        String summary = resolveSummaryFallback(article, title);
+        persistenceService.markGeneratedSingle(cluster.getId(), title, summary, List.of(), expectedArticleIds);
         return true;
     }
 

@@ -34,6 +34,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/api/news/recommended/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/news/**", "/api/market/**",
                             "/api/market-trends/overview",
                             "/api/stocks/**", "/api/ranking/**").permitAll()
