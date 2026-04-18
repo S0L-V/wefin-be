@@ -59,7 +59,7 @@ public class StockSearchService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.GAME_NOT_STARTED));
 
         // 4. keyword로 종목 검색 (턴 날짜에 거래 데이터 있는 것만, 최대 MAX_SEARCH_RESULTS건)
-        String escaped = trimmed.toLowerCase().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+        String escaped = trimmed.toLowerCase(java.util.Locale.ROOT).replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
         String likeKeyword = "%" + escaped + "%";
         Pageable pageable = PageRequest.of(0, MAX_SEARCH_RESULTS);
         return stockDailyRepository.searchByKeywordAndTradeDate(likeKeyword, activeTurn.getTurnDate(), pageable);
