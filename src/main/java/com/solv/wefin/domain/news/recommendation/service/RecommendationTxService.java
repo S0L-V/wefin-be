@@ -101,11 +101,6 @@ public class RecommendationTxService {
         cleanExpiredSession(userId);
 
         List<RecommendedNewsCard> existingCards = cardRepository.findByUserIdOrderByCreatedAtDesc(userId);
-
-        if (!existingCards.isEmpty()) {
-            checkRefreshLimit(userId);
-        }
-
         String currentHash = computeInterestHash(userId);
 
         if (!existingCards.isEmpty()) {
@@ -116,6 +111,8 @@ public class RecommendationTxService {
                 cardRepository.deleteByUserId(userId);
                 return collectCandidates(userId, currentHash, List.of(), List.of());
             }
+
+            checkRefreshLimit(userId);
         }
 
         List<String> usedStockCodes = cardRepository.findUsedInterestCodes(userId, CardType.STOCK);

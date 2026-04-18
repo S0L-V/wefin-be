@@ -1,7 +1,6 @@
 package com.solv.wefin.domain.news.recommendation.service;
 
 import com.solv.wefin.domain.news.article.repository.NewsArticleTagRepository;
-import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.news.recommendation.entity.RecommendedNewsCard;
 import com.solv.wefin.domain.news.recommendation.entity.RecommendedNewsCard.CardType;
@@ -23,9 +22,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -46,14 +48,12 @@ class RecommendationTxServiceTest {
     private RecommendationTxService txService;
 
     private final UUID userId = UUID.randomUUID();
-    private final String hash = "testhash";
     private final OffsetDateTime now = OffsetDateTime.now();
 
     @BeforeEach
     void setUp() {
         txService = new RecommendationTxService(
                 cardRepository, userInterestRepository, newsClusterRepository, newsArticleTagRepository);
-        // EntityManager는 @PersistenceContext field injection이라 reflection으로 주입
         org.springframework.test.util.ReflectionTestUtils.setField(txService, "entityManager", entityManager);
         stubAdvisoryLock();
     }
@@ -65,7 +65,8 @@ class RecommendationTxServiceTest {
     void resolveGetState_hashMatch_returnsCached() {
         stubInterests("STOCK", "005930");
         stubInterests("SECTOR", "SEMICON");
-        RecommendedNewsCard card = card(CardType.STOCK, "005930", now);
+        String matchingHash = sha256("STOCK:005930|SECTOR:SEMICON");
+        RecommendedNewsCard card = card(CardType.STOCK, "005930", now, matchingHash);
         when(cardRepository.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of(card));
         when(cardRepository.deleteExpiredCards(eq(userId), any())).thenReturn(0);
         stubUsedCodes(CardType.STOCK, "005930");
@@ -74,6 +75,7 @@ class RecommendationTxServiceTest {
         CardState state = txService.resolveGetState(userId);
 
         assertThat(state).isInstanceOf(CardState.Cached.class);
+        verify(cardRepository, never()).deleteByUserId(userId);
     }
 
     // ── resolveGetState: hash 불일치 + 쿨다운 ────────────
@@ -83,7 +85,8 @@ class RecommendationTxServiceTest {
     void resolveGetState_hashMismatchWithinCooldown_returnsCached() {
         stubInterests("STOCK", "005930", "000660");
         stubInterests("SECTOR");
-        RecommendedNewsCard card = card(CardType.STOCK, "005930", OffsetDateTime.now().minusMinutes(10));
+        String oldHash = sha256("STOCK:005930|SECTOR:");
+        RecommendedNewsCard card = card(CardType.STOCK, "005930", OffsetDateTime.now().minusMinutes(10), oldHash);
         when(cardRepository.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of(card));
         when(cardRepository.deleteExpiredCards(eq(userId), any())).thenReturn(0);
         stubUsedCodes(CardType.STOCK, "005930");
@@ -120,7 +123,8 @@ class RecommendationTxServiceTest {
         @Test
         @DisplayName("기존 카드와 다른 interest_code면 정상 저장한다")
         void differentInterestCode_saves() {
-            RecommendedNewsCard existing = card(CardType.STOCK, "005930", now);
+            String anyHash = "anyhash";
+            RecommendedNewsCard existing = card(CardType.STOCK, "005930", now, anyHash);
             when(cardRepository.findByUserIdOrderByCreatedAtDesc(userId))
                     .thenReturn(List.of(existing))
                     .thenReturn(List.of(existing));
@@ -129,12 +133,12 @@ class RecommendationTxServiceTest {
             stubInterests("STOCK", "005930", "000660");
             stubInterests("SECTOR");
 
-            RecommendedNewsCard newCard = card(CardType.STOCK, "000660", now);
+            RecommendedNewsCard newCard = card(CardType.STOCK, "000660", now, anyHash);
 
-            txService.saveAndBuildResult(userId, hash, List.of(newCard));
+            txService.saveAndBuildResult(userId, anyHash, List.of(newCard));
 
             verify(cardRepository).saveAll(argThat(cards -> {
-                List<RecommendedNewsCard> list = new java.util.ArrayList<>();
+                java.util.List<RecommendedNewsCard> list = new java.util.ArrayList<>();
                 cards.forEach(list::add);
                 assertThat(list).hasSize(1);
                 assertThat(list.get(0).getInterestCode()).isEqualTo("000660");
@@ -145,16 +149,17 @@ class RecommendationTxServiceTest {
         @Test
         @DisplayName("기존 카드와 같은 interest_code면 저장을 스킵한다 (동시 요청 방어)")
         void sameInterestCode_skips() {
-            RecommendedNewsCard existing = card(CardType.STOCK, "005930", now);
+            String anyHash = "anyhash";
+            RecommendedNewsCard existing = card(CardType.STOCK, "005930", now, anyHash);
             when(cardRepository.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of(existing));
             stubUsedCodes(CardType.STOCK, "005930");
             stubUsedCodes(CardType.SECTOR);
             stubInterests("STOCK", "005930");
             stubInterests("SECTOR");
 
-            RecommendedNewsCard duplicate = card(CardType.STOCK, "005930", now);
+            RecommendedNewsCard duplicate = card(CardType.STOCK, "005930", now, anyHash);
 
-            txService.saveAndBuildResult(userId, hash, List.of(duplicate));
+            txService.saveAndBuildResult(userId, anyHash, List.of(duplicate));
 
             verify(cardRepository, never()).saveAll(anyList());
         }
@@ -169,13 +174,19 @@ class RecommendationTxServiceTest {
         @Test
         @DisplayName("refresh 5회 이후 RECOMMENDATION_REFRESH_LIMIT_EXCEEDED 발생")
         void refreshLimit_exceeded_throws() {
+            String[] stocks = {"005930", "000660", "035420", "051910", "006400", "035720"};
+            String[] sectors = {"SEMICON"};
+            stubInterests("STOCK", stocks);
+            stubInterests("SECTOR", sectors);
+            String matchingHash = sha256(stocks, sectors);
+
             when(cardRepository.deleteExpiredCards(eq(userId), any())).thenReturn(0);
-            RecommendedNewsCard card = card(CardType.STOCK, "005930", now);
+            RecommendedNewsCard card = card(CardType.STOCK, "005930", now, matchingHash);
             when(cardRepository.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of(card));
             when(cardRepository.findUsedInterestCodes(userId, CardType.STOCK))
-                    .thenReturn(List.of("005930", "000660", "035420", "051910", "006400", "035720"));
+                    .thenReturn(List.of(stocks));
             when(cardRepository.findUsedInterestCodes(userId, CardType.SECTOR))
-                    .thenReturn(List.of("SEMICON"));
+                    .thenReturn(List.of(sectors));
 
             assertThatThrownBy(() -> txService.resolveRefreshState(userId))
                     .isInstanceOf(BusinessException.class)
@@ -185,15 +196,19 @@ class RecommendationTxServiceTest {
         @Test
         @DisplayName("refresh 4회까지는 정상 동작한다")
         void refreshLimit_withinLimit_proceeds() {
+            String[] stocks = {"005930", "000660", "035420", "051910", "006400"};
+            String[] sectors = {"SEMICON"};
+            stubInterests("STOCK", stocks);
+            stubInterests("SECTOR", sectors);
+            String matchingHash = sha256(stocks, sectors);
+
             when(cardRepository.deleteExpiredCards(eq(userId), any())).thenReturn(0);
-            RecommendedNewsCard card = card(CardType.STOCK, "005930", now);
+            RecommendedNewsCard card = card(CardType.STOCK, "005930", now, matchingHash);
             when(cardRepository.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of(card));
             when(cardRepository.findUsedInterestCodes(userId, CardType.STOCK))
-                    .thenReturn(List.of("005930", "000660", "035420", "051910", "006400"));
+                    .thenReturn(List.of(stocks));
             when(cardRepository.findUsedInterestCodes(userId, CardType.SECTOR))
-                    .thenReturn(List.of("SEMICON"));
-            stubInterests("STOCK", "005930", "000660", "035420", "051910", "006400");
-            stubInterests("SECTOR", "SEMICON");
+                    .thenReturn(List.of(sectors));
 
             CardState state = txService.resolveRefreshState(userId);
 
@@ -201,7 +216,7 @@ class RecommendationTxServiceTest {
         }
 
         @Test
-        @DisplayName("카드가 없는 상태에서는 refresh 제한 체크를 건너뛴다 — limit 초과 없이 정상 진행")
+        @DisplayName("카드가 없는 상태에서는 refresh 제한 체크를 건너뛴다")
         void refreshLimit_noExistingCards_skipsCheck() {
             when(cardRepository.deleteExpiredCards(eq(userId), any())).thenReturn(0);
             when(cardRepository.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of());
@@ -214,25 +229,72 @@ class RecommendationTxServiceTest {
 
             assertThat(state).isInstanceOf(CardState.Cached.class);
         }
+
+        @Test
+        @DisplayName("hash 불일치 시 refresh 제한을 적용하지 않고 이력을 삭제한다")
+        void refreshLimit_hashMismatch_skipsLimitAndDeletes() {
+            String[] oldStocks = {"005930", "000660", "035420", "051910", "006400", "035720"};
+            stubInterests("STOCK", "005930");
+            stubInterests("SECTOR");
+            String oldHash = sha256(oldStocks, new String[0]);
+
+            when(cardRepository.deleteExpiredCards(eq(userId), any())).thenReturn(0);
+            RecommendedNewsCard card = card(CardType.STOCK, "005930", now, oldHash);
+            when(cardRepository.findByUserIdOrderByCreatedAtDesc(userId))
+                    .thenReturn(List.of(card))
+                    .thenReturn(List.of());
+
+            CardState state = txService.resolveRefreshState(userId);
+
+            verify(cardRepository).deleteByUserId(userId);
+            assertThat(state).isInstanceOf(CardState.Cached.class);
+        }
     }
 
     // ── helper ──────────────────────────────────────────
 
-    private RecommendedNewsCard card(CardType type, String code, OffsetDateTime createdAt) {
+    private RecommendedNewsCard card(CardType type, String code, OffsetDateTime createdAt,
+                                     String interestHash) {
         RecommendedNewsCard card = RecommendedNewsCard.builder()
                 .userId(userId).cardType(type)
                 .interestCode(code).interestName(code)
                 .title("제목").summary("요약").context("맥락")
                 .reasons("[]").linkedClusterId(1L)
-                .interestHash(computeHashFor())
+                .interestHash(interestHash)
                 .sessionStartedAt(now)
                 .build();
         org.springframework.test.util.ReflectionTestUtils.setField(card, "createdAt", createdAt);
         return card;
     }
 
-    private String computeHashFor() {
-        return hash;
+    private String sha256(String[] stockCodes, String[] sectorCodes) {
+        String[] sortedStocks = stockCodes.clone();
+        String[] sortedSectors = sectorCodes.clone();
+        Arrays.sort(sortedStocks);
+        Arrays.sort(sortedSectors);
+        String input = "STOCK:" + String.join(",", sortedStocks) +
+                "|SECTOR:" + String.join(",", sortedSectors);
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder();
+            for (byte b : hash) hex.append(String.format("%02x", b));
+            return hex.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private String sha256(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder();
+            for (byte b : hash) hex.append(String.format("%02x", b));
+            return hex.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private void stubAdvisoryLock() {
@@ -242,7 +304,7 @@ class RecommendationTxServiceTest {
     }
 
     private void stubInterests(String type, String... codes) {
-        List<UserInterest> interests = java.util.Arrays.stream(codes)
+        List<UserInterest> interests = Arrays.stream(codes)
                 .map(code -> UserInterest.createManual(userId, type, code, BigDecimal.valueOf(5)))
                 .toList();
         when(userInterestRepository.findByUserIdAndInterestTypeAndManualRegisteredTrue(userId, type))

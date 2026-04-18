@@ -77,11 +77,11 @@ public record RecommendedNewsResponse(
                         reasonsJson, new TypeReference<>() {});
                 return raw.stream()
                         .map(m -> new ReasonResponse(
-                                (String) m.get("type"),
+                                m.get("type") instanceof String s ? s : null,
                                 m.get("count") instanceof Number n ? n.intValue() : null,
-                                (String) m.get("label")))
+                                m.get("label") instanceof String s ? s : null))
                         .toList();
-            } catch (JsonProcessingException e) {
+            } catch (Exception e) {
                 return List.of();
             }
         }
