@@ -8,7 +8,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('031210','서울보증보험','KOSPI',NULL),
                                                                     ('064400','LG씨엔에스','KOSPI',NULL),
                                                                     ('499790','GS피앤엘','KOSPI',NULL),
-                                                                    ('484870','엠앤씨솔루션','KOSPI',NULL);
+                                                                    ('484870','엠앤씨솔루션','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('415640','KB발해인프라','KOSPI',NULL),
                                                                     ('475560','더본코리아','KOSPI',NULL),
@@ -19,7 +19,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('462870','시프트업','KOSPI',NULL),
                                                                     ('034230','파라다이스','KOSPI',NULL),
                                                                     ('443060','HD현대마린솔루션','KOSPI',NULL),
-                                                                    ('475150','SK이터닉스','KOSPI',NULL);
+                                                                    ('475150','SK이터닉스','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('278470','에이피알','KOSPI',NULL),
                                                                     ('066970','엘앤에프','KOSPI',NULL),
@@ -30,7 +30,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('454910','두산로보틱스','KOSPI',NULL),
                                                                     ('465770','STX그린로지스','KOSPI',NULL),
                                                                     ('092790','넥스틸','KOSPI',NULL),
-                                                                    ('030190','NICE평가정보','KOSPI',NULL);
+                                                                    ('030190','NICE평가정보','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('462520','조선내화','KOSPI',NULL),
                                                                     ('090460','비에이치','KOSPI',NULL),
@@ -41,7 +41,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('100090','SK오션플랜트','KOSPI',NULL),
                                                                     ('453340','현대그린푸드','KOSPI',NULL),
                                                                     ('452260','한화갤러리아','KOSPI',NULL),
-                                                                    ('377740','바이오노트','KOSPI',NULL);
+                                                                    ('377740','바이오노트','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('446070','유니드비티플러스','KOSPI',NULL),
                                                                     ('108320','LX세미콘','KOSPI',NULL),
@@ -52,7 +52,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('377300','카카오페이','KOSPI',NULL),
                                                                     ('381970','케이카','KOSPI',NULL),
                                                                     ('329180','HD현대중공업','KOSPI',NULL),
-                                                                    ('271940','일진하이솔루스','KOSPI',NULL);
+                                                                    ('271940','일진하이솔루스','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('139990','아주스틸','KOSPI',NULL),
                                                                     ('089860','롯데렌탈','KOSPI',NULL),
@@ -63,7 +63,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('137310','에스디바이오센서','KOSPI',NULL),
                                                                     ('097520','엠씨넥스','KOSPI',NULL),
                                                                     ('383800','LX홀딩스','KOSPI',NULL),
-                                                                    ('383220','F&F','KOSPI',NULL);
+                                                                    ('383220','F&F','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('361610','SK아이이테크놀로지','KOSPI',NULL),
                                                                     ('302440','SK바이오사이언스','KOSPI',NULL),
@@ -74,7 +74,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('009900','명신산업','KOSPI',NULL),
                                                                     ('244920','에이플러스에셋','KOSPI',NULL),
                                                                     ('339770','교촌에프앤비','KOSPI',NULL),
-                                                                    ('352820','하이브','KOSPI',NULL);
+                                                                    ('352820','하이브','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('363280','티와이홀딩스','KOSPI',NULL),
                                                                     ('326030','에스케이바이오팜','KOSPI',NULL),
@@ -85,7 +85,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('272210','한화시스템','KOSPI',NULL),
                                                                     ('317400','자이에스앤디','KOSPI',NULL),
                                                                     ('013890','지누스','KOSPI',NULL),
-                                                                    ('336260','두산퓨얼셀','KOSPI',NULL);
+                                                                    ('336260','두산퓨얼셀','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('336370','솔루스첨단소재','KOSPI',NULL),
                                                                     ('036420','콘텐트리중앙','KOSPI',NULL),
@@ -96,7 +96,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('316140','우리금융지주','KOSPI',NULL),
                                                                     ('298690','에어부산','KOSPI',NULL),
                                                                     ('267850','아시아나IDT','KOSPI',NULL),
-                                                                    ('306200','세아제강','KOSPI',NULL);
+                                                                    ('306200','세아제강','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('293480','하나제약','KOSPI',NULL),
                                                                     ('010400','우진아이엔에스','KOSPI',NULL),
@@ -107,7 +107,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('298040','효성중공업','KOSPI',NULL),
                                                                     ('298020','효성티앤씨','KOSPI',NULL),
                                                                     ('298000','효성화학','KOSPI',NULL),
-                                                                    ('088260','이리츠코크렙','KOSPI',NULL);
+                                                                    ('088260','이리츠코크렙','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('294870','HDC현대산업개발','KOSPI',NULL),
                                                                     ('018250','애경산업','KOSPI',NULL),
@@ -118,7 +118,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('092780','DYP','KOSPI',NULL),
                                                                     ('272450','진에어','KOSPI',NULL),
                                                                     ('281820','케이씨텍','KOSPI',NULL),
-                                                                    ('272550','삼양패키징','KOSPI',NULL);
+                                                                    ('272550','삼양패키징','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('055490','테이팩스','KOSPI',NULL),
                                                                     ('280360','롯데웰푸드','KOSPI',NULL),
@@ -129,7 +129,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('267290','경동도시가스','KOSPI',NULL),
                                                                     ('251270','넷마블','KOSPI',NULL),
                                                                     ('267270','HD건설기계','KOSPI',NULL),
-                                                                    ('267250','HD현대','KOSPI',NULL);
+                                                                    ('267250','HD현대','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('267260','HD현대일렉트릭','KOSPI',NULL),
                                                                     ('264900','크라운제과','KOSPI',NULL),
@@ -140,7 +140,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('207940','삼성바이오로직스','KOSPI',NULL),
                                                                     ('234080','JW생명과학','KOSPI',NULL),
                                                                     ('241590','화승엔터프라이즈','KOSPI',NULL),
-                                                                    ('229640','LS에코에너지','KOSPI',NULL);
+                                                                    ('229640','LS에코에너지','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('249420','일동제약','KOSPI',NULL),
                                                                     ('248170','샘표식품','KOSPI',NULL),
@@ -151,7 +151,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('195870','해성디에스','KOSPI',NULL),
                                                                     ('070960','모나용평','KOSPI',NULL),
                                                                     ('101530','해태제과식품','KOSPI',NULL),
-                                                                    ('004440','삼일씨엔에스','KOSPI',NULL);
+                                                                    ('004440','삼일씨엔에스','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('194370','제이에스코퍼레이션','KOSPI',NULL),
                                                                     ('226320','잇츠한불','KOSPI',NULL),
@@ -162,7 +162,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('079550','LIG넥스원','KOSPI',NULL),
                                                                     ('039570','HDC랩스','KOSPI',NULL),
                                                                     ('002690','동일제강','KOSPI',NULL),
-                                                                    ('095570','AJ네트웍스','KOSPI',NULL);
+                                                                    ('095570','AJ네트웍스','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('214320','이노션','KOSPI',NULL),
                                                                     ('214420','토니모리','KOSPI',NULL),
@@ -173,7 +173,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('213500','한솔제지','KOSPI',NULL),
                                                                     ('210540','디와이파워','KOSPI',NULL),
                                                                     ('028260','삼성물산','KOSPI',NULL),
-                                                                    ('112610','씨에스윈드','KOSPI',NULL);
+                                                                    ('112610','씨에스윈드','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('018260','삼성에스디에스','KOSPI',NULL),
                                                                     ('204320','HL만도','KOSPI',NULL),
@@ -184,7 +184,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('192820','코스맥스','KOSPI',NULL),
                                                                     ('185750','종근당','KOSPI',NULL),
                                                                     ('006880','신송홀딩스','KOSPI',NULL),
-                                                                    ('183190','아세아시멘트','KOSPI',NULL);
+                                                                    ('183190','아세아시멘트','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('064350','현대로템','KOSPI',NULL),
                                                                     ('180640','한진칼','KOSPI',NULL),
@@ -195,7 +195,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('013870','지엠비코리아','KOSPI',NULL),
                                                                     ('037560','LG헬로비전','KOSPI',NULL),
                                                                     ('163560','동일고무벨트','KOSPI',NULL),
-                                                                    ('161890','한국콜마','KOSPI',NULL);
+                                                                    ('161890','한국콜마','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('161390','한국타이어앤테크놀로지','KOSPI',NULL),
                                                                     ('161000','애경케미칼','KOSPI',NULL),
@@ -206,7 +206,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('129260','인터지스','KOSPI',NULL),
                                                                     ('145990','삼양사','KOSPI',NULL),
                                                                     ('039130','하나투어','KOSPI',NULL),
-                                                                    ('078520','에이블씨엔씨','KOSPI',NULL);
+                                                                    ('078520','에이블씨엔씨','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('023000','삼원강재','KOSPI',NULL),
                                                                     ('031430','신세계인터내셔날','KOSPI',NULL),
@@ -217,7 +217,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('139480','이마트','KOSPI',NULL),
                                                                     ('139130','iM금융지주','KOSPI',NULL),
                                                                     ('053210','케이티스카이라이프','KOSPI',NULL),
-                                                                    ('138040','메리츠금융지주','KOSPI',NULL);
+                                                                    ('138040','메리츠금융지주','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('023350','한국종합기술','KOSPI',NULL),
                                                                     ('138930','BNK금융지주','KOSPI',NULL),
@@ -228,7 +228,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('134790','시디즈','KOSPI',NULL),
                                                                     ('082740','한화엔진','KOSPI',NULL),
                                                                     ('117580','대성에너지','KOSPI',NULL),
-                                                                    ('126560','현대퓨처넷','KOSPI',NULL);
+                                                                    ('126560','현대퓨처넷','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('058860','KTis','KOSPI',NULL),
                                                                     ('130660','한전산업','KOSPI',NULL),
@@ -239,7 +239,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('002150','도화엔지니어링','KOSPI',NULL),
                                                                     ('128820','대성산업','KOSPI',NULL),
                                                                     ('122900','아이마켓코리아','KOSPI',NULL),
-                                                                    ('128940','한미약품','KOSPI',NULL);
+                                                                    ('128940','한미약품','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('105840','우진','KOSPI',NULL),
                                                                     ('033920','무학','KOSPI',NULL),
@@ -250,7 +250,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('032830','삼성생명','KOSPI',NULL),
                                                                     ('031440','신세계푸드','KOSPI',NULL),
                                                                     ('088350','한화생명','KOSPI',NULL),
-                                                                    ('120030','조선선재','KOSPI',NULL);
+                                                                    ('120030','조선선재','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('120110','코오롱인더','KOSPI',NULL),
                                                                     ('119650','KC코트렐','KOSPI',NULL),
@@ -261,7 +261,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('114090','GKL','KOSPI',NULL),
                                                                     ('034730','SK','KOSPI',NULL),
                                                                     ('032560','황금에스티','KOSPI',NULL),
-                                                                    ('000080','하이트진로','KOSPI',NULL);
+                                                                    ('000080','하이트진로','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('082640','동양생명','KOSPI',NULL),
                                                                     ('047400','유니온머티리얼','KOSPI',NULL),
@@ -272,7 +272,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('028100','동아지질','KOSPI',NULL),
                                                                     ('071970','HD현대마린엔진','KOSPI',NULL),
                                                                     ('108670','LX하우시스','KOSPI',NULL),
-                                                                    ('105630','한세실업','KOSPI',NULL);
+                                                                    ('105630','한세실업','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('109070','주성코퍼레이션','KOSPI',NULL),
                                                                     ('107590','미원홀딩스','KOSPI',NULL),
@@ -283,7 +283,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('103590','일진전기','KOSPI',NULL),
                                                                     ('103140','풍산','KOSPI',NULL),
                                                                     ('011070','LG이노텍','KOSPI',NULL),
-                                                                    ('017180','명문제약','KOSPI',NULL);
+                                                                    ('017180','명문제약','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('100220','비상교육','KOSPI',NULL),
                                                                     ('102260','동성케미컬','KOSPI',NULL),
@@ -294,7 +294,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('100250','진양홀딩스','KOSPI',NULL),
                                                                     ('085310','엔케이','KOSPI',NULL),
                                                                     ('051600','한전KPS','KOSPI',NULL),
-                                                                    ('092440','기신정기','KOSPI',NULL);
+                                                                    ('092440','기신정기','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('044450','KSS해운','KOSPI',NULL),
                                                                     ('094280','효성 ITX','KOSPI',NULL),
@@ -305,7 +305,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('097230','HJ중공업','KOSPI',NULL),
                                                                     ('096760','JW홀딩스','KOSPI',NULL),
                                                                     ('096770','SK이노베이션','KOSPI',NULL),
-                                                                    ('029780','삼성카드','KOSPI',NULL);
+                                                                    ('029780','삼성카드','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('001780','알루코','KOSPI',NULL),
                                                                     ('095720','웅진씽크빅','KOSPI',NULL),
@@ -316,7 +316,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('044380','주연테크','KOSPI',NULL),
                                                                     ('044820','코스맥스비티아이','KOSPI',NULL),
                                                                     ('034590','인천도시가스','KOSPI',NULL),
-                                                                    ('009770','삼정펄프','KOSPI',NULL);
+                                                                    ('009770','삼정펄프','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('092220','KEC','KOSPI',NULL),
                                                                     ('092230','KPX홀딩스','KOSPI',NULL),
@@ -327,7 +327,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('090080','평화산업','KOSPI',NULL),
                                                                     ('049800','우진플라임','KOSPI',NULL),
                                                                     ('035510','신세계I&C','KOSPI',NULL),
-                                                                    ('088790','진도','KOSPI',NULL);
+                                                                    ('088790','진도','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('088980','맥쿼리인프라','KOSPI',NULL),
                                                                     ('023530','롯데쇼핑','KOSPI',NULL),
@@ -338,7 +338,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('079430','현대리바트','KOSPI',NULL),
                                                                     ('084010','대한제강','KOSPI',NULL),
                                                                     ('075180','새론오토모티브','KOSPI',NULL),
-                                                                    ('083420','그린케미칼','KOSPI',NULL);
+                                                                    ('083420','그린케미칼','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('084690','대상홀딩스','KOSPI',NULL),
                                                                     ('071950','코아스','KOSPI',NULL),
@@ -349,7 +349,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('010960','삼호개발','KOSPI',NULL),
                                                                     ('073240','금호타이어','KOSPI',NULL),
                                                                     ('079160','CJ CGV','KOSPI',NULL),
-                                                                    ('081000','일진다이아','KOSPI',NULL);
+                                                                    ('081000','일진다이아','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('014830','유니드','KOSPI',NULL),
                                                                     ('041650','상신브레이크','KOSPI',NULL),
@@ -360,7 +360,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('034220','LG디스플레이','KOSPI',NULL),
                                                                     ('078000','텔코웨어','KOSPI',NULL),
                                                                     ('077970','STX엔진','KOSPI',NULL),
-                                                                    ('034310','NICE','KOSPI',NULL);
+                                                                    ('034310','NICE','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('019680','대교','KOSPI',NULL),
                                                                     ('024110','기업은행','KOSPI',NULL),
@@ -371,7 +371,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('037270','YG PLUS','KOSPI',NULL),
                                                                     ('072710','농심홀딩스','KOSPI',NULL),
                                                                     ('071050','한국금융지주','KOSPI',NULL),
-                                                                    ('072130','유엔젤','KOSPI',NULL);
+                                                                    ('072130','유엔젤','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('034120','SBS','KOSPI',NULL),
                                                                     ('036570','엔씨소프트','KOSPI',NULL),
@@ -382,7 +382,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('069960','현대백화점','KOSPI',NULL),
                                                                     ('069460','대호에이엘','KOSPI',NULL),
                                                                     ('069620','대웅제약','KOSPI',NULL),
-                                                                    ('027740','마니커','KOSPI',NULL);
+                                                                    ('027740','마니커','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('036530','SNT홀딩스','KOSPI',NULL),
                                                                     ('069260','티케이지휴켐스','KOSPI',NULL),
@@ -393,7 +393,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('030610','교보증권','KOSPI',NULL),
                                                                     ('009240','한샘','KOSPI',NULL),
                                                                     ('017370','우신시스템','KOSPI',NULL),
-                                                                    ('066570','LG전자','KOSPI',NULL);
+                                                                    ('066570','LG전자','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('024720','콜마홀딩스','KOSPI',NULL),
                                                                     ('064960','SNT모티브','KOSPI',NULL),
@@ -404,7 +404,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('021240','코웨이','KOSPI',NULL),
                                                                     ('058650','세아홀딩스','KOSPI',NULL),
                                                                     ('051900','LG생활건강','KOSPI',NULL),
-                                                                    ('051910','LG화학','KOSPI',NULL);
+                                                                    ('051910','LG화학','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('047040','대우건설','KOSPI',NULL),
                                                                     ('047050','포스코인터내셔널','KOSPI',NULL),
@@ -415,7 +415,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('016450','한세예스24홀딩스','KOSPI',NULL),
                                                                     ('016710','대성홀딩스','KOSPI',NULL),
                                                                     ('003220','대원제약','KOSPI',NULL),
-                                                                    ('036460','한국가스공사','KOSPI',NULL);
+                                                                    ('036460','한국가스공사','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('007120','미래아이앤지','KOSPI',NULL),
                                                                     ('000850','화천기공','KOSPI',NULL),
@@ -426,7 +426,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('006840','AK홀딩스','KOSPI',NULL),
                                                                     ('035000','HS애드','KOSPI',NULL),
                                                                     ('006650','대한유화','KOSPI',NULL),
-                                                                    ('035150','백산','KOSPI',NULL);
+                                                                    ('035150','백산','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('033250','체시스','KOSPI',NULL),
                                                                     ('033240','자화전자','KOSPI',NULL),
@@ -437,7 +437,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('029460','케이씨','KOSPI',NULL),
                                                                     ('024890','대원화성','KOSPI',NULL),
                                                                     ('017940','E1','KOSPI',NULL),
-                                                                    ('018670','SK가스','KOSPI',NULL);
+                                                                    ('018670','SK가스','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('023590','다우기술','KOSPI',NULL),
                                                                     ('014440','영보화학','KOSPI',NULL),
@@ -448,7 +448,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('023800','인지컨트롤스','KOSPI',NULL),
                                                                     ('012320','경동인베스트','KOSPI',NULL),
                                                                     ('031820','아이티센씨티에스','KOSPI',NULL),
-                                                                    ('025530','에스제이엠홀딩스','KOSPI',NULL);
+                                                                    ('025530','에스제이엠홀딩스','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('000660','SK하이닉스','KOSPI',NULL),
                                                                     ('015360','INVENI','KOSPI',NULL),
@@ -459,7 +459,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('005320','온타이드','KOSPI',NULL),
                                                                     ('016800','퍼시스','KOSPI',NULL),
                                                                     ('024070','WISCOM','KOSPI',NULL),
-                                                                    ('030720','동원수산','KOSPI',NULL);
+                                                                    ('030720','동원수산','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('025560','미래산업','KOSPI',NULL),
                                                                     ('030210','다올투자증권','KOSPI',NULL),
@@ -470,7 +470,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('011930','신성이엔지','KOSPI',NULL),
                                                                     ('019180','티에이치엔','KOSPI',NULL),
                                                                     ('018880','한온시스템','KOSPI',NULL),
-                                                                    ('006740','블루산업개발','KOSPI',NULL);
+                                                                    ('006740','블루산업개발','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('021820','세원정공','KOSPI',NULL),
                                                                     ('000910','유니온','KOSPI',NULL),
@@ -481,7 +481,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('016580','환인제약','KOSPI',NULL),
                                                                     ('013580','계룡건설산업','KOSPI',NULL),
                                                                     ('021050','서원','KOSPI',NULL),
-                                                                    ('012750','에스원','KOSPI',NULL);
+                                                                    ('012750','에스원','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('015890','태경산업','KOSPI',NULL),
                                                                     ('016590','신대양제지','KOSPI',NULL),
@@ -492,7 +492,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('011200','HMM','KOSPI',NULL),
                                                                     ('012610','경인양행','KOSPI',NULL),
                                                                     ('017810','풀무원','KOSPI',NULL),
-                                                                    ('017390','서울도시가스','KOSPI',NULL);
+                                                                    ('017390','서울도시가스','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('025820','이구산업','KOSPI',NULL),
                                                                     ('011090','에넥스','KOSPI',NULL),
@@ -503,7 +503,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('007980','TP','KOSPI',NULL),
                                                                     ('010580','에스엠벡셀','KOSPI',NULL),
                                                                     ('009440','KC그린홀딩스','KOSPI',NULL),
-                                                                    ('008420','문배철강','KOSPI',NULL);
+                                                                    ('008420','문배철강','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('016880','웅진','KOSPI',NULL),
                                                                     ('014790','HL D&I','KOSPI',NULL),
@@ -514,7 +514,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('000760','이화산업','KOSPI',NULL),
                                                                     ('014820','동원시스템즈','KOSPI',NULL),
                                                                     ('010140','삼성중공업','KOSPI',NULL),
-                                                                    ('009680','모토닉','KOSPI',NULL);
+                                                                    ('009680','모토닉','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('010690','화신','KOSPI',NULL),
                                                                     ('000390','삼화페인트공업','KOSPI',NULL),
@@ -525,7 +525,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('005880','대한해운','KOSPI',NULL),
                                                                     ('005870','휴니드테크놀러지스','KOSPI',NULL),
                                                                     ('017550','수산세보틱스','KOSPI',NULL),
-                                                                    ('011170','롯데케미칼','KOSPI',NULL);
+                                                                    ('011170','롯데케미칼','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('001430','세아베스틸지주','KOSPI',NULL),
                                                                     ('008770','호텔신라','KOSPI',NULL),
@@ -536,7 +536,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('014530','극동유화','KOSPI',NULL),
                                                                     ('002140','고려산업','KOSPI',NULL),
                                                                     ('016090','대현','KOSPI',NULL),
-                                                                    ('001620','케이비아이동국실업','KOSPI',NULL);
+                                                                    ('001620','케이비아이동국실업','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('017040','광명전기','KOSPI',NULL),
                                                                     ('011390','부산산업','KOSPI',NULL),
@@ -547,7 +547,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('001500','현대차증권','KOSPI',NULL),
                                                                     ('008870','금비','KOSPI',NULL),
                                                                     ('005820','원림','KOSPI',NULL),
-                                                                    ('008490','서흥','KOSPI',NULL);
+                                                                    ('008490','서흥','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('014910','성문전자','KOSPI',NULL),
                                                                     ('003580','HLB글로벌','KOSPI',NULL),
@@ -558,7 +558,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('002210','동성제약','KOSPI',NULL),
                                                                     ('012170','아센디오','KOSPI',NULL),
                                                                     ('009420','한올바이오파마','KOSPI',NULL),
-                                                                    ('011330','유니켐','KOSPI',NULL);
+                                                                    ('011330','유니켐','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('012800','대창','KOSPI',NULL),
                                                                     ('013360','일성건설','KOSPI',NULL),
@@ -569,7 +569,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('009290','광동제약','KOSPI',NULL),
                                                                     ('011420','갤럭시아에스엠','KOSPI',NULL),
                                                                     ('004270','남성','KOSPI',NULL),
-                                                                    ('001940','KISCO홀딩스','KOSPI',NULL);
+                                                                    ('001940','KISCO홀딩스','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('009410','태영건설','KOSPI',NULL),
                                                                     ('007280','한국특강','KOSPI',NULL),
@@ -580,7 +580,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('003650','미창석유공업','KOSPI',NULL),
                                                                     ('004380','삼익THK','KOSPI',NULL),
                                                                     ('002840','미원상사','KOSPI',NULL),
-                                                                    ('007860','서연','KOSPI',NULL);
+                                                                    ('007860','서연','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('013000','세우글로벌','KOSPI',NULL),
                                                                     ('012330','현대모비스','KOSPI',NULL),
@@ -591,7 +591,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('015760','한국전력공사','KOSPI',NULL),
                                                                     ('007690','국도화학','KOSPI',NULL),
                                                                     ('006280','녹십자','KOSPI',NULL),
-                                                                    ('009160','SIMPAC','KOSPI',NULL);
+                                                                    ('009160','SIMPAC','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('008600','윌비스','KOSPI',NULL),
                                                                     ('015230','대창단조','KOSPI',NULL),
@@ -602,7 +602,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('009580','무림P&P','KOSPI',NULL),
                                                                     ('014990','인디에프','KOSPI',NULL),
                                                                     ('013570','디와이','KOSPI',NULL),
-                                                                    ('003610','방림','KOSPI',NULL);
+                                                                    ('003610','방림','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('015590','DKME','KOSPI',NULL),
                                                                     ('014680','한솔케미칼','KOSPI',NULL),
@@ -613,7 +613,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('015020','이스타코','KOSPI',NULL),
                                                                     ('011280','태림포장','KOSPI',NULL),
                                                                     ('002310','아세아제지','KOSPI',NULL),
-                                                                    ('010660','화천기계','KOSPI',NULL);
+                                                                    ('010660','화천기계','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('011150','CJ씨푸드','KOSPI',NULL),
                                                                     ('001770','SHD','KOSPI',NULL),
@@ -624,7 +624,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('003850','보령','KOSPI',NULL),
                                                                     ('008250','이건산업','KOSPI',NULL),
                                                                     ('012690','모나리자','KOSPI',NULL),
-                                                                    ('006370','대구백화점','KOSPI',NULL);
+                                                                    ('006370','대구백화점','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('006980','우성','KOSPI',NULL),
                                                                     ('002920','유성기업','KOSPI',NULL),
@@ -635,7 +635,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('000890','보해양조','KOSPI',NULL),
                                                                     ('001290','상상인증권','KOSPI',NULL),
                                                                     ('003010','혜인','KOSPI',NULL),
-                                                                    ('014280','금강공업','KOSPI',NULL);
+                                                                    ('014280','금강공업','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('009810','플레이그램','KOSPI',NULL),
                                                                     ('008730','율촌화학','KOSPI',NULL),
@@ -646,7 +646,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('005810','풍산홀딩스','KOSPI',NULL),
                                                                     ('001270','부국증권','KOSPI',NULL),
                                                                     ('012200','계양전기','KOSPI',NULL),
-                                                                    ('004710','한솔테크닉스','KOSPI',NULL);
+                                                                    ('004710','한솔테크닉스','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('016610','DB증권','KOSPI',NULL),
                                                                     ('008930','한미사이언스','KOSPI',NULL),
@@ -657,7 +657,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('001230','동국홀딩스','KOSPI',NULL),
                                                                     ('006340','대원전선','KOSPI',NULL),
                                                                     ('005950','이수화학','KOSPI',NULL),
-                                                                    ('016360','삼성증권','KOSPI',NULL);
+                                                                    ('016360','삼성증권','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('002810','삼영무역','KOSPI',NULL),
                                                                     ('001750','한양증권','KOSPI',NULL),
@@ -668,7 +668,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('009460','한창제지','KOSPI',NULL),
                                                                     ('005720','넥센','KOSPI',NULL),
                                                                     ('006660','삼성공조','KOSPI',NULL),
-                                                                    ('004490','세방전지','KOSPI',NULL);
+                                                                    ('004490','세방전지','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('011000','진원생명과학','KOSPI',NULL),
                                                                     ('009310','참엔지니어링','KOSPI',NULL),
@@ -679,7 +679,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('001200','유진증권','KOSPI',NULL),
                                                                     ('003460','유화증권','KOSPI',NULL),
                                                                     ('011700','한신기계공업','KOSPI',NULL),
-                                                                    ('005420','코스모화학','KOSPI',NULL);
+                                                                    ('005420','코스모화학','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('000500','가온전선','KOSPI',NULL),
                                                                     ('010950','S-Oil','KOSPI',NULL),
@@ -690,7 +690,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('004560','현대비앤지스틸','KOSPI',NULL),
                                                                     ('006090','사조오양','KOSPI',NULL),
                                                                     ('003530','한화투자증권','KOSPI',NULL),
-                                                                    ('009470','삼화전기','KOSPI',NULL);
+                                                                    ('009470','삼화전기','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('001510','SK증권','KOSPI',NULL),
                                                                     ('010770','평화홀딩스','KOSPI',NULL),
@@ -701,7 +701,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('003830','대한화섬','KOSPI',NULL),
                                                                     ('007810','코리아써키트','KOSPI',NULL),
                                                                     ('004170','신세계','KOSPI',NULL),
-                                                                    ('010060','OCI홀딩스','KOSPI',NULL);
+                                                                    ('010060','OCI홀딩스','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('000520','삼일제약','KOSPI',NULL),
                                                                     ('006490','인스코비','KOSPI',NULL),
@@ -712,7 +712,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('007700','F&F 홀딩스','KOSPI',NULL),
                                                                     ('008700','아남전자','KOSPI',NULL),
                                                                     ('006360','GS건설','KOSPI',NULL),
-                                                                    ('006110','삼아알미늄','KOSPI',NULL);
+                                                                    ('006110','삼아알미늄','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('006200','한국전자홀딩스','KOSPI',NULL),
                                                                     ('006400','삼성SDI','KOSPI',NULL),
@@ -723,7 +723,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('005180','빙그레','KOSPI',NULL),
                                                                     ('005250','녹십자홀딩스','KOSPI',NULL),
                                                                     ('000480','시알홀딩스','KOSPI',NULL),
-                                                                    ('004310','현대약품','KOSPI',NULL);
+                                                                    ('004310','현대약품','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('003920','남양유업','KOSPI',NULL),
                                                                     ('008350','남선알미늄','KOSPI',NULL),
@@ -734,7 +734,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('002100','경농','KOSPI',NULL),
                                                                     ('004870','티웨이홀딩스','KOSPI',NULL),
                                                                     ('007590','동방아그로','KOSPI',NULL),
-                                                                    ('004430','송원산업','KOSPI',NULL);
+                                                                    ('004430','송원산업','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('002780','진흥기업','KOSPI',NULL),
                                                                     ('004090','한국석유공업','KOSPI',NULL),
@@ -745,7 +745,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('004360','세방','KOSPI',NULL),
                                                                     ('008970','KBI동양철관','KOSPI',NULL),
                                                                     ('002880','대유에이텍','KOSPI',NULL),
-                                                                    ('001260','남광토건','KOSPI',NULL);
+                                                                    ('001260','남광토건','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('005680','삼영전자공업','KOSPI',NULL),
                                                                     ('005800','신영와코루','KOSPI',NULL),
@@ -756,7 +756,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('003080','SB성보','KOSPI',NULL),
                                                                     ('004690','삼천리','KOSPI',NULL),
                                                                     ('002600','조흥','KOSPI',NULL),
-                                                                    ('001570','금양','KOSPI',NULL);
+                                                                    ('001570','금양','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('003960','사조대림','KOSPI',NULL),
                                                                     ('002070','비비안','KOSPI',NULL),
@@ -767,7 +767,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('004980','성신양회','KOSPI',NULL),
                                                                     ('004970','신라교역','KOSPI',NULL),
                                                                     ('002870','신풍','KOSPI',NULL),
-                                                                    ('001630','종근당홀딩스','KOSPI',NULL);
+                                                                    ('001630','종근당홀딩스','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('005740','크라운해태홀딩스','KOSPI',NULL),
                                                                     ('002390','한독','KOSPI',NULL),
@@ -778,7 +778,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('001250','GS글로벌','KOSPI',NULL),
                                                                     ('002990','금호건설','KOSPI',NULL),
                                                                     ('001470','삼부토건','KOSPI',NULL),
-                                                                    ('001820','삼화콘덴서공업','KOSPI',NULL);
+                                                                    ('001820','삼화콘덴서공업','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('001020','페이퍼코리아','KOSPI',NULL),
                                                                     ('001520','동양','KOSPI',NULL),
@@ -789,7 +789,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('000180','성창기업지주','KOSPI',NULL),
                                                                     ('005110','한창','KOSPI',NULL),
                                                                     ('004450','삼화왕관','KOSPI',NULL),
-                                                                    ('000040','KR모터스','KOSPI',NULL);
+                                                                    ('000040','KR모터스','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('002240','고려제강','KOSPI',NULL),
                                                                     ('004100','태양금속공업','KOSPI',NULL),
@@ -800,7 +800,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('004000','롯데정밀화학','KOSPI',NULL),
                                                                     ('000020','동화약품','KOSPI',NULL),
                                                                     ('000210','DL','KOSPI',NULL),
-                                                                    ('001120','LX인터내셔널','KOSPI',NULL);
+                                                                    ('001120','LX인터내셔널','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('002720','국제약품','KOSPI',NULL),
                                                                     ('003240','태광산업','KOSPI',NULL),
@@ -811,7 +811,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('000220','유유제약','KOSPI',NULL),
                                                                     ('000860','강남제비스코','KOSPI',NULL),
                                                                     ('003540','대신증권','KOSPI',NULL),
-                                                                    ('005940','NH투자증권','KOSPI',NULL);
+                                                                    ('005940','NH투자증권','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('006800','미래에셋증권','KOSPI',NULL),
                                                                     ('002700','신일전자','KOSPI',NULL),
@@ -822,7 +822,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('008260','NI스틸','KOSPI',NULL),
                                                                     ('000230','일동홀딩스','KOSPI',NULL),
                                                                     ('000490','대동','KOSPI',NULL),
-                                                                    ('001800','오리온홀딩스','KOSPI',NULL);
+                                                                    ('001800','오리온홀딩스','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('004540','깨끗한나라','KOSPI',NULL),
                                                                     ('001420','태원물산','KOSPI',NULL),
@@ -833,7 +833,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('003620','KG모빌리티','KOSPI',NULL),
                                                                     ('005610','SPC삼립','KOSPI',NULL),
                                                                     ('000540','흥국화재','KOSPI',NULL),
-                                                                    ('007570','일양약품','KOSPI',NULL);
+                                                                    ('007570','일양약품','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('002320','한진','KOSPI',NULL),
                                                                     ('002200','한국수출포장공업','KOSPI',NULL),
@@ -844,7 +844,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('006380','카프로','KOSPI',NULL),
                                                                     ('004990','롯데지주','KOSPI',NULL),
                                                                     ('001070','대한방직','KOSPI',NULL),
-                                                                    ('004410','서울식품공업','KOSPI',NULL);
+                                                                    ('004410','서울식품공업','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('000680','LS네트웍스','KOSPI',NULL),
                                                                     ('001210','금호전기','KOSPI',NULL),
@@ -855,7 +855,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('001040','CJ','KOSPI',NULL),
                                                                     ('000150','두산','KOSPI',NULL),
                                                                     ('005010','휴스틸','KOSPI',NULL),
-                                                                    ('005830','DB손해보험','KOSPI',NULL);
+                                                                    ('005830','DB손해보험','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('002900','TYM','KOSPI',NULL),
                                                                     ('003090','대웅','KOSPI',NULL),
@@ -866,7 +866,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('003200','일신방직','KOSPI',NULL),
                                                                     ('002790','아모레퍼시픽홀딩스','KOSPI',NULL),
                                                                     ('006220','제주은행','KOSPI',NULL),
-                                                                    ('004150','한솔홀딩스','KOSPI',NULL);
+                                                                    ('004150','한솔홀딩스','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('007210','벽산','KOSPI',NULL),
                                                                     ('000400','롯데손해보험','KOSPI',NULL),
@@ -877,7 +877,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('003690','코리안리','KOSPI',NULL),
                                                                     ('000970','한국주철관공업','KOSPI',NULL),
                                                                     ('003300','한일홀딩스','KOSPI',NULL),
-                                                                    ('004250','엔피씨','KOSPI',NULL);
+                                                                    ('004250','엔피씨','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('003030','세아제강지주','KOSPI',NULL),
                                                                     ('001440','대한전선','KOSPI',NULL),
@@ -888,7 +888,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('000950','전방','KOSPI',NULL),
                                                                     ('003490','대한항공','KOSPI',NULL),
                                                                     ('001530','디아이동일','KOSPI',NULL),
-                                                                    ('000100','유한양행','KOSPI',NULL);
+                                                                    ('000100','유한양행','KOSPI',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('000120','CJ대한통운','KOSPI',NULL),
                                                                     ('000050','경방','KOSPI',NULL),
@@ -899,7 +899,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('493280','아이엠바이오로직스','KOSDAQ',NULL),
                                                                     ('458350','에스팀','KOSDAQ',NULL),
                                                                     ('493330','지에프아이','KOSDAQ',NULL),
-                                                                    ('012210','삼미금속','KOSDAQ',NULL);
+                                                                    ('012210','삼미금속','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('490470','세미파이브','KOSDAQ',NULL),
                                                                     ('491000','리브스메드','KOSDAQ',NULL),
@@ -910,7 +910,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('950250','테라뷰','KOSDAQ',NULL),
                                                                     ('488900','비츠로넥스텍','KOSDAQ',NULL),
                                                                     ('388210','씨엠티엑스','KOSDAQ',NULL),
-                                                                    ('403850','더핑크퐁컴퍼니','KOSDAQ',NULL);
+                                                                    ('403850','더핑크퐁컴퍼니','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('459550','알트','KOSDAQ',NULL),
                                                                     ('061090','세나테크놀로지','KOSDAQ',NULL),
@@ -921,7 +921,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('488280','에스투더블유','KOSDAQ',NULL),
                                                                     ('342870','오아','KOSDAQ',NULL),
                                                                     ('318060','그래피','KOSDAQ',NULL),
-                                                                    ('397810','애드포러스','KOSDAQ',NULL);
+                                                                    ('397810','애드포러스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('125490','한라캐스트','KOSDAQ',NULL),
                                                                     ('484590','삼양컴텍','KOSDAQ',NULL),
@@ -932,7 +932,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('380550','뉴로핏','KOSDAQ',NULL),
                                                                     ('484120','도우인시스','KOSDAQ',NULL),
                                                                     ('331740','아우토크립트','KOSDAQ',NULL),
-                                                                    ('462310','뉴키즈온','KOSDAQ',NULL);
+                                                                    ('462310','뉴키즈온','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('234030','싸이닉솔루션','KOSDAQ',NULL),
                                                                     ('463020','뉴엔AI','KOSDAQ',NULL),
@@ -943,7 +943,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('475430','키스트론','KOSDAQ',NULL),
                                                                     ('287840','인투셀','KOSDAQ',NULL),
                                                                     ('489460','바이오비쥬','KOSDAQ',NULL),
-                                                                    ('424870','이뮨온시아','KOSDAQ',NULL);
+                                                                    ('424870','이뮨온시아','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('188040','바이오포트','KOSDAQ',NULL),
                                                                     ('125020','티씨머티리얼즈','KOSDAQ',NULL),
@@ -954,7 +954,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('364950','에이아이코리아','KOSDAQ',NULL),
                                                                     ('081180','쎄크','KOSDAQ',NULL),
                                                                     ('448900','한국피아이엠','KOSDAQ',NULL),
-                                                                    ('481070','에이유브랜즈','KOSDAQ',NULL);
+                                                                    ('481070','에이유브랜즈','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('101970','우양에이치씨','KOSDAQ',NULL),
                                                                     ('462860','더즌','KOSDAQ',NULL),
@@ -965,7 +965,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('226590','엠디바이스','KOSDAQ',NULL),
                                                                     ('393970','대진첨단소재','KOSDAQ',NULL),
                                                                     ('435570','에르코스','KOSDAQ',NULL),
-                                                                    ('489500','엘케이켐','KOSDAQ',NULL);
+                                                                    ('489500','엘케이켐','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('479960','위너스','KOSDAQ',NULL),
                                                                     ('463480','모티브링크','KOSDAQ',NULL),
@@ -976,7 +976,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('462980','아이지넷','KOSDAQ',NULL),
                                                                     ('452450','피아이이','KOSDAQ',NULL),
                                                                     ('482630','삼양엔씨켐','KOSDAQ',NULL),
-                                                                    ('373160','데이원컴퍼니','KOSDAQ',NULL);
+                                                                    ('373160','데이원컴퍼니','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('450950','아스테라시스','KOSDAQ',NULL),
                                                                     ('096250','와이즈넛','KOSDAQ',NULL),
@@ -987,7 +987,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('177900','쓰리에이로직스','KOSDAQ',NULL),
                                                                     ('176750','듀켐바이오','KOSDAQ',NULL),
                                                                     ('398120','에스지헬스케어','KOSDAQ',NULL),
-                                                                    ('476060','온코닉테라퓨틱스','KOSDAQ',NULL);
+                                                                    ('476060','온코닉테라퓨틱스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('382150','온코크로스','KOSDAQ',NULL),
                                                                     ('457600','벡트','KOSDAQ',NULL),
@@ -998,7 +998,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('466410','사이냅소프트','KOSDAQ',NULL),
                                                                     ('475660','에스켐','KOSDAQ',NULL),
                                                                     ('413390','엠오티','KOSDAQ',NULL),
-                                                                    ('394800','쓰리빌리언','KOSDAQ',NULL);
+                                                                    ('394800','쓰리빌리언','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('464580','닷밀','KOSDAQ',NULL),
                                                                     ('473980','노머스','KOSDAQ',NULL),
@@ -1009,7 +1009,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('336680','탑런토탈솔루션','KOSDAQ',NULL),
                                                                     ('458650','성우','KOSDAQ',NULL),
                                                                     ('466100','클로봇','KOSDAQ',NULL),
-                                                                    ('044990','에이치엔에스하이텍','KOSDAQ',NULL);
+                                                                    ('044990','에이치엔에스하이텍','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('289930','웨이비스','KOSDAQ',NULL),
                                                                     ('475400','씨메스','KOSDAQ',NULL),
@@ -1020,7 +1020,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('308430','셀비온','KOSDAQ',NULL),
                                                                     ('381620','제닉스로보틱스','KOSDAQ',NULL),
                                                                     ('351870','차이커뮤니케이션','KOSDAQ',NULL),
-                                                                    ('464500','아이언디바이스','KOSDAQ',NULL);
+                                                                    ('464500','아이언디바이스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('469750','아이비젼웍스','KOSDAQ',NULL),
                                                                     ('461300','아이스크림미디어','KOSDAQ',NULL),
@@ -1031,7 +1031,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('431190','케이쓰리아이','KOSDAQ',NULL),
                                                                     ('088340','유라클','KOSDAQ',NULL),
                                                                     ('199480','뱅크웨어글로벌','KOSDAQ',NULL),
-                                                                    ('460470','아이빔테크놀로지','KOSDAQ',NULL);
+                                                                    ('460470','아이빔테크놀로지','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('460940','피앤에스로보틱스','KOSDAQ',NULL),
                                                                     ('373110','엑셀세라퓨틱스','KOSDAQ',NULL),
@@ -1042,7 +1042,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('464080','에스오에스랩','KOSDAQ',NULL),
                                                                     ('107640','한중엔시에스','KOSDAQ',NULL),
                                                                     ('458870','씨어스테크놀로지','KOSDAQ',NULL),
-                                                                    ('462510','라메디텍','KOSDAQ',NULL);
+                                                                    ('462510','라메디텍','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('453450','그리드위즈','KOSDAQ',NULL),
                                                                     ('323350','다원넥스뷰','KOSDAQ',NULL),
@@ -1053,7 +1053,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('140430','카티스','KOSDAQ',NULL),
                                                                     ('347850','디앤디파마텍','KOSDAQ',NULL),
                                                                     ('412540','제일엠앤에스','KOSDAQ',NULL),
-                                                                    ('451250','삐아','KOSDAQ',NULL);
+                                                                    ('451250','삐아','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('461030','아이엠비디엑스','KOSDAQ',NULL),
                                                                     ('455900','엔젤로보틱스','KOSDAQ',NULL),
@@ -1064,7 +1064,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('418620','E8','KOSDAQ',NULL),
                                                                     ('360350','코셈','KOSDAQ',NULL),
                                                                     ('068100','케이웨더','KOSDAQ',NULL),
-                                                                    ('452430','사피엔반도체','KOSDAQ',NULL);
+                                                                    ('452430','사피엔반도체','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('443670','에스피소프트','KOSDAQ',NULL),
                                                                     ('415380','스튜디오삼익','KOSDAQ',NULL),
@@ -1075,7 +1075,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('460930','현대힘스','KOSDAQ',NULL),
                                                                     ('440290','HB인베스트먼트','KOSDAQ',NULL),
                                                                     ('362990','드림인사이트','KOSDAQ',NULL),
-                                                                    ('457550','우진엔텍','KOSDAQ',NULL);
+                                                                    ('457550','우진엔텍','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('452190','한빛레이저','KOSDAQ',NULL),
                                                                     ('109670','씨싸이트','KOSDAQ',NULL),
@@ -1086,7 +1086,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('355690','에이텀','KOSDAQ',NULL),
                                                                     ('453860','에이에스텍','KOSDAQ',NULL),
                                                                     ('402490','그린리소스','KOSDAQ',NULL),
-                                                                    ('452160','제이엔비','KOSDAQ',NULL);
+                                                                    ('452160','제이엔비','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('452280','한선엔지니어링','KOSDAQ',NULL),
                                                                     ('448280','에코아이','KOSDAQ',NULL),
@@ -1097,7 +1097,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('446540','메가터치','KOSDAQ',NULL),
                                                                     ('413640','비아이매트릭스','KOSDAQ',NULL),
                                                                     ('451760','컨텍','KOSDAQ',NULL),
-                                                                    ('372320','큐로셀','KOSDAQ',NULL);
+                                                                    ('372320','큐로셀','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('088280','쏘닉스','KOSDAQ',NULL),
                                                                     ('188260','세니젠','KOSDAQ',NULL),
@@ -1108,7 +1108,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('396470','워트','KOSDAQ',NULL),
                                                                     ('246250','에스엘에스바이오','KOSDAQ',NULL),
                                                                     ('416180','신성에스티','KOSDAQ',NULL),
-                                                                    ('445180','퓨릿','KOSDAQ',NULL);
+                                                                    ('445180','퓨릿','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('451220','아이엠티','KOSDAQ',NULL),
                                                                     ('443250','레뷰코퍼레이션','KOSDAQ',NULL),
@@ -1119,7 +1119,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('384470','코어라인소프트','KOSDAQ',NULL),
                                                                     ('146060','율촌','KOSDAQ',NULL),
                                                                     ('355390','크라우드웍스','KOSDAQ',NULL),
-                                                                    ('418250','시큐레터','KOSDAQ',NULL);
+                                                                    ('418250','시큐레터','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('424960','스마트레이더시스템','KOSDAQ',NULL),
                                                                     ('210120','캔버스엔','KOSDAQ',NULL),
@@ -1130,7 +1130,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('429270','시지트로닉스','KOSDAQ',NULL),
                                                                     ('172670','에이엘티','KOSDAQ',NULL),
                                                                     ('388870','파로스아이바이오','KOSDAQ',NULL),
-                                                                    ('438700','버넥트','KOSDAQ',NULL);
+                                                                    ('438700','버넥트','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('406820','뷰티스킨','KOSDAQ',NULL),
                                                                     ('432430','와이랩','KOSDAQ',NULL),
@@ -1141,7 +1141,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('440320','오픈놀','KOSDAQ',NULL),
                                                                     ('232830','아이티센피엔에스','KOSDAQ',NULL),
                                                                     ('303360','프로티아','KOSDAQ',NULL),
-                                                                    ('348080','큐라티스','KOSDAQ',NULL);
+                                                                    ('348080','큐라티스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('439090','마녀공장','KOSDAQ',NULL),
                                                                     ('405920','나라셀라','KOSDAQ',NULL),
@@ -1152,7 +1152,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('340810','시선AI','KOSDAQ',NULL),
                                                                     ('446840','지슨','KOSDAQ',NULL),
                                                                     ('417790','트루엔','KOSDAQ',NULL),
-                                                                    ('304360','에스바이오메딕스','KOSDAQ',NULL);
+                                                                    ('304360','에스바이오메딕스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('298830','슈어소프트테크','KOSDAQ',NULL),
                                                                     ('393210','토마토시스템','KOSDAQ',NULL),
@@ -1163,7 +1163,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('356680','엑스게이트','KOSDAQ',NULL),
                                                                     ('282720','금양그린파워','KOSDAQ',NULL),
                                                                     ('418420','라온텍','KOSDAQ',NULL),
-                                                                    ('389020','자람테크놀로지','KOSDAQ',NULL);
+                                                                    ('389020','자람테크놀로지','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('417010','나노팀','KOSDAQ',NULL),
                                                                     ('199730','바이오인프라','KOSDAQ',NULL),
@@ -1174,7 +1174,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('407400','꿈비','KOSDAQ',NULL),
                                                                     ('408900','스튜디오미르','KOSDAQ',NULL),
                                                                     ('419050','삼기에너지솔루션즈','KOSDAQ',NULL),
-                                                                    ('417860','오브젠','KOSDAQ',NULL);
+                                                                    ('417860','오브젠','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('254490','미래반도체','KOSDAQ',NULL),
                                                                     ('425040','티이엠씨','KOSDAQ',NULL),
@@ -1185,7 +1185,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('419530','SAMG엔터','KOSDAQ',NULL),
                                                                     ('168360','펨트론','KOSDAQ',NULL),
                                                                     ('389470','인벤티지랩','KOSDAQ',NULL),
-                                                                    ('419080','엔젯','KOSDAQ',NULL);
+                                                                    ('419080','엔젯','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('084440','유비온','KOSDAQ',NULL),
                                                                     ('204610','티쓰리','KOSDAQ',NULL),
@@ -1196,7 +1196,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('417500','제이아이테크','KOSDAQ',NULL),
                                                                     ('405100','큐알티','KOSDAQ',NULL),
                                                                     ('417840','저스템','KOSDAQ',NULL),
-                                                                    ('419120','산돌','KOSDAQ',NULL);
+                                                                    ('419120','산돌','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('405000','플라즈맵','KOSDAQ',NULL),
                                                                     ('291810','핀텔','KOSDAQ',NULL),
@@ -1207,7 +1207,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('368970','오에스피','KOSDAQ',NULL),
                                                                     ('417970','모델솔루션','KOSDAQ',NULL),
                                                                     ('296640','이노룰스','KOSDAQ',NULL),
-                                                                    ('441270','파인엠텍','KOSDAQ',NULL);
+                                                                    ('441270','파인엠텍','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('067370','선바이오','KOSDAQ',NULL),
                                                                     ('393890','더블유씨피','KOSDAQ',NULL),
@@ -1218,7 +1218,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('107600','새빗켐','KOSDAQ',NULL),
                                                                     ('368600','아이씨에이치','KOSDAQ',NULL),
                                                                     ('365340','성일하이텍','KOSDAQ',NULL),
-                                                                    ('397030','에이프릴바이오','KOSDAQ',NULL);
+                                                                    ('397030','에이프릴바이오','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('424760','벨로크','KOSDAQ',NULL),
                                                                     ('328130','루닛','KOSDAQ',NULL),
@@ -1229,7 +1229,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('412350','레이저쎌','KOSDAQ',NULL),
                                                                     ('310210','보로노이','KOSDAQ',NULL),
                                                                     ('377460','위니아에이드','KOSDAQ',NULL),
-                                                                    ('148780','비큐AI','KOSDAQ',NULL);
+                                                                    ('148780','비큐AI','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('382900','범한퓨얼셀','KOSDAQ',NULL),
                                                                     ('362320','청담글로벌','KOSDAQ',NULL),
@@ -1240,7 +1240,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('413630','씨피시스템','KOSDAQ',NULL),
                                                                     ('396300','세아메카닉스','KOSDAQ',NULL),
                                                                     ('366030','공구우먼','KOSDAQ',NULL),
-                                                                    ('388720','유일로보틱스','KOSDAQ',NULL);
+                                                                    ('388720','유일로보틱스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('288980','모아데이타','KOSDAQ',NULL),
                                                                     ('408920','메쎄이상','KOSDAQ',NULL),
@@ -1251,7 +1251,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('365900','브이씨','KOSDAQ',NULL),
                                                                     ('370090','퓨런티어','KOSDAQ',NULL),
                                                                     ('251120','바이오에프디엔씨','KOSDAQ',NULL),
-                                                                    ('211050','인카금융서비스','KOSDAQ',NULL);
+                                                                    ('211050','인카금융서비스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('137080','나래나노텍','KOSDAQ',NULL),
                                                                     ('136410','아셈스','KOSDAQ',NULL),
@@ -1262,7 +1262,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('353590','오토앤','KOSDAQ',NULL),
                                                                     ('200350','아티스트스튜디오','KOSDAQ',NULL),
                                                                     ('199800','툴젠','KOSDAQ',NULL),
-                                                                    ('377480','마음AI','KOSDAQ',NULL);
+                                                                    ('377480','마음AI','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('361570','알비더블유','KOSDAQ',NULL),
                                                                     ('222160','NPX','KOSDAQ',NULL),
@@ -1273,7 +1273,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('376300','디어유','KOSDAQ',NULL),
                                                                     ('389030','지니너스','KOSDAQ',NULL),
                                                                     ('376180','피코그램','KOSDAQ',NULL),
-                                                                    ('348370','엔켐','KOSDAQ',NULL);
+                                                                    ('348370','엔켐','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('377450','리파인','KOSDAQ',NULL),
                                                                     ('382800','지앤비에스 에코','KOSDAQ',NULL),
@@ -1284,7 +1284,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('376290','씨유테크','KOSDAQ',NULL),
                                                                     ('159010','아스플로','KOSDAQ',NULL),
                                                                     ('382840','원준','KOSDAQ',NULL),
-                                                                    ('257720','실리콘투','KOSDAQ',NULL);
+                                                                    ('257720','실리콘투','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('260970','에스앤디','KOSDAQ',NULL),
                                                                     ('377220','프롬바이오','KOSDAQ',NULL),
@@ -1295,7 +1295,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('308080','바이젠셀','KOSDAQ',NULL),
                                                                     ('099390','브레인즈컴퍼니','KOSDAQ',NULL),
                                                                     ('315640','딥노이드','KOSDAQ',NULL),
-                                                                    ('058970','엠로','KOSDAQ',NULL);
+                                                                    ('058970','엠로','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('367000','플래티어','KOSDAQ',NULL),
                                                                     ('376980','원티드랩','KOSDAQ',NULL),
@@ -1306,7 +1306,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('352910','오비고','KOSDAQ',NULL),
                                                                     ('357580','아모센스','KOSDAQ',NULL),
                                                                     ('303530','이노뎁','KOSDAQ',NULL),
-                                                                    ('232680','라온로보틱스','KOSDAQ',NULL);
+                                                                    ('232680','라온로보틱스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('187660','페니트리움바이오','KOSDAQ',NULL),
                                                                     ('383310','에코프로에이치엔','KOSDAQ',NULL),
@@ -1317,7 +1317,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('352480','씨앤씨인터내셔널','KOSDAQ',NULL),
                                                                     ('357230','에이치피오','KOSDAQ',NULL),
                                                                     ('294570','쿠콘','KOSDAQ',NULL),
-                                                                    ('351330','이삭엔지니어링','KOSDAQ',NULL);
+                                                                    ('351330','이삭엔지니어링','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('059270','해성에어로보틱스','KOSDAQ',NULL),
                                                                     ('333620','엔시스','KOSDAQ',NULL),
@@ -1328,7 +1328,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('950220','네오이뮨텍','KOSDAQ',NULL),
                                                                     ('356890','싸이버원','KOSDAQ',NULL),
                                                                     ('334970','프레스티지바이오로직스','KOSDAQ',NULL),
-                                                                    ('247660','나노씨엠에스','KOSDAQ',NULL);
+                                                                    ('247660','나노씨엠에스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('338220','뷰노','KOSDAQ',NULL),
                                                                     ('373200','엑스플러스','KOSDAQ',NULL),
@@ -1339,7 +1339,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('363260','모비데이즈','KOSDAQ',NULL),
                                                                     ('262840','아이퀘스트','KOSDAQ',NULL),
                                                                     ('277810','레인보우로보틱스','KOSDAQ',NULL),
-                                                                    ('321820','아티스트컴퍼니','KOSDAQ',NULL);
+                                                                    ('321820','아티스트컴퍼니','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('163730','핑거','KOSDAQ',NULL),
                                                                     ('348030','모비릭스','KOSDAQ',NULL),
@@ -1350,7 +1350,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('369370','블리츠웨이엔터테인먼트','KOSDAQ',NULL),
                                                                     ('357550','석경에이티','KOSDAQ',NULL),
                                                                     ('314130','지놈앤컴퍼니','KOSDAQ',NULL),
-                                                                    ('335810','프리시젼바이오','KOSDAQ',NULL);
+                                                                    ('335810','프리시젼바이오','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('347860','알체라','KOSDAQ',NULL),
                                                                     ('365590','하이딥','KOSDAQ',NULL),
@@ -1361,7 +1361,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('317690','퀀타매트릭스','KOSDAQ',NULL),
                                                                     ('352770','셀레스트라','KOSDAQ',NULL),
                                                                     ('318020','포인트모바일','KOSDAQ',NULL),
-                                                                    ('129890','앱코','KOSDAQ',NULL);
+                                                                    ('129890','앱코','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('265740','엔에프씨','KOSDAQ',NULL),
                                                                     ('199820','제일일렉트릭','KOSDAQ',NULL),
@@ -1372,7 +1372,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('290690','소룩스','KOSDAQ',NULL),
                                                                     ('348350','위드텍','KOSDAQ',NULL),
                                                                     ('347000','센코','KOSDAQ',NULL),
-                                                                    ('301300','바이브컴퍼니','KOSDAQ',NULL);
+                                                                    ('301300','바이브컴퍼니','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('214610','롤링스톤','KOSDAQ',NULL),
                                                                     ('304840','피플바이오','KOSDAQ',NULL),
@@ -1383,7 +1383,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('323990','박셀바이오','KOSDAQ',NULL),
                                                                     ('318410','비비씨','KOSDAQ',NULL),
                                                                     ('355150','코스텍시스','KOSDAQ',NULL),
-                                                                    ('347770','핌스','KOSDAQ',NULL);
+                                                                    ('347770','핌스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('291650','압타머사이언스','KOSDAQ',NULL),
                                                                     ('294090','이오플로우','KOSDAQ',NULL),
@@ -1394,7 +1394,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('950190','고스트스튜디오','KOSDAQ',NULL),
                                                                     ('337930','젝시믹스','KOSDAQ',NULL),
                                                                     ('060850','영림원소프트랩','KOSDAQ',NULL),
-                                                                    ('032300','한국파마','KOSDAQ',NULL);
+                                                                    ('032300','한국파마','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('357780','솔브레인','KOSDAQ',NULL),
                                                                     ('332570','PS일렉트로닉스','KOSDAQ',NULL),
@@ -1405,7 +1405,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('304100','솔트룩스','KOSDAQ',NULL),
                                                                     ('277880','티에스아이','KOSDAQ',NULL),
                                                                     ('262260','에이프로','KOSDAQ',NULL),
-                                                                    ('950200','소마젠','KOSDAQ',NULL);
+                                                                    ('950200','소마젠','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('290520','신도기연','KOSDAQ',NULL),
                                                                     ('330350','위더스제약','KOSDAQ',NULL),
@@ -1416,7 +1416,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('298060','에스씨엠생명과학','KOSDAQ',NULL),
                                                                     ('353190','휴럼','KOSDAQ',NULL),
                                                                     ('353810','이지바이오','KOSDAQ',NULL),
-                                                                    ('223250','드림씨아이에스','KOSDAQ',NULL);
+                                                                    ('223250','드림씨아이에스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('198080','캐프','KOSDAQ',NULL),
                                                                     ('237820','플레이디','KOSDAQ',NULL),
@@ -1427,7 +1427,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('294630','서남','KOSDAQ',NULL),
                                                                     ('065370','위세아이텍','KOSDAQ',NULL),
                                                                     ('340440','세림B&G','KOSDAQ',NULL),
-                                                                    ('311690','CJ 바이오사이언스','KOSDAQ',NULL);
+                                                                    ('311690','CJ 바이오사이언스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('062970','한국첨단소재','KOSDAQ',NULL),
                                                                     ('327260','RF머트리얼즈','KOSDAQ',NULL),
@@ -1438,7 +1438,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('336570','원텍','KOSDAQ',NULL),
                                                                     ('226330','신테카바이오','KOSDAQ',NULL),
                                                                     ('322510','제이엘케이','KOSDAQ',NULL),
-                                                                    ('124560','태웅로직스','KOSDAQ',NULL);
+                                                                    ('124560','태웅로직스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('335870','윙스풋','KOSDAQ',NULL),
                                                                     ('302550','리메드','KOSDAQ',NULL),
@@ -1449,7 +1449,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('103840','우양','KOSDAQ',NULL),
                                                                     ('190650','코리아에셋투자증권','KOSDAQ',NULL),
                                                                     ('306040','에스제이그룹','KOSDAQ',NULL),
-                                                                    ('216080','제테마','KOSDAQ',NULL);
+                                                                    ('216080','제테마','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('214260','라파스','KOSDAQ',NULL),
                                                                     ('084850','아이티엠반도체','KOSDAQ',NULL),
@@ -1460,7 +1460,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('331520','밸로프','KOSDAQ',NULL),
                                                                     ('317530','캐리소프트','KOSDAQ',NULL),
                                                                     ('272110','케이엔제이','KOSDAQ',NULL),
-                                                                    ('317870','엔바이오니아','KOSDAQ',NULL);
+                                                                    ('317870','엔바이오니아','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('318010','팜스빌','KOSDAQ',NULL),
                                                                     ('300120','라온피플','KOSDAQ',NULL),
@@ -1471,7 +1471,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('244460','올리패스','KOSDAQ',NULL),
                                                                     ('317120','라닉스','KOSDAQ',NULL),
                                                                     ('320000','한울반도체','KOSDAQ',NULL),
-                                                                    ('256150','한독크린텍','KOSDAQ',NULL);
+                                                                    ('256150','한독크린텍','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('311390','네오크레마','KOSDAQ',NULL),
                                                                     ('195500','마니커에프앤지','KOSDAQ',NULL),
@@ -1482,7 +1482,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('186230','그린플러스','KOSDAQ',NULL),
                                                                     ('282880','코윈테크','KOSDAQ',NULL),
                                                                     ('317330','덕산테코피아','KOSDAQ',NULL),
-                                                                    ('318000','KBG','KOSDAQ',NULL);
+                                                                    ('318000','KBG','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('317770','엑스페릭스','KOSDAQ',NULL),
                                                                     ('148150','세경하이테크','KOSDAQ',NULL),
@@ -1493,7 +1493,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('234340','헥토파이낸셜','KOSDAQ',NULL),
                                                                     ('289010','아이스크림에듀','KOSDAQ',NULL),
                                                                     ('251970','펌텍코리아','KOSDAQ',NULL),
-                                                                    ('312610','에이에프더블류','KOSDAQ',NULL);
+                                                                    ('312610','에이에프더블류','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('323280','태성','KOSDAQ',NULL),
                                                                     ('293780','압타바이오','KOSDAQ',NULL),
@@ -1504,7 +1504,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('253840','수젠텍','KOSDAQ',NULL),
                                                                     ('307930','컴퍼니케이','KOSDAQ',NULL),
                                                                     ('319660','피에스케이','KOSDAQ',NULL),
-                                                                    ('319400','현대무벡스','KOSDAQ',NULL);
+                                                                    ('319400','현대무벡스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('317240','TS트릴리온','KOSDAQ',NULL),
                                                                     ('125210','아모그린텍','KOSDAQ',NULL),
@@ -1515,7 +1515,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('299660','셀리드','KOSDAQ',NULL),
                                                                     ('278280','천보','KOSDAQ',NULL),
                                                                     ('246960','SCL사이언스','KOSDAQ',NULL),
-                                                                    ('104620','노랑풍선','KOSDAQ',NULL);
+                                                                    ('104620','노랑풍선','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('053580','웹케시','KOSDAQ',NULL),
                                                                     ('238200','비피도','KOSDAQ',NULL),
@@ -1526,7 +1526,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('310870','디와이씨','KOSDAQ',NULL),
                                                                     ('299900','위지윅스튜디오','KOSDAQ',NULL),
                                                                     ('309930','조이웍스앤코','KOSDAQ',NULL),
-                                                                    ('307750','국전약품','KOSDAQ',NULL);
+                                                                    ('307750','국전약품','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('298380','에이비엘바이오','KOSDAQ',NULL),
                                                                     ('100590','머큐리','KOSDAQ',NULL),
@@ -1537,7 +1537,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('290120','DH오토리드','KOSDAQ',NULL),
                                                                     ('128540','에코캡','KOSDAQ',NULL),
                                                                     ('307280','원바이오젠','KOSDAQ',NULL),
-                                                                    ('900340','윙입푸드','KOSDAQ',NULL);
+                                                                    ('900340','윙입푸드','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('111710','남화산업','KOSDAQ',NULL),
                                                                     ('179290','엠아이텍','KOSDAQ',NULL),
@@ -1548,7 +1548,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('217330','싸이토젠','KOSDAQ',NULL),
                                                                     ('027360','아주IB투자','KOSDAQ',NULL),
                                                                     ('263020','디케이앤디','KOSDAQ',NULL),
-                                                                    ('227100','프로브잇','KOSDAQ',NULL);
+                                                                    ('227100','프로브잇','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('194700','노바렉스','KOSDAQ',NULL),
                                                                     ('290670','대보마그네틱','KOSDAQ',NULL),
@@ -1559,7 +1559,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('153710','옵티팜','KOSDAQ',NULL),
                                                                     ('288620','에스퓨얼셀','KOSDAQ',NULL),
                                                                     ('293580','나우IB','KOSDAQ',NULL),
-                                                                    ('290720','푸드나무','KOSDAQ',NULL);
+                                                                    ('290720','푸드나무','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('110790','크리스에프앤씨','KOSDAQ',NULL),
                                                                     ('299170','더블유에스아이','KOSDAQ',NULL),
@@ -1570,7 +1570,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('303030','지니틱스','KOSDAQ',NULL),
                                                                     ('290740','액트로','KOSDAQ',NULL),
                                                                     ('173130','오파스넷','KOSDAQ',NULL),
-                                                                    ('089970','브이엠','KOSDAQ',NULL);
+                                                                    ('089970','브이엠','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('086820','바이오솔루션','KOSDAQ',NULL),
                                                                     ('110990','디아이티','KOSDAQ',NULL),
@@ -1581,7 +1581,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('297570','알로이스','KOSDAQ',NULL),
                                                                     ('226950','올릭스','KOSDAQ',NULL),
                                                                     ('175250','아이큐어','KOSDAQ',NULL),
-                                                                    ('289080','SV인베스트먼트','KOSDAQ',NULL);
+                                                                    ('289080','SV인베스트먼트','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('245620','EDGC','KOSDAQ',NULL),
                                                                     ('284620','카이노스메드','KOSDAQ',NULL),
@@ -1592,7 +1592,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('950170','JTC','KOSDAQ',NULL),
                                                                     ('253590','네오셈','KOSDAQ',NULL),
                                                                     ('263700','케어랩스','KOSDAQ',NULL),
-                                                                    ('277070','린드먼아시아','KOSDAQ',NULL);
+                                                                    ('277070','린드먼아시아','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('226400','오스테오닉','KOSDAQ',NULL),
                                                                     ('183490','엔지켐생명과학','KOSDAQ',NULL),
@@ -1603,7 +1603,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('219420','링크제니시스','KOSDAQ',NULL),
                                                                     ('267790','배럴','KOSDAQ',NULL),
                                                                     ('255220','SG','KOSDAQ',NULL),
-                                                                    ('264660','씨앤지하이테크','KOSDAQ',NULL);
+                                                                    ('264660','씨앤지하이테크','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('269620','시스웍','KOSDAQ',NULL),
                                                                     ('187870','디바이스','KOSDAQ',NULL),
@@ -1614,7 +1614,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('066360','체리부로','KOSDAQ',NULL),
                                                                     ('007680','대원','KOSDAQ',NULL),
                                                                     ('253450','스튜디오드래곤','KOSDAQ',NULL),
-                                                                    ('950160','코오롱티슈진','KOSDAQ',NULL);
+                                                                    ('950160','코오롱티슈진','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('265560','영화테크','KOSDAQ',NULL),
                                                                     ('234100','폴라리스세원','KOSDAQ',NULL),
@@ -1625,7 +1625,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('243840','신흥에스이씨','KOSDAQ',NULL),
                                                                     ('179900','유티아이','KOSDAQ',NULL),
                                                                     ('171090','선익시스템','KOSDAQ',NULL),
-                                                                    ('259630','엠플러스','KOSDAQ',NULL);
+                                                                    ('259630','엠플러스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('174900','앱클론','KOSDAQ',NULL),
                                                                     ('263750','펄어비스','KOSDAQ',NULL),
@@ -1636,7 +1636,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('140670','알에스오토메이션','KOSDAQ',NULL),
                                                                     ('900310','컬러레이','KOSDAQ',NULL),
                                                                     ('273060','와이즈버즈','KOSDAQ',NULL),
-                                                                    ('118990','모트렉스','KOSDAQ',NULL);
+                                                                    ('118990','모트렉스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('263800','데이타솔루션','KOSDAQ',NULL),
                                                                     ('263860','지니언스','KOSDAQ',NULL),
@@ -1647,7 +1647,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('272290','이녹스첨단소재','KOSDAQ',NULL),
                                                                     ('003380','하림지주','KOSDAQ',NULL),
                                                                     ('261200','덴티스','KOSDAQ',NULL),
-                                                                    ('267320','나인테크','KOSDAQ',NULL);
+                                                                    ('267320','나인테크','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('250000','보라티알','KOSDAQ',NULL),
                                                                     ('267980','매일유업','KOSDAQ',NULL),
@@ -1658,7 +1658,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('166090','하나머티리얼즈','KOSDAQ',NULL),
                                                                     ('258790','소프트캠프','KOSDAQ',NULL),
                                                                     ('251370','와이엠티','KOSDAQ',NULL),
-                                                                    ('265520','AP시스템','KOSDAQ',NULL);
+                                                                    ('265520','AP시스템','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('263770','유에스티','KOSDAQ',NULL),
                                                                     ('063760','이엘피','KOSDAQ',NULL),
@@ -1669,7 +1669,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('217480','에스디생명공학','KOSDAQ',NULL),
                                                                     ('002800','신신제약','KOSDAQ',NULL),
                                                                     ('083500','에프엔에스테크','KOSDAQ',NULL),
-                                                                    ('087260','모바일어플라이언스','KOSDAQ',NULL);
+                                                                    ('087260','모바일어플라이언스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('241820','피씨엘','KOSDAQ',NULL),
                                                                     ('140070','서플러스글로벌','KOSDAQ',NULL),
@@ -1680,7 +1680,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('147760','피엠티','KOSDAQ',NULL),
                                                                     ('196300','HLB펩','KOSDAQ',NULL),
                                                                     ('203450','유니온바이오메트릭스','KOSDAQ',NULL),
-                                                                    ('215600','신라젠','KOSDAQ',NULL);
+                                                                    ('215600','신라젠','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('254120','자비스','KOSDAQ',NULL),
                                                                     ('241790','티이엠씨씨엔에스','KOSDAQ',NULL),
@@ -1691,7 +1691,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('237880','클리오','KOSDAQ',NULL),
                                                                     ('900300','오가닉티코스메틱','KOSDAQ',NULL),
                                                                     ('238120','얼라인드','KOSDAQ',NULL),
-                                                                    ('252500','세화피앤씨','KOSDAQ',NULL);
+                                                                    ('252500','세화피앤씨','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('216050','인크로스','KOSDAQ',NULL),
                                                                     ('239610','에이치엘사이언스','KOSDAQ',NULL),
@@ -1702,7 +1702,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('950140','잉글우드랩','KOSDAQ',NULL),
                                                                     ('238090','앤디포스','KOSDAQ',NULL),
                                                                     ('050960','수산아이앤티','KOSDAQ',NULL),
-                                                                    ('201490','미투온','KOSDAQ',NULL);
+                                                                    ('201490','미투온','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('250930','예선테크','KOSDAQ',NULL),
                                                                     ('241690','유니테크노','KOSDAQ',NULL),
@@ -1713,7 +1713,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('230360','에코마케팅','KOSDAQ',NULL),
                                                                     ('208860','다산디엠씨','KOSDAQ',NULL),
                                                                     ('073560','우리손에프앤지','KOSDAQ',NULL),
-                                                                    ('123010','알엔티엑스','KOSDAQ',NULL);
+                                                                    ('123010','알엔티엑스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('142760','모아라이프플러스','KOSDAQ',NULL),
                                                                     ('237750','피앤씨테크','KOSDAQ',NULL),
@@ -1724,7 +1724,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('239340','이스트에이드','KOSDAQ',NULL),
                                                                     ('243070','휴온스','KOSDAQ',NULL),
                                                                     ('240810','원익IPS','KOSDAQ',NULL),
-                                                                    ('228850','레이언스','KOSDAQ',NULL);
+                                                                    ('228850','레이언스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('228340','동양파일','KOSDAQ',NULL),
                                                                     ('222110','팬젠','KOSDAQ',NULL),
@@ -1735,7 +1735,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('236200','슈프리마','KOSDAQ',NULL),
                                                                     ('142210','유니트론텍','KOSDAQ',NULL),
                                                                     ('900250','크리스탈신소재','KOSDAQ',NULL),
-                                                                    ('224060','더코디','KOSDAQ',NULL);
+                                                                    ('224060','더코디','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('109610','에스와이','KOSDAQ',NULL),
                                                                     ('223310','사토시홀딩스','KOSDAQ',NULL),
@@ -1746,7 +1746,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('206560','덱스터','KOSDAQ',NULL),
                                                                     ('013310','아진산업','KOSDAQ',NULL),
                                                                     ('047920','HLB제약','KOSDAQ',NULL),
-                                                                    ('217730','강스템바이오텍','KOSDAQ',NULL);
+                                                                    ('217730','강스템바이오텍','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('133750','메가엠디','KOSDAQ',NULL),
                                                                     ('225530','HC보광산업','KOSDAQ',NULL),
@@ -1757,7 +1757,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('058110','멕아이씨에스','KOSDAQ',NULL),
                                                                     ('217820','원익피앤이','KOSDAQ',NULL),
                                                                     ('221840','하이즈항공','KOSDAQ',NULL),
-                                                                    ('180400','DXVX','KOSDAQ',NULL);
+                                                                    ('180400','DXVX','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('221980','케이디켐','KOSDAQ',NULL),
                                                                     ('212560','네오오토','KOSDAQ',NULL),
@@ -1768,7 +1768,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('056090','시지메드텍','KOSDAQ',NULL),
                                                                     ('226340','본느','KOSDAQ',NULL),
                                                                     ('182400','엔케이젠바이오텍코리아','KOSDAQ',NULL),
-                                                                    ('092870','엑시콘','KOSDAQ',NULL);
+                                                                    ('092870','엑시콘','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('225430','케이엠제약','KOSDAQ',NULL),
                                                                     ('225590','패션플랫폼','KOSDAQ',NULL),
@@ -1779,7 +1779,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('222080','씨아이에스','KOSDAQ',NULL),
                                                                     ('224110','에이텍모빌리티','KOSDAQ',NULL),
                                                                     ('196700','웹스','KOSDAQ',NULL),
-                                                                    ('131760','파인텍','KOSDAQ',NULL);
+                                                                    ('131760','파인텍','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('222800','심텍','KOSDAQ',NULL),
                                                                     ('189980','흥국에프엔비','KOSDAQ',NULL),
@@ -1790,7 +1790,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('067730','로지시스','KOSDAQ',NULL),
                                                                     ('220260','켐트로스','KOSDAQ',NULL),
                                                                     ('214450','파마리서치','KOSDAQ',NULL),
-                                                                    ('219550','디와이디','KOSDAQ',NULL);
+                                                                    ('219550','디와이디','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('087010','펩트론','KOSDAQ',NULL),
                                                                     ('218410','RFHIC','KOSDAQ',NULL),
@@ -1801,7 +1801,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('177350','베셀','KOSDAQ',NULL),
                                                                     ('217270','넵튠','KOSDAQ',NULL),
                                                                     ('218150','미래생명자원','KOSDAQ',NULL),
-                                                                    ('160980','싸이맥스','KOSDAQ',NULL);
+                                                                    ('160980','싸이맥스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('217500','러셀','KOSDAQ',NULL),
                                                                     ('087600','픽셀플러스','KOSDAQ',NULL),
@@ -1812,7 +1812,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('215790','이노인스트루먼트','KOSDAQ',NULL),
                                                                     ('215360','우리산업','KOSDAQ',NULL),
                                                                     ('215200','메가스터디교육','KOSDAQ',NULL),
-                                                                    ('215090','솔디펜스','KOSDAQ',NULL);
+                                                                    ('215090','솔디펜스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('215100','로보로보','KOSDAQ',NULL),
                                                                     ('214680','디알텍','KOSDAQ',NULL),
@@ -1823,7 +1823,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('189690','포시에스','KOSDAQ',NULL),
                                                                     ('213420','덕산네오룩스','KOSDAQ',NULL),
                                                                     ('060480','국일신동','KOSDAQ',NULL),
-                                                                    ('193250','링크드','KOSDAQ',NULL);
+                                                                    ('193250','링크드','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('206640','바디텍메드','KOSDAQ',NULL),
                                                                     ('208640','썸에이지','KOSDAQ',NULL),
@@ -1834,7 +1834,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('080580','오킨스전자','KOSDAQ',NULL),
                                                                     ('208350','지란지교시큐리티','KOSDAQ',NULL),
                                                                     ('208710','포톤','KOSDAQ',NULL),
-                                                                    ('160550','NEW','KOSDAQ',NULL);
+                                                                    ('160550','NEW','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('124500','아이티센글로벌','KOSDAQ',NULL),
                                                                     ('142280','녹십자엠에스','KOSDAQ',NULL),
@@ -1845,7 +1845,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('084650','랩지노믹스','KOSDAQ',NULL),
                                                                     ('200710','에이디테크놀로지','KOSDAQ',NULL),
                                                                     ('200780','비씨월드제약','KOSDAQ',NULL),
-                                                                    ('207760','미스터블루','KOSDAQ',NULL);
+                                                                    ('207760','미스터블루','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('196170','알테오젠','KOSDAQ',NULL),
                                                                     ('206400','베노티앤알','KOSDAQ',NULL),
@@ -1856,7 +1856,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('204840','지엘팜텍','KOSDAQ',NULL),
                                                                     ('204620','글로벌텍스프리','KOSDAQ',NULL),
                                                                     ('196490','디에이테크놀로지','KOSDAQ',NULL),
-                                                                    ('205500','넥써쓰','KOSDAQ',NULL);
+                                                                    ('205500','넥써쓰','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('205100','엑셈','KOSDAQ',NULL),
                                                                     ('191420','테고사이언스','KOSDAQ',NULL),
@@ -1867,7 +1867,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('194480','데브시스터즈','KOSDAQ',NULL),
                                                                     ('203690','아크솔루션스','KOSDAQ',NULL),
                                                                     ('192410','오늘이엔엠','KOSDAQ',NULL),
-                                                                    ('198440','강동씨앤엘','KOSDAQ',NULL);
+                                                                    ('198440','강동씨앤엘','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('187270','신화콘텍','KOSDAQ',NULL),
                                                                     ('177830','파버나인','KOSDAQ',NULL),
@@ -1878,7 +1878,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('200130','콜마비앤에이치','KOSDAQ',NULL),
                                                                     ('105550','엣지파운드리','KOSDAQ',NULL),
                                                                     ('196450','코아시아씨엠','KOSDAQ',NULL),
-                                                                    ('071850','캐스텍코리아','KOSDAQ',NULL);
+                                                                    ('071850','캐스텍코리아','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('187790','나노','KOSDAQ',NULL),
                                                                     ('192250','케이사인','KOSDAQ',NULL),
@@ -1889,7 +1889,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('184230','SGA솔루션즈','KOSDAQ',NULL),
                                                                     ('049080','기가레인','KOSDAQ',NULL),
                                                                     ('085810','알티캐스트','KOSDAQ',NULL),
-                                                                    ('170030','현대공업','KOSDAQ',NULL);
+                                                                    ('170030','현대공업','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('067570','엔브이에이치코리아','KOSDAQ',NULL),
                                                                     ('134580','탑코미디어','KOSDAQ',NULL),
@@ -1900,7 +1900,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('076610','해성옵틱스','KOSDAQ',NULL),
                                                                     ('168330','내츄럴엔도텍','KOSDAQ',NULL),
                                                                     ('131970','두산테스나','KOSDAQ',NULL),
-                                                                    ('150900','파수','KOSDAQ',NULL);
+                                                                    ('150900','파수','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('170920','엘티씨','KOSDAQ',NULL),
                                                                     ('119850','지엔씨에너지','KOSDAQ',NULL),
@@ -1911,7 +1911,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('089600','KT나스미디어','KOSDAQ',NULL),
                                                                     ('950130','엑세스바이오','KOSDAQ',NULL),
                                                                     ('141080','리가켐바이오','KOSDAQ',NULL),
-                                                                    ('097800','윈팩','KOSDAQ',NULL);
+                                                                    ('097800','윈팩','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('104540','코렌텍','KOSDAQ',NULL),
                                                                     ('159580','제로투세븐','KOSDAQ',NULL),
@@ -1922,7 +1922,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('046970','우리로','KOSDAQ',NULL),
                                                                     ('113810','디젠스','KOSDAQ',NULL),
                                                                     ('155650','와이엠씨','KOSDAQ',NULL),
-                                                                    ('149950','아바텍','KOSDAQ',NULL);
+                                                                    ('149950','아바텍','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('121850','코이즈','KOSDAQ',NULL),
                                                                     ('153460','네이블','KOSDAQ',NULL),
@@ -1933,7 +1933,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('143240','사람인','KOSDAQ',NULL),
                                                                     ('147830','제룡산업','KOSDAQ',NULL),
                                                                     ('091590','남화토건','KOSDAQ',NULL),
-                                                                    ('140410','메지온','KOSDAQ',NULL);
+                                                                    ('140410','메지온','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('104830','원익머트리얼즈','KOSDAQ',NULL),
                                                                     ('127120','제이에스링크','KOSDAQ',NULL),
@@ -1944,7 +1944,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('139670','키네마스터','KOSDAQ',NULL),
                                                                     ('121800','비덴트','KOSDAQ',NULL),
                                                                     ('138070','신진에스엠','KOSDAQ',NULL),
-                                                                    ('123570','이엠넷','KOSDAQ',NULL);
+                                                                    ('123570','이엠넷','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('122870','와이지엔터테인먼트','KOSDAQ',NULL),
                                                                     ('089030','테크윙','KOSDAQ',NULL),
@@ -1955,7 +1955,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('131220','대한과학','KOSDAQ',NULL),
                                                                     ('143160','아이디스','KOSDAQ',NULL),
                                                                     ('137950','제이씨케미칼','KOSDAQ',NULL),
-                                                                    ('040910','아이씨디','KOSDAQ',NULL);
+                                                                    ('040910','아이씨디','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('123330','제닉','KOSDAQ',NULL),
                                                                     ('139050','BF랩스','KOSDAQ',NULL),
@@ -1966,7 +1966,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('019770','서연탑메탈','KOSDAQ',NULL),
                                                                     ('137940','넥스트아이','KOSDAQ',NULL),
                                                                     ('131100','티엔엔터테인먼트','KOSDAQ',NULL),
-                                                                    ('122450','KX','KOSDAQ',NULL);
+                                                                    ('122450','KX','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('121440','골프존홀딩스','KOSDAQ',NULL),
                                                                     ('136540','윈스테크넷','KOSDAQ',NULL),
@@ -1977,7 +1977,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('121600','나노신소재','KOSDAQ',NULL),
                                                                     ('093320','케이아이엔엑스','KOSDAQ',NULL),
                                                                     ('130740','티피씨글로벌','KOSDAQ',NULL),
-                                                                    ('061970','LB세미콘','KOSDAQ',NULL);
+                                                                    ('061970','LB세미콘','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('131180','딜리','KOSDAQ',NULL),
                                                                     ('126880','제이엔케이글로벌','KOSDAQ',NULL),
@@ -1988,7 +1988,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('131290','티에스이','KOSDAQ',NULL),
                                                                     ('131400','이브이첨단소재','KOSDAQ',NULL),
                                                                     ('120240','대정화금','KOSDAQ',NULL),
-                                                                    ('128660','피제이메탈','KOSDAQ',NULL);
+                                                                    ('128660','피제이메탈','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('131030','옵투스제약','KOSDAQ',NULL),
                                                                     ('096690','에이루트','KOSDAQ',NULL),
@@ -1999,7 +1999,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('105740','디케이락','KOSDAQ',NULL),
                                                                     ('123420','위메이드플레이','KOSDAQ',NULL),
                                                                     ('123860','아나패스','KOSDAQ',NULL),
-                                                                    ('058400','KNN','KOSDAQ',NULL);
+                                                                    ('058400','KNN','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('069140','누리플랜','KOSDAQ',NULL),
                                                                     ('119830','아이텍','KOSDAQ',NULL),
@@ -2010,7 +2010,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('119500','포메탈','KOSDAQ',NULL),
                                                                     ('068240','다원시스','KOSDAQ',NULL),
                                                                     ('096530','씨젠','KOSDAQ',NULL),
-                                                                    ('122990','와이솔','KOSDAQ',NULL);
+                                                                    ('122990','와이솔','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('126700','하이비젼시스템','KOSDAQ',NULL),
                                                                     ('126640','화신정공','KOSDAQ',NULL),
@@ -2021,7 +2021,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('106190','하이텍팜','KOSDAQ',NULL),
                                                                     ('121890','에스디시스템','KOSDAQ',NULL),
                                                                     ('123750','알톤','KOSDAQ',NULL),
-                                                                    ('089850','유비벨록스','KOSDAQ',NULL);
+                                                                    ('089850','유비벨록스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('046120','오르비텍','KOSDAQ',NULL),
                                                                     ('070300','엑스큐어','KOSDAQ',NULL),
@@ -2032,7 +2032,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('900110','이스트아시아홀딩스','KOSDAQ',NULL),
                                                                     ('900100','애머릿지','KOSDAQ',NULL),
                                                                     ('115500','케이씨에스','KOSDAQ',NULL),
-                                                                    ('900120','씨엑스아이','KOSDAQ',NULL);
+                                                                    ('900120','씨엑스아이','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('115450','HLB테라퓨틱스','KOSDAQ',NULL),
                                                                     ('122350','삼기','KOSDAQ',NULL),
@@ -2043,7 +2043,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('115570','스타플렉스','KOSDAQ',NULL),
                                                                     ('115440','우리넷','KOSDAQ',NULL),
                                                                     ('050860','아세아텍','KOSDAQ',NULL),
-                                                                    ('114630','폴라리스우노','KOSDAQ',NULL);
+                                                                    ('114630','폴라리스우노','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('080530','코디','KOSDAQ',NULL),
                                                                     ('900070','글로벌에스엠','KOSDAQ',NULL),
@@ -2054,7 +2054,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('108860','셀바스AI','KOSDAQ',NULL),
                                                                     ('088290','이원컴포텍','KOSDAQ',NULL),
                                                                     ('114190','강원에너지','KOSDAQ',NULL),
-                                                                    ('115160','휴맥스','KOSDAQ',NULL);
+                                                                    ('115160','휴맥스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('109960','앱토크롬','KOSDAQ',NULL),
                                                                     ('099410','동방선기','KOSDAQ',NULL),
@@ -2065,7 +2065,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('104200','NHN벅스','KOSDAQ',NULL),
                                                                     ('052860','아이앤씨','KOSDAQ',NULL),
                                                                     ('105330','케이엔더블유','KOSDAQ',NULL),
-                                                                    ('109740','디에스케이','KOSDAQ',NULL);
+                                                                    ('109740','디에스케이','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('095700','제넥신','KOSDAQ',NULL),
                                                                     ('108230','톱텍','KOSDAQ',NULL),
@@ -2076,7 +2076,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('102120','어보브반도체','KOSDAQ',NULL),
                                                                     ('101730','위메이드맥스','KOSDAQ',NULL),
                                                                     ('102710','이엔에프테크놀로지','KOSDAQ',NULL),
-                                                                    ('099440','스맥','KOSDAQ',NULL);
+                                                                    ('099440','스맥','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('099220','SDN','KOSDAQ',NULL),
                                                                     ('101680','한국정밀기계','KOSDAQ',NULL),
@@ -2087,7 +2087,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('071670','에이테크솔루션','KOSDAQ',NULL),
                                                                     ('101490','에스앤에스텍','KOSDAQ',NULL),
                                                                     ('100120','뷰웍스','KOSDAQ',NULL),
-                                                                    ('102940','코오롱생명과학','KOSDAQ',NULL);
+                                                                    ('102940','코오롱생명과학','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('101400','엔시트론','KOSDAQ',NULL),
                                                                     ('106240','파인테크닉스','KOSDAQ',NULL),
@@ -2098,7 +2098,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('058630','엠게임','KOSDAQ',NULL),
                                                                     ('059100','아이컴포넌트','KOSDAQ',NULL),
                                                                     ('067630','HLB생명과학','KOSDAQ',NULL),
-                                                                    ('092130','이크레더블','KOSDAQ',NULL);
+                                                                    ('092130','이크레더블','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('100700','세운메디칼','KOSDAQ',NULL),
                                                                     ('098120','마이크로컨텍솔','KOSDAQ',NULL),
@@ -2109,7 +2109,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('094840','슈프리마에이치큐','KOSDAQ',NULL),
                                                                     ('063170','서울옥션','KOSDAQ',NULL),
                                                                     ('047560','이스트소프트','KOSDAQ',NULL),
-                                                                    ('096240','크레버스','KOSDAQ',NULL);
+                                                                    ('096240','크레버스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('101160','월덱스','KOSDAQ',NULL),
                                                                     ('099320','쎄트렉아이','KOSDAQ',NULL),
@@ -2120,7 +2120,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('095610','테스','KOSDAQ',NULL),
                                                                     ('053280','예스24','KOSDAQ',NULL),
                                                                     ('096870','엘디티','KOSDAQ',NULL),
-                                                                    ('059210','메타바이오메드','KOSDAQ',NULL);
+                                                                    ('059210','메타바이오메드','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('097870','효성오앤비','KOSDAQ',NULL),
                                                                     ('091440','한울소재과학','KOSDAQ',NULL),
@@ -2131,7 +2131,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('067010','이씨에스','KOSDAQ',NULL),
                                                                     ('096350','대창솔루션','KOSDAQ',NULL),
                                                                     ('069920','엑시온그룹','KOSDAQ',NULL),
-                                                                    ('096610','알에프세미','KOSDAQ',NULL);
+                                                                    ('096610','알에프세미','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('092070','디엔에프','KOSDAQ',NULL),
                                                                     ('094820','일진파워','KOSDAQ',NULL),
@@ -2142,7 +2142,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('095910','에스에너지','KOSDAQ',NULL),
                                                                     ('081580','성우전자','KOSDAQ',NULL),
                                                                     ('073110','엘엠에스','KOSDAQ',NULL),
-                                                                    ('094970','제이엠티','KOSDAQ',NULL);
+                                                                    ('094970','제이엠티','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('080520','오디텍','KOSDAQ',NULL),
                                                                     ('095340','ISC','KOSDAQ',NULL),
@@ -2153,7 +2153,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('057540','옴니시스템','KOSDAQ',NULL),
                                                                     ('094940','푸른기술','KOSDAQ',NULL),
                                                                     ('095270','웨이브일렉트로','KOSDAQ',NULL),
-                                                                    ('093190','빅솔론','KOSDAQ',NULL);
+                                                                    ('093190','빅솔론','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('091340','S&K폴리텍','KOSDAQ',NULL),
                                                                     ('072770','멤레이비티','KOSDAQ',NULL),
@@ -2164,7 +2164,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('095660','네오위즈','KOSDAQ',NULL),
                                                                     ('092600','앤씨앤','KOSDAQ',NULL),
                                                                     ('069410','엔텔스','KOSDAQ',NULL),
-                                                                    ('093380','풍강','KOSDAQ',NULL);
+                                                                    ('093380','풍강','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('086450','동국제약','KOSDAQ',NULL),
                                                                     ('064820','케이프','KOSDAQ',NULL),
@@ -2175,7 +2175,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('094850','참좋은여행','KOSDAQ',NULL),
                                                                     ('094860','네오리진','KOSDAQ',NULL),
                                                                     ('078020','LS증권','KOSDAQ',NULL),
-                                                                    ('093520','매커스','KOSDAQ',NULL);
+                                                                    ('093520','매커스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('091970','나노캠텍','KOSDAQ',NULL),
                                                                     ('092730','네오팜','KOSDAQ',NULL),
@@ -2186,7 +2186,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('084110','휴온스글로벌','KOSDAQ',NULL),
                                                                     ('089150','케이씨티','KOSDAQ',NULL),
                                                                     ('091700','파트론','KOSDAQ',NULL),
-                                                                    ('086390','유니테스트','KOSDAQ',NULL);
+                                                                    ('086390','유니테스트','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('090710','휴림로봇','KOSDAQ',NULL),
                                                                     ('060540','에스에이티','KOSDAQ',NULL),
@@ -2197,7 +2197,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('089140','넥스턴앤롤코리아','KOSDAQ',NULL),
                                                                     ('089790','제이티','KOSDAQ',NULL),
                                                                     ('090150','아이윈','KOSDAQ',NULL),
-                                                                    ('088390','이녹스','KOSDAQ',NULL);
+                                                                    ('088390','이녹스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('089230','THE E&M','KOSDAQ',NULL),
                                                                     ('043150','바텍','KOSDAQ',NULL),
@@ -2208,7 +2208,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('086980','쇼박스','KOSDAQ',NULL),
                                                                     ('068050','팬엔터테인먼트','KOSDAQ',NULL),
                                                                     ('039290','인포뱅크','KOSDAQ',NULL),
-                                                                    ('078860','스테이지원엔터','KOSDAQ',NULL);
+                                                                    ('078860','스테이지원엔터','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('088910','동우팜투테이블','KOSDAQ',NULL),
                                                                     ('054950','제이브이엠','KOSDAQ',NULL),
@@ -2219,7 +2219,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('068760','셀트리온제약','KOSDAQ',NULL),
                                                                     ('083450','GST','KOSDAQ',NULL),
                                                                     ('019990','에너토크','KOSDAQ',NULL),
-                                                                    ('079370','제우스','KOSDAQ',NULL);
+                                                                    ('079370','제우스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('085670','뉴프렉스','KOSDAQ',NULL),
                                                                     ('084370','유진테크','KOSDAQ',NULL),
@@ -2230,7 +2230,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('085660','차바이오텍','KOSDAQ',NULL),
                                                                     ('078140','대봉엘에스','KOSDAQ',NULL),
                                                                     ('067900','와이엔텍','KOSDAQ',NULL),
-                                                                    ('083550','케이엠','KOSDAQ',NULL);
+                                                                    ('083550','케이엠','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('084180','수성웹툰','KOSDAQ',NULL),
                                                                     ('080420','모다이노칩','KOSDAQ',NULL),
@@ -2241,7 +2241,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('079000','와토스코리아','KOSDAQ',NULL),
                                                                     ('041020','폴라리스오피스','KOSDAQ',NULL),
                                                                     ('078590','휴림에이텍','KOSDAQ',NULL),
-                                                                    ('038070','서린바이오','KOSDAQ',NULL);
+                                                                    ('038070','서린바이오','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('079940','가비아','KOSDAQ',NULL),
                                                                     ('077360','덕산하이메탈','KOSDAQ',NULL),
@@ -2252,7 +2252,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('080010','이상네트웍스','KOSDAQ',NULL),
                                                                     ('078160','메디포스트','KOSDAQ',NULL),
                                                                     ('082850','우리바이오','KOSDAQ',NULL),
-                                                                    ('080160','모두투어','KOSDAQ',NULL);
+                                                                    ('080160','모두투어','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('078890','가온그룹','KOSDAQ',NULL),
                                                                     ('050890','쏠리드','KOSDAQ',NULL),
@@ -2263,7 +2263,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('079950','인베니아','KOSDAQ',NULL),
                                                                     ('079960','동양이엔피','KOSDAQ',NULL),
                                                                     ('080220','제주반도체','KOSDAQ',NULL),
-                                                                    ('079170','한창산업','KOSDAQ',NULL);
+                                                                    ('079170','한창산업','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('079810','디이엔티','KOSDAQ',NULL),
                                                                     ('052220','iMBC','KOSDAQ',NULL),
@@ -2274,7 +2274,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('052460','아이크래프트','KOSDAQ',NULL),
                                                                     ('072870','메가스터디','KOSDAQ',NULL),
                                                                     ('073010','케이에스피','KOSDAQ',NULL),
-                                                                    ('046440','KG모빌리언스','KOSDAQ',NULL);
+                                                                    ('046440','KG모빌리언스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('078600','대주전자재료','KOSDAQ',NULL),
                                                                     ('054450','텔레칩스','KOSDAQ',NULL),
@@ -2285,7 +2285,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('068790','DMS','KOSDAQ',NULL),
                                                                     ('048870','시너지이노베이션','KOSDAQ',NULL),
                                                                     ('065350','신성델타테크','KOSDAQ',NULL),
-                                                                    ('039340','한국경제TV','KOSDAQ',NULL);
+                                                                    ('039340','한국경제TV','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('064260','다날','KOSDAQ',NULL),
                                                                     ('011080','형지I&C','KOSDAQ',NULL),
@@ -2296,7 +2296,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('066700','테라젠이텍스','KOSDAQ',NULL),
                                                                     ('066900','디에이피','KOSDAQ',NULL),
                                                                     ('078350','한양디지텍','KOSDAQ',NULL),
-                                                                    ('075970','동국알앤에스','KOSDAQ',NULL);
+                                                                    ('075970','동국알앤에스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('069540','빛과전자','KOSDAQ',NULL),
                                                                     ('073190','듀오백','KOSDAQ',NULL),
@@ -2307,7 +2307,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('073570','리튬포어스','KOSDAQ',NULL),
                                                                     ('073640','테라사이언스','KOSDAQ',NULL),
                                                                     ('065680','우주일렉트로','KOSDAQ',NULL),
-                                                                    ('067160','SOOP','KOSDAQ',NULL);
+                                                                    ('067160','SOOP','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('060570','드림어스컴퍼니','KOSDAQ',NULL),
                                                                     ('066410','버킷스튜디오','KOSDAQ',NULL),
@@ -2318,7 +2318,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('054780','키이스트','KOSDAQ',NULL),
                                                                     ('041440','현대에버다임','KOSDAQ',NULL),
                                                                     ('072020','중앙백신','KOSDAQ',NULL),
-                                                                    ('065510','휴비츠','KOSDAQ',NULL);
+                                                                    ('065510','휴비츠','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('072470','우리산업홀딩스','KOSDAQ',NULL),
                                                                     ('068930','디지털대성','KOSDAQ',NULL),
@@ -2329,7 +2329,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('047310','파워로직스','KOSDAQ',NULL),
                                                                     ('041520','이엘씨','KOSDAQ',NULL),
                                                                     ('064240','홈캐스트','KOSDAQ',NULL),
-                                                                    ('066790','씨씨에스','KOSDAQ',NULL);
+                                                                    ('066790','씨씨에스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('069080','웹젠','KOSDAQ',NULL),
                                                                     ('067080','대화제약','KOSDAQ',NULL),
@@ -2340,7 +2340,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('065130','탑엔지니어링','KOSDAQ',NULL),
                                                                     ('065440','이루온','KOSDAQ',NULL),
                                                                     ('049630','재영솔루텍','KOSDAQ',NULL),
-                                                                    ('021650','한국큐빅','KOSDAQ',NULL);
+                                                                    ('021650','한국큐빅','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('051370','인터플렉스','KOSDAQ',NULL),
                                                                     ('065570','삼영이엔씨','KOSDAQ',NULL),
@@ -2351,7 +2351,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('066670','디티씨','KOSDAQ',NULL),
                                                                     ('066430','아이로보틱스','KOSDAQ',NULL),
                                                                     ('047820','초록뱀미디어','KOSDAQ',NULL),
-                                                                    ('064090','인크레더블버즈','KOSDAQ',NULL);
+                                                                    ('064090','인크레더블버즈','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('049960','쎌바이오텍','KOSDAQ',NULL),
                                                                     ('053290','NE능률','KOSDAQ',NULL),
@@ -2362,7 +2362,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('042600','새로닉스','KOSDAQ',NULL),
                                                                     ('065500','오리엔트정공','KOSDAQ',NULL),
                                                                     ('060900','에이전트AI','KOSDAQ',NULL),
-                                                                    ('066620','국보디자인','KOSDAQ',NULL);
+                                                                    ('066620','국보디자인','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('052770','아이톡시','KOSDAQ',NULL),
                                                                     ('065420','에스아이리소스','KOSDAQ',NULL),
@@ -2373,7 +2373,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('045340','토탈소프트','KOSDAQ',NULL),
                                                                     ('065710','서호전기','KOSDAQ',NULL),
                                                                     ('065690','파커스','KOSDAQ',NULL),
-                                                                    ('060560','HC홈센타','KOSDAQ',NULL);
+                                                                    ('060560','HC홈센타','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('043710','서울리거','KOSDAQ',NULL),
                                                                     ('036010','아비코전자','KOSDAQ',NULL),
@@ -2384,7 +2384,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('060150','인선이엔티','KOSDAQ',NULL),
                                                                     ('065530','와이어블','KOSDAQ',NULL),
                                                                     ('063440','SM Life Design','KOSDAQ',NULL),
-                                                                    ('051160','지어소프트','KOSDAQ',NULL);
+                                                                    ('051160','지어소프트','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('065060','지엔코','KOSDAQ',NULL),
                                                                     ('049180','셀루메드','KOSDAQ',NULL),
@@ -2395,7 +2395,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('050120','ES큐브','KOSDAQ',NULL),
                                                                     ('054410','케이피티유','KOSDAQ',NULL),
                                                                     ('060310','3S','KOSDAQ',NULL),
-                                                                    ('061250','화일약품','KOSDAQ',NULL);
+                                                                    ('061250','화일약품','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('053980','오상자이엘','KOSDAQ',NULL),
                                                                     ('054050','농우바이오','KOSDAQ',NULL),
@@ -2406,7 +2406,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('060590','씨티씨바이오','KOSDAQ',NULL),
                                                                     ('049070','인탑스','KOSDAQ',NULL),
                                                                     ('060370','LS마린솔루션','KOSDAQ',NULL),
-                                                                    ('051380','피씨디렉트','KOSDAQ',NULL);
+                                                                    ('051380','피씨디렉트','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('053270','구영테크','KOSDAQ',NULL),
                                                                     ('034950','한국기업평가','KOSDAQ',NULL),
@@ -2417,7 +2417,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('046890','서울반도체','KOSDAQ',NULL),
                                                                     ('013990','아가방컴퍼니','KOSDAQ',NULL),
                                                                     ('058450','한주에이알티','KOSDAQ',NULL),
-                                                                    ('059090','미코','KOSDAQ',NULL);
+                                                                    ('059090','미코','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('054930','유신','KOSDAQ',NULL),
                                                                     ('035200','프럼파스트','KOSDAQ',NULL),
@@ -2428,7 +2428,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('054300','팬스타엔터프라이즈','KOSDAQ',NULL),
                                                                     ('047080','한빛소프트','KOSDAQ',NULL),
                                                                     ('060250','NHN KCP','KOSDAQ',NULL),
-                                                                    ('056730','CNT85','KOSDAQ',NULL);
+                                                                    ('056730','CNT85','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('053260','금강철강','KOSDAQ',NULL),
                                                                     ('060240','스타코링크','KOSDAQ',NULL),
@@ -2439,7 +2439,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('058470','리노공업','KOSDAQ',NULL),
                                                                     ('045300','성우테크론','KOSDAQ',NULL),
                                                                     ('056190','에스에프에이','KOSDAQ',NULL),
-                                                                    ('056700','신화인터텍','KOSDAQ',NULL);
+                                                                    ('056700','신화인터텍','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('054940','엑사이엔씨','KOSDAQ',NULL),
                                                                     ('043370','피에이치에이','KOSDAQ',NULL),
@@ -2450,7 +2450,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('054540','삼영엠텍','KOSDAQ',NULL),
                                                                     ('053350','이니텍','KOSDAQ',NULL),
                                                                     ('056080','유진로봇','KOSDAQ',NULL),
-                                                                    ('044490','태웅','KOSDAQ',NULL);
+                                                                    ('044490','태웅','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('053950','경남제약','KOSDAQ',NULL),
                                                                     ('053700','삼보모터스','KOSDAQ',NULL),
@@ -2461,7 +2461,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('054180','메디콕스','KOSDAQ',NULL),
                                                                     ('043090','더테크놀로지','KOSDAQ',NULL),
                                                                     ('049470','비트플래닛','KOSDAQ',NULL),
-                                                                    ('053050','지에스이','KOSDAQ',NULL);
+                                                                    ('053050','지에스이','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('054800','아이디스홀딩스','KOSDAQ',NULL),
                                                                     ('047770','코데즈컴바인','KOSDAQ',NULL),
@@ -2472,7 +2472,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('021320','KCC건설','KOSDAQ',NULL),
                                                                     ('053060','세동','KOSDAQ',NULL),
                                                                     ('053610','프로텍','KOSDAQ',NULL),
-                                                                    ('052790','액토즈소프트','KOSDAQ',NULL);
+                                                                    ('052790','액토즈소프트','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('053450','세코닉스','KOSDAQ',NULL),
                                                                     ('053030','바이넥스','KOSDAQ',NULL),
@@ -2483,7 +2483,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('048910','대원미디어','KOSDAQ',NULL),
                                                                     ('051980','중앙첨단소재','KOSDAQ',NULL),
                                                                     ('051500','CJ프레시웨이','KOSDAQ',NULL),
-                                                                    ('049120','파인디앤씨','KOSDAQ',NULL);
+                                                                    ('049120','파인디앤씨','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('043360','디지아이','KOSDAQ',NULL),
                                                                     ('052330','코텍','KOSDAQ',NULL),
@@ -2494,7 +2494,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('033790','피노','KOSDAQ',NULL),
                                                                     ('051490','나라엠앤디','KOSDAQ',NULL),
                                                                     ('038870','에코바이오','KOSDAQ',NULL),
-                                                                    ('045660','에이텍','KOSDAQ',NULL);
+                                                                    ('045660','에이텍','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('045390','대아티아이','KOSDAQ',NULL),
                                                                     ('050110','캠시스','KOSDAQ',NULL),
@@ -2505,7 +2505,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('048550','SM C&C','KOSDAQ',NULL),
                                                                     ('049830','승일','KOSDAQ',NULL),
                                                                     ('048770','TPC','KOSDAQ',NULL),
-                                                                    ('049430','코메론','KOSDAQ',NULL);
+                                                                    ('049430','코메론','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('044480','빌리언스','KOSDAQ',NULL),
                                                                     ('046390','삼화네트웍스','KOSDAQ',NULL),
@@ -2516,7 +2516,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('042510','라온시큐어','KOSDAQ',NULL),
                                                                     ('036670','삼양케이씨아이','KOSDAQ',NULL),
                                                                     ('039830','오로라','KOSDAQ',NULL),
-                                                                    ('036190','금화피에스시','KOSDAQ',NULL);
+                                                                    ('036190','금화피에스시','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('046070','코다코','KOSDAQ',NULL),
                                                                     ('041830','인바디','KOSDAQ',NULL),
@@ -2527,7 +2527,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('032080','아즈텍WB','KOSDAQ',NULL),
                                                                     ('010470','오리콤','KOSDAQ',NULL),
                                                                     ('044340','위닉스','KOSDAQ',NULL),
-                                                                    ('042940','상지건설','KOSDAQ',NULL);
+                                                                    ('042940','상지건설','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('048830','엔피케이','KOSDAQ',NULL),
                                                                     ('000250','삼천당제약','KOSDAQ',NULL),
@@ -2538,7 +2538,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('043340','에쎈테크','KOSDAQ',NULL),
                                                                     ('043650','국순당','KOSDAQ',NULL),
                                                                     ('037950','엘컴텍','KOSDAQ',NULL),
-                                                                    ('039030','이오테크닉스','KOSDAQ',NULL);
+                                                                    ('039030','이오테크닉스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('038540','상상인','KOSDAQ',NULL),
                                                                     ('018680','서울제약','KOSDAQ',NULL),
@@ -2549,7 +2549,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('042370','비츠로테크','KOSDAQ',NULL),
                                                                     ('045970','코아시아','KOSDAQ',NULL),
                                                                     ('040420','정상제이엘에스','KOSDAQ',NULL),
-                                                                    ('007370','진양제약','KOSDAQ',NULL);
+                                                                    ('007370','진양제약','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('043610','KT지니뮤직','KOSDAQ',NULL),
                                                                     ('036890','진성티이씨','KOSDAQ',NULL),
@@ -2560,7 +2560,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('039740','한국정보공학','KOSDAQ',NULL),
                                                                     ('039840','디오','KOSDAQ',NULL),
                                                                     ('042420','네오위즈홀딩스','KOSDAQ',NULL),
-                                                                    ('039560','다산네트웍스','KOSDAQ',NULL);
+                                                                    ('039560','다산네트웍스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('038460','바이오스마트','KOSDAQ',NULL),
                                                                     ('032820','우리기술','KOSDAQ',NULL),
@@ -2571,7 +2571,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('036640','HRS','KOSDAQ',NULL),
                                                                     ('031330','에스에이엠티','KOSDAQ',NULL),
                                                                     ('038620','위즈코프','KOSDAQ',NULL),
-                                                                    ('039020','이건홀딩스','KOSDAQ',NULL);
+                                                                    ('039020','이건홀딩스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('038950','파인디지털','KOSDAQ',NULL),
                                                                     ('036800','나이스정보통신','KOSDAQ',NULL),
@@ -2582,7 +2582,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('010280','아이티센엔텍','KOSDAQ',NULL),
                                                                     ('037760','쎄니트','KOSDAQ',NULL),
                                                                     ('036480','대성미생물','KOSDAQ',NULL),
-                                                                    ('038110','에코플라스틱','KOSDAQ',NULL);
+                                                                    ('038110','에코플라스틱','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('032500','케이엠더블유','KOSDAQ',NULL),
                                                                     ('039610','화성밸브','KOSDAQ',NULL),
@@ -2593,7 +2593,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('036830','솔브레인홀딩스','KOSDAQ',NULL),
                                                                     ('036810','에프에스티','KOSDAQ',NULL),
                                                                     ('036690','코맥스','KOSDAQ',NULL),
-                                                                    ('037370','EG','KOSDAQ',NULL);
+                                                                    ('037370','EG','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('036620','감성코퍼레이션','KOSDAQ',NULL),
                                                                     ('037350','성도이엔지','KOSDAQ',NULL),
@@ -2604,7 +2604,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('037070','파세코','KOSDAQ',NULL),
                                                                     ('036560','KZ정밀','KOSDAQ',NULL),
                                                                     ('016250','SGC E&C','KOSDAQ',NULL),
-                                                                    ('035890','서희건설','KOSDAQ',NULL);
+                                                                    ('035890','서희건설','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('036930','주성엔지니어링','KOSDAQ',NULL),
                                                                     ('036030','케이티알파','KOSDAQ',NULL),
@@ -2615,7 +2615,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('026040','제이에스티나','KOSDAQ',NULL),
                                                                     ('037230','한국팩키지','KOSDAQ',NULL),
                                                                     ('037460','삼지전자','KOSDAQ',NULL),
-                                                                    ('037400','우리엔터프라이즈','KOSDAQ',NULL);
+                                                                    ('037400','우리엔터프라이즈','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('033640','네패스','KOSDAQ',NULL),
                                                                     ('037330','인지디스플레','KOSDAQ',NULL),
@@ -2626,7 +2626,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('035290','골드앤에스','KOSDAQ',NULL),
                                                                     ('036120','서울평가정보','KOSDAQ',NULL),
                                                                     ('027040','서울전자통신','KOSDAQ',NULL),
-                                                                    ('027830','대성창투','KOSDAQ',NULL);
+                                                                    ('027830','대성창투','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('036000','예림당','KOSDAQ',NULL),
                                                                     ('035760','CJ ENM','KOSDAQ',NULL),
@@ -2637,7 +2637,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('020710','시공테크','KOSDAQ',NULL),
                                                                     ('012790','신일제약','KOSDAQ',NULL),
                                                                     ('034940','조아제약','KOSDAQ',NULL),
-                                                                    ('033230','인성정보','KOSDAQ',NULL);
+                                                                    ('033230','인성정보','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('035080','그래디언트','KOSDAQ',NULL),
                                                                     ('005160','동국산업','KOSDAQ',NULL),
@@ -2648,7 +2648,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('033500','동성화인텍','KOSDAQ',NULL),
                                                                     ('030350','드래곤플라이','KOSDAQ',NULL),
                                                                     ('033160','엠케이전자','KOSDAQ',NULL),
-                                                                    ('033310','엠투엔','KOSDAQ',NULL);
+                                                                    ('033310','엠투엔','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('033320','제이씨현시스템','KOSDAQ',NULL),
                                                                     ('009520','포스코엠텍','KOSDAQ',NULL),
@@ -2659,7 +2659,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('015710','코콤','KOSDAQ',NULL),
                                                                     ('033100','제룡전기','KOSDAQ',NULL),
                                                                     ('033050','제이엠아이','KOSDAQ',NULL),
-                                                                    ('033130','디지틀조선','KOSDAQ',NULL);
+                                                                    ('033130','디지틀조선','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('032980','바이온','KOSDAQ',NULL),
                                                                     ('019210','와이지-원','KOSDAQ',NULL),
@@ -2670,7 +2670,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('032940','원익','KOSDAQ',NULL),
                                                                     ('008290','원풍물산','KOSDAQ',NULL),
                                                                     ('032750','삼진','KOSDAQ',NULL),
-                                                                    ('032860','더라미','KOSDAQ',NULL);
+                                                                    ('032860','더라미','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('032850','비트컴퓨터','KOSDAQ',NULL),
                                                                     ('032790','엠젠솔루션','KOSDAQ',NULL),
@@ -2681,7 +2681,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('028080','휴맥스홀딩스','KOSDAQ',NULL),
                                                                     ('032280','삼일','KOSDAQ',NULL),
                                                                     ('012340','뉴인텍','KOSDAQ',NULL),
-                                                                    ('031510','오스템','KOSDAQ',NULL);
+                                                                    ('031510','오스템','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('031860','디에이치엑스컴퍼니','KOSDAQ',NULL),
                                                                     ('031980','피에스케이홀딩스','KOSDAQ',NULL),
@@ -2692,7 +2692,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('030520','한글과컴퓨터','KOSDAQ',NULL),
                                                                     ('021880','메이슨캐피탈','KOSDAQ',NULL),
                                                                     ('029480','광무','KOSDAQ',NULL),
-                                                                    ('021040','대호특수강','KOSDAQ',NULL);
+                                                                    ('021040','대호특수강','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('028300','HLB','KOSDAQ',NULL),
                                                                     ('027710','팜스토리','KOSDAQ',NULL),
@@ -2703,7 +2703,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('012700','리드코프','KOSDAQ',NULL),
                                                                     ('018000','유니슨','KOSDAQ',NULL),
                                                                     ('025980','아난티','KOSDAQ',NULL),
-                                                                    ('026910','광진실업','KOSDAQ',NULL);
+                                                                    ('026910','광진실업','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('017250','인터엠','KOSDAQ',NULL),
                                                                     ('015750','성우하이텍','KOSDAQ',NULL),
@@ -2714,7 +2714,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('025870','신라에스지','KOSDAQ',NULL),
                                                                     ('025880','케이씨피드','KOSDAQ',NULL),
                                                                     ('002680','한탑','KOSDAQ',NULL),
-                                                                    ('025550','한국선재','KOSDAQ',NULL);
+                                                                    ('025550','한국선재','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('025440','DH오토웨어','KOSDAQ',NULL),
                                                                     ('025320','시노펙스','KOSDAQ',NULL),
@@ -2725,7 +2725,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('024910','경창산업','KOSDAQ',NULL),
                                                                     ('004780','대륙제관','KOSDAQ',NULL),
                                                                     ('013120','동원개발','KOSDAQ',NULL),
-                                                                    ('024830','세원물산','KOSDAQ',NULL);
+                                                                    ('024830','세원물산','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('024880','케이피에프','KOSDAQ',NULL),
                                                                     ('024120','KB오토시스','KOSDAQ',NULL),
@@ -2736,7 +2736,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('023900','풍국주정','KOSDAQ',NULL),
                                                                     ('017650','대림제지','KOSDAQ',NULL),
                                                                     ('010170','대한광통신','KOSDAQ',NULL),
-                                                                    ('023790','동일스틸럭스','KOSDAQ',NULL);
+                                                                    ('023790','동일스틸럭스','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('023770','플레이위드','KOSDAQ',NULL),
                                                                     ('023760','한국캐피탈','KOSDAQ',NULL),
@@ -2747,7 +2747,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('023440','제이스코홀딩스','KOSDAQ',NULL),
                                                                     ('006910','보성파워텍','KOSDAQ',NULL),
                                                                     ('018290','브이티','KOSDAQ',NULL),
-                                                                    ('023160','태광','KOSDAQ',NULL);
+                                                                    ('023160','태광','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('007530','와이엠','KOSDAQ',NULL),
                                                                     ('001000','신라섬유','KOSDAQ',NULL),
@@ -2758,7 +2758,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('007720','소노스퀘어','KOSDAQ',NULL),
                                                                     ('013720','THE CUBE&','KOSDAQ',NULL),
                                                                     ('011320','유니크','KOSDAQ',NULL),
-                                                                    ('018120','진로발효','KOSDAQ',NULL);
+                                                                    ('018120','진로발효','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('009620','삼보산업','KOSDAQ',NULL),
                                                                     ('005670','푸드웰','KOSDAQ',NULL),
@@ -2769,7 +2769,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('020400','대동금속','KOSDAQ',NULL),
                                                                     ('005710','대원산업','KOSDAQ',NULL),
                                                                     ('016600','큐캐피탈','KOSDAQ',NULL),
-                                                                    ('004590','한국가구','KOSDAQ',NULL);
+                                                                    ('004590','한국가구','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('016670','디모아','KOSDAQ',NULL),
                                                                     ('000440','중앙에너비스','KOSDAQ',NULL),
@@ -2780,7 +2780,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('002290','삼일기업공사','KOSDAQ',NULL),
                                                                     ('019540','일지테크','KOSDAQ',NULL),
                                                                     ('007770','한일화학','KOSDAQ',NULL),
-                                                                    ('017890','한국알콜','KOSDAQ',NULL);
+                                                                    ('017890','한국알콜','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('003310','대주산업','KOSDAQ',NULL),
                                                                     ('019660','글로본','KOSDAQ',NULL),
@@ -2791,7 +2791,7 @@ INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('009730','이렘','KOSDAQ',NULL),
                                                                     ('016920','카스','KOSDAQ',NULL),
                                                                     ('013030','하이록코리아','KOSDAQ',NULL),
-                                                                    ('019550','SBI인베스트먼트','KOSDAQ',NULL);
+                                                                    ('019550','SBI인베스트먼트','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO public.stock_info (symbol,stock_name,market,sector) VALUES
                                                                     ('019570','플루토스','KOSDAQ',NULL),
-                                                                    ('006920','모헨즈','KOSDAQ',NULL);
+                                                                    ('006920','모헨즈','KOSDAQ',NULL) ON CONFLICT (symbol) DO NOTHING;
