@@ -41,6 +41,5 @@ public interface RecommendedNewsCardRepository extends JpaRepository<Recommended
     /**
      * 해당 사용자의 모든 카드를 삭제한다 (관심사 변경 시 이력 리셋)
      */
-    @Modifying
     void deleteByUserId(UUID userId);
 }
