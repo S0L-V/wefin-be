@@ -95,8 +95,9 @@ class ChatMessageServiceTest {
     }
 
     @Test
-    @DisplayName("sendMessage publishes event and quest progress")
+    @DisplayName("메시지 전송 시 이벤트 발행과 퀘스트 진행도가 반영된다")
     void sendMessage_success() {
+        // given
         UUID userId = UUID.randomUUID();
         String content = "hello";
 
@@ -136,8 +137,10 @@ class ChatMessageServiceTest {
 
         ArgumentCaptor<ChatMessage> captor = ArgumentCaptor.forClass(ChatMessage.class);
 
+        // when
         chatMessageService.sendMessage(content, userId, null);
 
+        // then
         verify(chatMessageRepository, times(1))
                 .countByGroup_IdAndUser_UserIdAndCreatedAtAfter(eq(1L), eq(userId), any(OffsetDateTime.class));
         verify(chatSpamGuard, times(1))
@@ -155,21 +158,25 @@ class ChatMessageServiceTest {
     }
 
     @Test
-    @DisplayName("sendMessage rejects blank content")
+    @DisplayName("빈 메시지를 전송하면 예외가 발생한다")
     void sendMessage_fail_blank() {
+        // given
         UUID userId = UUID.randomUUID();
 
+        // when
         BusinessException exception = assertThrows(BusinessException.class,
                 () -> chatMessageService.sendMessage(" ", userId, null));
 
+        // then
         assertEquals(ErrorCode.CHAT_MESSAGE_EMPTY, exception.getErrorCode());
         verify(chatMessageRepository, never()).save(any());
         verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
-    @DisplayName("sendMessage handles /영 command as user message and system message")
+    @DisplayName("/영 명령어를 전송하면 사용자 메시지와 시스템 메시지가 함께 저장된다")
     void sendMessage_youngCommand_success() {
+        // given
         UUID userId = UUID.randomUUID();
 
         User user = User.builder()
@@ -217,8 +224,10 @@ class ChatMessageServiceTest {
 
         ArgumentCaptor<ChatMessage> captor = ArgumentCaptor.forClass(ChatMessage.class);
 
+        // when
         chatMessageService.sendMessage("/영", userId, null);
 
+        // then
         verify(openAiChatClient, never()).ask(any(), any(), any());
         verify(chatMessageRepository, times(2)).save(captor.capture());
         verify(eventPublisher, times(2)).publishEvent(any(ChatMessageCreatedEvent.class));
@@ -233,8 +242,79 @@ class ChatMessageServiceTest {
     }
 
     @Test
-    @DisplayName("getMessages computes hasNext and nextCursor")
+    @DisplayName("/wefini AI 호출이 실패해도 질문 메시지는 남고 안내 시스템 메시지가 발행된다")
+    void sendMessage_wefiniCommand_aiFailure_keepsQuestionAndPublishesFallback() {
+        // given
+        UUID userId = UUID.randomUUID();
+
+        User user = User.builder()
+                .email("test@test.com")
+                .nickname("groupUser")
+                .password("password")
+                .build();
+        ReflectionTestUtils.setField(user, "userId", userId);
+
+        Group group = Group.builder().name("group-1").build();
+        ReflectionTestUtils.setField(group, "id", 1L);
+
+        GroupMember groupMember = GroupMember.builder()
+                .user(user)
+                .group(group)
+                .role(GroupMember.GroupMemberRole.MEMBER)
+                .status(GroupMember.GroupMemberStatus.ACTIVE)
+                .build();
+
+        ChatMessage savedUserMessage = ChatMessage.builder()
+                .user(user)
+                .group(group)
+                .messageType(MessageType.CHAT)
+                .content("/wefini 질문")
+                .createdAt(OffsetDateTime.now())
+                .build();
+        ReflectionTestUtils.setField(savedUserMessage, "id", 30L);
+
+        ChatMessage savedSystemMessage = ChatMessage.builder()
+                .group(group)
+                .messageType(MessageType.SYSTEM)
+                .content("AI 응답을 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.")
+                .createdAt(OffsetDateTime.now())
+                .build();
+        ReflectionTestUtils.setField(savedSystemMessage, "id", 31L);
+
+        when(groupMemberRepository.findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(groupMember));
+        when(chatMessageRepository.countByGroup_IdAndUser_UserIdAndCreatedAtAfter(
+                eq(1L), eq(userId), any(OffsetDateTime.class))
+        ).thenReturn(0L);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(openAiChatClient.ask(any(), eq("질문"), any()))
+                .thenThrow(new BusinessException(ErrorCode.AI_CHAT_REQUEST_FAILED));
+        when(chatMessageRepository.save(any(ChatMessage.class)))
+                .thenReturn(savedUserMessage, savedSystemMessage);
+
+        ArgumentCaptor<ChatMessage> captor = ArgumentCaptor.forClass(ChatMessage.class);
+
+        // when
+        chatMessageService.sendMessage("  /wefini 질문  ", userId, null);
+
+        // then
+        verify(chatMessageRepository, times(2)).save(captor.capture());
+        verify(eventPublisher, times(2)).publishEvent(any(ChatMessageCreatedEvent.class));
+        verify(questProgressService, never()).handleEvent(userId, QuestEventType.USE_AI_CHAT);
+        verify(questProgressService, never()).handleEvent(userId, QuestEventType.SEND_GROUP_CHAT);
+
+        List<ChatMessage> capturedMessages = captor.getAllValues();
+        assertEquals(MessageType.CHAT, capturedMessages.get(0).getMessageType());
+        assertEquals("/wefini 질문", capturedMessages.get(0).getContent());
+        assertEquals(MessageType.SYSTEM, capturedMessages.get(1).getMessageType());
+        assertEquals("AI 응답을 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.", capturedMessages.get(1).getContent());
+        assertNull(capturedMessages.get(1).getUser());
+    }
+
+    @Test
+    @DisplayName("메시지 조회 시 hasNext와 nextCursor를 올바르게 계산한다")
     void getMessages_success_with_hasNext_and_nextCursor() {
+        // given
         UUID userId = UUID.randomUUID();
 
         User user = User.builder()
@@ -286,8 +366,10 @@ class ChatMessageServiceTest {
         when(chatMessageRepository.findMessagesByGroupId(eq(3L), any(Pageable.class)))
                 .thenReturn(List.of(latestMessage, middleMessage, oldestMessage));
 
+        // when
         ChatMessagesInfo result = chatMessageService.getMessages(userId, null, 2);
 
+        // then
         assertEquals(2, result.messages().size());
         assertTrue(result.hasNext());
         assertEquals(2L, result.nextCursor());
@@ -298,8 +380,9 @@ class ChatMessageServiceTest {
     }
 
     @Test
-    @DisplayName("shareNews returns response with news share payload")
+    @DisplayName("뉴스 공유 시 뉴스 공유 정보가 포함된 응답을 반환한다")
     void shareNews_success() {
+        // given
         UUID userId = UUID.randomUUID();
 
         User user = User.builder()
@@ -351,8 +434,10 @@ class ChatMessageServiceTest {
                     return newsShare;
                 });
 
+        // when
         var result = chatMessageService.shareNews(userId, new ShareNewsCommand(55L));
 
+        // then
         verify(chatMessageRepository).save(argThat(message ->
                 message.getMessageType() == MessageType.NEWS
                         && "cluster title".equals(message.getContent())
@@ -372,4 +457,3 @@ class ChatMessageServiceTest {
         assertEquals("https://image.test/thumb.png", result.newsShare().thumbnailUrl());
     }
 }
-

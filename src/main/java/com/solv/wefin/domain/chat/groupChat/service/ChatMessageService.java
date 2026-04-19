@@ -61,12 +61,11 @@ public class ChatMessageService {
     private final OpenAiChatClient openAiChatClient;
 
     private static final long SPAM_WINDOW_SECONDS = 3L;
-    private static final String YOUNG_COMMAND = "/영";
-    private static final String YOUNG_RESPONSE = "차";
     private static final String WEFINI_COMMAND_PREFIX = "/wefini";
-    private static final String YOUNG_COMMAND_LITERAL = "/\uC601";
-    private static final String YOUNG_DISPLAY_MESSAGE_LITERAL = "\uC601";
-    private static final String YOUNG_RESPONSE_LITERAL = "\uCC28";
+    private static final String YOUNG_COMMAND_LITERAL = "/영";
+    private static final String YOUNG_DISPLAY_MESSAGE_LITERAL = "영";
+    private static final String YOUNG_RESPONSE_LITERAL = "차";
+    private static final String WEFINI_FAILURE_MESSAGE = "AI 응답을 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.";
     private static final String WEFINI_USAGE_MESSAGE = "/wefini 뒤에 질문을 함께 입력해 주세요.";
     private static final String SYSTEM = "시스템";
     private static final int MAX_MESSAGE_LENGTH = 1000;
@@ -145,9 +144,16 @@ public class ChatMessageService {
             return true;
         }
 
-        publishUserMessage(user, group, content);
+        publishUserMessage(user, group, trimmed);
 
-        String answer = openAiChatClient.ask(List.of(), question, null);
+        String answer;
+        try {
+            answer = openAiChatClient.ask(List.of(), question, null);
+        } catch (BusinessException e) {
+            log.warn("AI 응답 실패 userId={}, code={}", userId, e.getErrorCode(), e);
+            publishSystemMessage(group, WEFINI_FAILURE_MESSAGE);
+            return true;
+        }
         publishSystemMessage(group, answer);
         handleQuestEventSafely(userId, QuestEventType.USE_AI_CHAT);
         handleQuestEventSafely(userId, QuestEventType.SEND_GROUP_CHAT);
