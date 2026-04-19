@@ -14,8 +14,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface GameRoomRepository extends JpaRepository<GameRoom, UUID> {
-    // 방장 1일 1회 제한
-    boolean existsByUserIdAndStartedAtBetween(UUID userId, OffsetDateTime from, OffsetDateTime to);
+    // 방장 1일 횟수 제한
+    long countByUserIdAndStartedAtBetween(UUID userId, OffsetDateTime from, OffsetDateTime to);
 
     //만들어진 방 체크
     boolean existsByGroupIdAndStatusIn(Long groupId, List<RoomStatus> statuses);
