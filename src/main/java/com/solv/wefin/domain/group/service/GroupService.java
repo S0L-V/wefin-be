@@ -135,6 +135,33 @@ public class GroupService {
         return GroupInviteInfo.from(invite);
     }
 
+    public GroupInviteInfo getLatestInviteCode(Long groupId, UUID userId) {
+        Group group = groupRepository.findByIdForUpdate(groupId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
+
+        boolean isMember = groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
+                userId,
+                group,
+                GroupMember.GroupMemberStatus.ACTIVE
+        );
+
+        if (!isMember) {
+            throw new BusinessException(ErrorCode.GROUP_INVITE_FORBIDDEN);
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        GroupInvite invite = groupInviteRepository
+                .findFirstByGroupAndStatusAndExpiredAtAfterOrderByCreatedAtDesc(
+                        group,
+                        GroupInvite.InviteStatus.PENDING,
+                        now
+                )
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_INVITE_NOT_FOUND));
+
+        return GroupInviteInfo.from(invite);
+    }
+
     @Transactional
     public GroupMemberInfo joinGroup(UUID userId, UUID inviteCode) {
         GroupInvite invite = groupInviteRepository.findByInviteCode(inviteCode)

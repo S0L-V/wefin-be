@@ -226,4 +226,93 @@ class GroupInviteServiceTest {
             verify(groupInviteRepository, never()).save(any());
         }
     }
+
+    @Nested
+    @DisplayName("getLatestInviteCode")
+    class GetLatestInviteCodeTest {
+
+        @Test
+        @DisplayName("유효한 초대 코드가 있으면 반환한다")
+        void success() throws Exception {
+            UUID userId = UUID.randomUUID();
+
+            Group group = createGroup(1L, "테스트 그룹", GroupType.SHARED);
+            var user = createUser(
+                    userId,
+                    "leader@test.com",
+                    "리더",
+                    "encoded-password"
+            );
+
+            GroupInvite existingInvite = createGroupInvite(
+                    10L,
+                    group,
+                    user,
+                    UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+                    GroupInvite.InviteStatus.PENDING
+            );
+
+            when(groupRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(group));
+            when(groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
+                    userId,
+                    group,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            )).thenReturn(true);
+            when(groupInviteRepository.findFirstByGroupAndStatusAndExpiredAtAfterOrderByCreatedAtDesc(
+                    eq(group),
+                    eq(GroupInvite.InviteStatus.PENDING),
+                    any(OffsetDateTime.class)
+            )).thenReturn(Optional.of(existingInvite));
+
+            GroupInviteInfo result = groupService.getLatestInviteCode(1L, userId);
+
+            assertAll(
+                    () -> assertThat(result.codeId()).isEqualTo(10L),
+                    () -> assertThat(result.groupId()).isEqualTo(1L),
+                    () -> assertThat(result.inviteCode())
+                            .isEqualTo(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")),
+                    () -> assertThat(result.status()).isEqualTo(GroupInvite.InviteStatus.PENDING),
+                    () -> assertThat(result.expiredAt()).isNotNull()
+            );
+
+            verify(groupRepository).findByIdForUpdate(1L);
+            verify(groupMemberRepository).existsByUser_UserIdAndGroupAndStatus(
+                    userId,
+                    group,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            );
+            verify(groupInviteRepository).findFirstByGroupAndStatusAndExpiredAtAfterOrderByCreatedAtDesc(
+                    eq(group),
+                    eq(GroupInvite.InviteStatus.PENDING),
+                    any(OffsetDateTime.class)
+            );
+        }
+
+        @Test
+        @DisplayName("초대 코드가 없으면 예외가 발생한다")
+        void fail_not_found() throws Exception {
+            UUID userId = UUID.randomUUID();
+
+            Group group = createGroup(1L, "테스트 그룹", GroupType.SHARED);
+
+            when(groupRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(group));
+            when(groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
+                    userId,
+                    group,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            )).thenReturn(true);
+            when(groupInviteRepository.findFirstByGroupAndStatusAndExpiredAtAfterOrderByCreatedAtDesc(
+                    eq(group),
+                    eq(GroupInvite.InviteStatus.PENDING),
+                    any(OffsetDateTime.class)
+            )).thenReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> groupService.getLatestInviteCode(1L, userId)
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_INVITE_NOT_FOUND);
+        }
+    }
 }

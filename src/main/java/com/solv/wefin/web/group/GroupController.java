@@ -50,6 +50,15 @@ public class GroupController {
         return ApiResponse.success(CreateGroupInviteResponse.from(inviteInfo));
     }
 
+    @GetMapping("/{groupId}/invite-codes/latest")
+    public ApiResponse<CreateGroupInviteResponse> getLatestInviteCode(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal UUID userId
+    ) {
+        GroupInviteInfo info = groupService.getLatestInviteCode(groupId, userId);
+        return ApiResponse.success(CreateGroupInviteResponse.from(info));
+    }
+
     @PostMapping("/join")
     public ApiResponse<JoinGroupResponse> joinGroup(
             @RequestBody @Valid JoinGroupRequest request,

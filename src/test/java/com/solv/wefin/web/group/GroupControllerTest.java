@@ -111,6 +111,35 @@ class GroupControllerTest {
     }
 
     @Test
+    @DisplayName("최신 그룹 초대 코드 조회에 성공한다")
+    void getLatestInviteCode_success() throws Exception {
+        UUID userId = UUID.randomUUID();
+        OffsetDateTime expiredAt = OffsetDateTime.now().plusHours(24);
+
+        given(groupService.getLatestInviteCode(1L, userId))
+                .willReturn(new GroupInviteInfo(
+                        10L,
+                        1L,
+                        UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+                        GroupInvite.InviteStatus.PENDING,
+                        expiredAt
+                ));
+
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(userId, null, List.of());
+
+        mockMvc.perform(get("/api/groups/{groupId}/invite-codes/latest", 1L)
+                        .with(authentication(authentication)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.codeId").value(10))
+                .andExpect(jsonPath("$.data.groupId").value(1))
+                .andExpect(jsonPath("$.data.inviteCode").value("550e8400-e29b-41d4-a716-446655440000"))
+                .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andExpect(jsonPath("$.data.expiredAt").exists());
+    }
+
+    @Test
     @DisplayName("그룹 탈퇴에 성공한다")
     void leaveGroup_success() throws Exception {
         // given
