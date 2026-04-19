@@ -23,6 +23,7 @@ import com.solv.wefin.domain.game.turn.entity.TurnStatus;
 import com.solv.wefin.domain.game.turn.repository.GameTurnRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
+import com.solv.wefin.domain.game.turn.event.GameFinishedEvent;
 import com.solv.wefin.domain.game.turn.event.TurnChangeEvent;
 import com.solv.wefin.domain.game.turn.event.TurnChangeEvent.SnapshotData;
 import lombok.RequiredArgsConstructor;
@@ -105,6 +106,7 @@ public class TurnAdvanceService {
             forceEndAllActive(gameRoom, snapshots);
             gameRoom.finish();
             log.info("[턴 전환] 게임 종료: roomId={}, 마지막 턴={}", roomId, currentTurn.getTurnNumber());
+            eventPublisher.publishEvent(new GameFinishedEvent(roomId));
             return null;
         }
 
@@ -248,13 +250,41 @@ public class TurnAdvanceService {
     }
 
     /**
+     * 게임의 총 턴 수를 계산한다.
+     * startDate부터 endDate까지 moveDays 간격으로 거래일을 이동하며 카운트.
+     */
+    @Transactional(readOnly = true)
+    public int calculateTotalTurns(LocalDate startDate, LocalDate endDate, int moveDays) {
+        int turns = 1; // 첫 턴 포함
+        LocalDate current = startDate;
+
+        while (true) {
+            LocalDate next = calculateNextTradeDate(current, moveDays);
+            if (next.isAfter(endDate)) break;
+            turns++;
+            current = next;
+        }
+
+        return turns;
+    }
+
+    /**
      * 다음 거래일을 계산한다.
      * 현재 날짜 + moveDays 후, 비거래일이면 가장 가까운 이전 거래일로 보정.
+     * 단, currentDate 이후의 거래일만 반환하여 무한 루프를 방지한다.
      */
     private LocalDate calculateNextTradeDate(LocalDate currentDate, int moveDays) {
         LocalDate targetDate = currentDate.plusDays(moveDays);
 
-        return stockDailyRepository.findLatestTradeDateOnOrBefore(targetDate)
+        LocalDate nextTradeDate = stockDailyRepository.findLatestTradeDateOnOrBefore(targetDate)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GAME_STOCK_PRICE_NOT_FOUND));
+
+        // 보정 결과가 현재 날짜 이하면 currentDate 다음 날부터 재탐색
+        if (!nextTradeDate.isAfter(currentDate)) {
+            nextTradeDate = stockDailyRepository.findEarliestTradeDateAfter(currentDate)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.GAME_STOCK_PRICE_NOT_FOUND));
+        }
+
+        return nextTradeDate;
     }
 }
