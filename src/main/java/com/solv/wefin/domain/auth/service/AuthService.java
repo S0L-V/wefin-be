@@ -133,6 +133,27 @@ public class AuthService {
     }
 
     @Transactional
+    public void changePassword(UUID userId, String currentPassword, String newPassword) {
+
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.AUTH_UNAUTHORIZED);
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new BusinessException(ErrorCode.AUTH_PASSWORD_MISMATCH);
+        }
+
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new BusinessException(ErrorCode.AUTH_PASSWORD_SAME_AS_OLD);
+        }
+
+        user.changePassword(passwordEncoder.encode(newPassword));
+    }
+
+    @Transactional
     public LoginInfo login(String email, String password) {
         if (email == null || password == null) {
             throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
