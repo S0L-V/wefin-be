@@ -134,17 +134,9 @@ public class AuthService {
 
     @Transactional
     public void changePassword(UUID userId, String currentPassword, String newPassword) {
-        if (userId == null || currentPassword == null || newPassword == null) {
-            throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
-        }
 
-        if (currentPassword.isBlank() || newPassword.isBlank()) {
-            throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
-        }
-
-        if (!currentPassword.equals(currentPassword.trim())
-                || !newPassword.equals(newPassword.trim())) {
-            throw new BusinessException(ErrorCode.AUTH_VALIDATION_FAILED);
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.AUTH_UNAUTHORIZED);
         }
 
         User user = userRepository.findById(userId)

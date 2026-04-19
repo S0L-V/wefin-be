@@ -618,28 +618,5 @@ class AuthServiceTest {
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
         }
-
-        @Test
-        @DisplayName("입력값이 null 또는 blank면 validation 실패한다")
-        void changePassword_fail_when_invalid_input() {
-            UUID userId = UUID.randomUUID();
-
-            BusinessException nullException = assertThrows(
-                    BusinessException.class,
-                    () -> authService.changePassword(userId, null, "newpass123")
-            );
-
-            BusinessException blankException = assertThrows(
-                    BusinessException.class,
-                    () -> authService.changePassword(userId, "   ", "newpass123")
-            );
-
-            assertAll(
-                    () -> assertThat(nullException.getErrorCode()).isEqualTo(ErrorCode.AUTH_VALIDATION_FAILED),
-                    () -> assertThat(blankException.getErrorCode()).isEqualTo(ErrorCode.AUTH_VALIDATION_FAILED)
-            );
-
-            verify(userRepository, never()).findById(any());
-        }
     }
 }
