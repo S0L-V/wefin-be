@@ -6,16 +6,11 @@ import com.solv.wefin.domain.auth.dto.SignupInfo;
 import com.solv.wefin.domain.auth.service.AuthService;
 import com.solv.wefin.domain.auth.service.EmailVerificationService;
 import com.solv.wefin.global.common.ApiResponse;
-import com.solv.wefin.global.error.BusinessException;
-import com.solv.wefin.global.error.ErrorCode;
 import com.solv.wefin.web.auth.dto.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
@@ -23,6 +18,7 @@ import java.util.UUID;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
+
     private final AuthService authService;
     private final EmailVerificationService emailVerificationService;
 
@@ -68,20 +64,14 @@ public class AuthController {
     ) {
         String newAccessToken = authService.refresh(request.refreshToken());
 
-        RefreshTokenResponse response = new RefreshTokenResponse(newAccessToken);
-
-        return ApiResponse.success(response);
+        return ApiResponse.success(new RefreshTokenResponse(newAccessToken));
     }
 
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
-            Authentication authentication,
+            @AuthenticationPrincipal UUID userId,
             @RequestBody @Valid LogoutRequest request
     ) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof UUID userId)) {
-            throw new BusinessException(ErrorCode.AUTH_UNAUTHORIZED);
-        }
-
         authService.logout(userId, request.refreshToken());
         return ApiResponse.success(null);
     }
@@ -125,13 +115,9 @@ public class AuthController {
 
     @PostMapping("/password/change")
     public ApiResponse<Void> changePassword(
-            Authentication authentication,
+            @AuthenticationPrincipal UUID userId,
             @RequestBody @Valid ChangePasswordRequest request
     ) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof UUID userId)) {
-            throw new BusinessException(ErrorCode.AUTH_UNAUTHORIZED);
-        }
-
         authService.changePassword(
                 userId,
                 request.getCurrentPassword(),
