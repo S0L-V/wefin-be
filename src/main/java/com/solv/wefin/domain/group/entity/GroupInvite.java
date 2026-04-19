@@ -69,8 +69,8 @@ public class GroupInvite {
         }
     }
 
-    public void markAccepted() {
-        this.status = InviteStatus.ACCEPTED;
+    public boolean isExpired(OffsetDateTime now) {
+        return this.expiredAt.isBefore(now) || this.status == InviteStatus.EXPIRED;
     }
 
     public void expire() {
