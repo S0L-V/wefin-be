@@ -70,6 +70,24 @@ public final class GroupTestFixtures {
             UUID inviteCode,
             GroupInvite.InviteStatus status
     ) throws Exception {
+        return createGroupInvite(
+                id,
+                group,
+                createdBy,
+                inviteCode,
+                status,
+                OffsetDateTime.now().plusHours(24)
+        );
+    }
+
+    public static GroupInvite createGroupInvite(
+            Long id,
+            Group group,
+            User createdBy,
+            UUID inviteCode,
+            GroupInvite.InviteStatus status,
+            OffsetDateTime expiredAt
+    ) throws Exception {
         Constructor<GroupInvite> constructor = GroupInvite.class.getDeclaredConstructor(
                 Group.class,
                 User.class,
@@ -84,7 +102,7 @@ public final class GroupTestFixtures {
                 createdBy,
                 inviteCode,
                 status,
-                OffsetDateTime.now().plusHours(24)
+                expiredAt
         );
 
         Field idField = GroupInvite.class.getDeclaredField("id");

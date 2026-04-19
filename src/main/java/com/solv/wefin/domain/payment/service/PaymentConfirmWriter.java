@@ -12,6 +12,7 @@ import com.solv.wefin.domain.payment.repository.SubscriptionRepository;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -77,7 +78,8 @@ public class PaymentConfirmWriter {
             String errorCode,
             String errorMessage
     ) {
-        Payment payment = getPayment(paymentId);
+        Payment payment = paymentRepository.findWithLockByPaymentId(paymentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
         if (!payment.isPaid()) {
             payment.markFailed("TOSS_API_ERROR");
@@ -103,7 +105,8 @@ public class PaymentConfirmWriter {
             String errorCode,
             String errorMessage
     ) {
-        Payment payment = getPayment(paymentId);
+        Payment payment = paymentRepository.findWithLockByPaymentId(paymentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
         if (!payment.isPaid()) {
             payment.markFailed(failureReason);
@@ -129,7 +132,8 @@ public class PaymentConfirmWriter {
             String errorCode,
             String errorMessage
     ) {
-        Payment payment = getPayment(paymentId);
+        Payment payment = paymentRepository.findWithLockByPaymentId(paymentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
         if (!payment.isPaid()) {
             payment.markCanceled(failureReason);
@@ -153,7 +157,8 @@ public class PaymentConfirmWriter {
             String paymentKey,
             TossPaymentConfirmResult result
     ) {
-        Payment payment = getPayment(paymentId);
+        Payment payment = paymentRepository.findWithLockByPaymentId(paymentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
         if (payment.isPaid()) {
             throw new BusinessException(ErrorCode.PAYMENT_ALREADY_CONFIRMED);
@@ -188,9 +193,13 @@ public class PaymentConfirmWriter {
         );
 
         paymentRepository.save(payment);
-        Subscription savedSubscription = subscriptionRepository.save(subscription);
 
-        return PaymentConfirmInfo.from(payment, savedSubscription);
+        try {
+            Subscription savedSubscription = subscriptionRepository.save(subscription);
+            return PaymentConfirmInfo.from(payment, savedSubscription);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.ACTIVE_SUBSCRIPTION_ALREADY_EXISTS);
+        }
     }
 
     @Transactional
@@ -199,7 +208,8 @@ public class PaymentConfirmWriter {
             String paymentKey,
             String errorMessage
     ) {
-        Payment payment = getPayment(paymentId);
+        Payment payment = paymentRepository.findWithLockByPaymentId(paymentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
         paymentFailureLogWriter.save(
                 payment,
@@ -218,7 +228,8 @@ public class PaymentConfirmWriter {
             String paymentKey,
             String errorMessage
     ) {
-        Payment payment = getPayment(paymentId);
+        Payment payment = paymentRepository.findWithLockByPaymentId(paymentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
         paymentFailureLogWriter.save(
                 payment,
@@ -229,11 +240,6 @@ public class PaymentConfirmWriter {
                 ErrorCode.PAYMENT_CANCEL_FAILED.name(),
                 errorMessage
         );
-    }
-
-    private Payment getPayment(Long paymentId) {
-        return paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
     }
 
     private OffsetDateTime calculateExpiredAt(

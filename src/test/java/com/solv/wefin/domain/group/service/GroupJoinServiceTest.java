@@ -19,6 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -334,7 +335,7 @@ class GroupJoinServiceTest {
         }
 
         @Test
-        @DisplayName("만료된 초대 코드는 사용할 수 없다")
+        @DisplayName("expiredAt이 지난 초대 코드는 사용할 수 없다")
         void joinGroup_fail_when_invite_expired() throws Exception {
             UUID userId = UUID.randomUUID();
             UUID inviteCode = UUID.randomUUID();
@@ -347,10 +348,9 @@ class GroupJoinServiceTest {
                     targetGroup,
                     user,
                     inviteCode,
-                    GroupInvite.InviteStatus.PENDING
+                    GroupInvite.InviteStatus.PENDING,
+                    OffsetDateTime.now().minusHours(1)
             );
-
-            invite.expire();
 
             when(groupInviteRepository.findByInviteCode(inviteCode))
                     .thenReturn(Optional.of(invite));

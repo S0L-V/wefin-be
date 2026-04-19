@@ -143,7 +143,6 @@ public class GroupService {
         OffsetDateTime now = OffsetDateTime.now();
 
         if (invite.isExpired(now)) {
-            invite.expire();
             throw new BusinessException(ErrorCode.GROUP_INVITE_EXPIRED);
         }
 

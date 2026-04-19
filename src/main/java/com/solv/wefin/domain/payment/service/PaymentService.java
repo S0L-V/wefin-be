@@ -83,10 +83,8 @@ public class PaymentService {
 
         TossPaymentConfirmResult result;
 
-        log.info("confirm API 진입 userId={}, orderId={}", userId, orderId);
-
         try {
-            log.info("confirm start: paymentKey={}, orderId={}, amount={}", paymentKey, orderId, amount);
+            log.info("confirm start: orderId={}, amount={}", orderId, amount);
 
             result = tossPaymentClient.confirm(
                     paymentKey,
@@ -94,7 +92,12 @@ public class PaymentService {
                     amount
             );
 
-            log.info("confirm success: result={}", result);
+            log.info(
+                    "confirm success: orderId={}, status={}, approvedAt={}",
+                    result.orderId(),
+                    result.status(),
+                    result.approvedAt()
+            );
 
         } catch (BusinessException e) {
             paymentConfirmWriter.saveFailedAfterConfirmApiError(
