@@ -2,6 +2,7 @@ package com.solv.wefin.domain.chat.groupChat.service;
 
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
+import com.solv.wefin.domain.chat.aiChat.client.OpenAiChatClient;
 import com.solv.wefin.domain.chat.common.constant.ChatScope;
 import com.solv.wefin.domain.chat.common.service.ChatSpamGuard;
 import com.solv.wefin.domain.chat.groupChat.dto.command.ShareNewsCommand;
@@ -62,6 +63,7 @@ class ChatMessageServiceTest {
     private QuestProgressService questProgressService;
     private VoteRepository voteRepository;
     private VoteOptionRepository voteOptionRepository;
+    private OpenAiChatClient openAiChatClient;
 
     @BeforeEach
     void setUp() {
@@ -75,6 +77,7 @@ class ChatMessageServiceTest {
         questProgressService = mock(QuestProgressService.class);
         voteRepository = mock(VoteRepository.class);
         voteOptionRepository = mock(VoteOptionRepository.class);
+        openAiChatClient = mock(OpenAiChatClient.class);
 
         chatMessageService = new ChatMessageService(
                 chatMessageRepository,
@@ -85,6 +88,7 @@ class ChatMessageServiceTest {
                 questProgressService,
                 voteRepository,
                 voteOptionRepository,
+                openAiChatClient,
                 newsClusterRepository,
                 chatMessageNewsShareService
         );
@@ -161,6 +165,71 @@ class ChatMessageServiceTest {
         assertEquals(ErrorCode.CHAT_MESSAGE_EMPTY, exception.getErrorCode());
         verify(chatMessageRepository, never()).save(any());
         verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("sendMessage handles /영 command as user message and system message")
+    void sendMessage_youngCommand_success() {
+        UUID userId = UUID.randomUUID();
+
+        User user = User.builder()
+                .email("test@test.com")
+                .nickname("groupUser")
+                .password("password")
+                .build();
+        ReflectionTestUtils.setField(user, "userId", userId);
+
+        Group group = Group.builder().name("group-1").build();
+        ReflectionTestUtils.setField(group, "id", 1L);
+
+        GroupMember groupMember = GroupMember.builder()
+                .user(user)
+                .group(group)
+                .role(GroupMember.GroupMemberRole.MEMBER)
+                .status(GroupMember.GroupMemberStatus.ACTIVE)
+                .build();
+
+        ChatMessage savedUserMessage = ChatMessage.builder()
+                .user(user)
+                .group(group)
+                .messageType(MessageType.CHAT)
+                .content("영")
+                .createdAt(OffsetDateTime.now())
+                .build();
+        ReflectionTestUtils.setField(savedUserMessage, "id", 22L);
+
+        ChatMessage savedSystemMessage = ChatMessage.builder()
+                .group(group)
+                .messageType(MessageType.SYSTEM)
+                .content("차")
+                .createdAt(OffsetDateTime.now())
+                .build();
+        ReflectionTestUtils.setField(savedSystemMessage, "id", 23L);
+
+        when(groupMemberRepository.findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE))
+                .thenReturn(Optional.of(groupMember));
+        when(chatMessageRepository.countByGroup_IdAndUser_UserIdAndCreatedAtAfter(
+                eq(1L), eq(userId), any(OffsetDateTime.class))
+        ).thenReturn(0L);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(chatMessageRepository.save(any(ChatMessage.class)))
+                .thenReturn(savedUserMessage, savedSystemMessage);
+
+        ArgumentCaptor<ChatMessage> captor = ArgumentCaptor.forClass(ChatMessage.class);
+
+        chatMessageService.sendMessage("/영", userId, null);
+
+        verify(openAiChatClient, never()).ask(any(), any(), any());
+        verify(chatMessageRepository, times(2)).save(captor.capture());
+        verify(eventPublisher, times(2)).publishEvent(any(ChatMessageCreatedEvent.class));
+        verify(questProgressService).handleEvent(userId, QuestEventType.SEND_GROUP_CHAT);
+
+        List<ChatMessage> capturedMessages = captor.getAllValues();
+        assertEquals(MessageType.CHAT, capturedMessages.get(0).getMessageType());
+        assertEquals("영", capturedMessages.get(0).getContent());
+        assertEquals(MessageType.SYSTEM, capturedMessages.get(1).getMessageType());
+        assertEquals("차", capturedMessages.get(1).getContent());
+        assertNull(capturedMessages.get(1).getUser());
     }
 
     @Test
@@ -303,3 +372,4 @@ class ChatMessageServiceTest {
         assertEquals("https://image.test/thumb.png", result.newsShare().thumbnailUrl());
     }
 }
+

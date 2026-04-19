@@ -2,6 +2,7 @@ package com.solv.wefin.domain.chat.groupChat.service;
 
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
+import com.solv.wefin.domain.chat.aiChat.client.OpenAiChatClient;
 import com.solv.wefin.domain.chat.common.constant.ChatScope;
 import com.solv.wefin.domain.chat.common.service.ChatSpamGuard;
 import com.solv.wefin.domain.chat.groupChat.dto.command.ShareNewsCommand;
@@ -57,8 +58,16 @@ public class ChatMessageService {
     private final QuestProgressService questProgressService;
     private final VoteRepository voteRepository;
     private final VoteOptionRepository voteOptionRepository;
+    private final OpenAiChatClient openAiChatClient;
 
     private static final long SPAM_WINDOW_SECONDS = 3L;
+    private static final String YOUNG_COMMAND = "/영";
+    private static final String YOUNG_RESPONSE = "차";
+    private static final String WEFINI_COMMAND_PREFIX = "/wefini";
+    private static final String YOUNG_COMMAND_LITERAL = "/\uC601";
+    private static final String YOUNG_DISPLAY_MESSAGE_LITERAL = "\uC601";
+    private static final String YOUNG_RESPONSE_LITERAL = "\uCC28";
+    private static final String WEFINI_USAGE_MESSAGE = "/wefini 뒤에 질문을 함께 입력해 주세요.";
     private static final String SYSTEM = "시스템";
     private static final int MAX_MESSAGE_LENGTH = 1000;
     private static final int MAX_PAGE_SIZE = 100;
@@ -78,8 +87,6 @@ public class ChatMessageService {
         Group group = findActiveUserGroup(userId);
         Long groupId = group.getId();
 
-        ChatMessage replyTarget = findReplyTarget(replyToMessageId, groupId);
-
         String blockKey = ChatScope.groupKey(groupId, userId);
         Object lock = chatLocks.computeIfAbsent(blockKey, key -> new Object());
 
@@ -97,6 +104,12 @@ public class ChatMessageService {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+            if (handleCommandMessage(content, userId, user, group)) {
+                return;
+            }
+
+            ChatMessage replyTarget = findReplyTarget(replyToMessageId, groupId);
+
             ChatMessage savedMessage = chatMessageRepository.save(
                     ChatMessage.createUserMessage(user, group, content, replyTarget)
             );
@@ -105,6 +118,56 @@ public class ChatMessageService {
         }
 
         questProgressService.handleEvent(userId, QuestEventType.SEND_GROUP_CHAT);
+    }
+
+    private boolean handleCommandMessage(String content, UUID userId, User user, Group group) {
+        String trimmed = content.trim();
+
+        if (trimmed.equals(YOUNG_COMMAND_LITERAL)) {
+            publishUserMessage(user, group, YOUNG_DISPLAY_MESSAGE_LITERAL);
+            publishSystemMessage(group, YOUNG_RESPONSE_LITERAL);
+            handleQuestEventSafely(userId, QuestEventType.SEND_GROUP_CHAT);
+            return true;
+        }
+
+        if (trimmed.equals(WEFINI_COMMAND_PREFIX)) {
+            publishSystemMessage(group, WEFINI_USAGE_MESSAGE);
+            return true;
+        }
+
+        if (!trimmed.startsWith(WEFINI_COMMAND_PREFIX + " ")) {
+            return false;
+        }
+
+        String question = trimmed.substring(WEFINI_COMMAND_PREFIX.length()).trim();
+        if (question.isBlank()) {
+            publishSystemMessage(group, WEFINI_USAGE_MESSAGE);
+            return true;
+        }
+
+        publishUserMessage(user, group, content);
+
+        String answer = openAiChatClient.ask(List.of(), question, null);
+        publishSystemMessage(group, answer);
+        handleQuestEventSafely(userId, QuestEventType.USE_AI_CHAT);
+        handleQuestEventSafely(userId, QuestEventType.SEND_GROUP_CHAT);
+        return true;
+    }
+
+    private void publishUserMessage(User user, Group group, String content) {
+        ChatMessage userMessage = chatMessageRepository.save(
+                ChatMessage.createUserMessage(user, group, content, null)
+        );
+
+        eventPublisher.publishEvent(toEvent(userMessage));
+    }
+
+    private void publishSystemMessage(Group group, String content) {
+        ChatMessage systemMessage = chatMessageRepository.save(
+                ChatMessage.createSystemMessage(group, content)
+        );
+
+        eventPublisher.publishEvent(toEvent(systemMessage));
     }
 
     @Transactional
