@@ -23,11 +23,9 @@ public class RoomDetailResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     private RoomStatus status;
-    private Integer totalTurns;
     private List<ParticipantDetailDto> participants;
 
-    public static RoomDetailResponse from(GameRoom room, List<ParticipantDetailDto> participants,
-                                           int totalTurns) {
+    public static RoomDetailResponse from(GameRoom room, List<ParticipantDetailDto> participants) {
         return new RoomDetailResponse(
                 room.getRoomId(),
                 room.getUserId(),
@@ -37,7 +35,6 @@ public class RoomDetailResponse {
                 room.getStartDate(),
                 room.getEndDate(),
                 room.getStatus(),
-                totalTurns,
                 participants
         );
     }
