@@ -78,7 +78,7 @@ class GroupInviteServiceTest {
                     GroupInvite.InviteStatus.PENDING
             );
 
-            when(groupRepository.findById(1L)).thenReturn(Optional.of(group));
+            when(groupRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(group));
             when(groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
                     userId,
                     group,
@@ -103,7 +103,7 @@ class GroupInviteServiceTest {
                     () -> assertThat(result.expiredAt()).isNotNull()
             );
 
-            verify(groupRepository).findById(1L);
+            verify(groupRepository).findByIdForUpdate(1L);
             verify(groupMemberRepository).existsByUser_UserIdAndGroupAndStatus(
                     userId,
                     group,
@@ -139,7 +139,7 @@ class GroupInviteServiceTest {
                     GroupInvite.InviteStatus.PENDING
             );
 
-            when(groupRepository.findById(1L)).thenReturn(Optional.of(group));
+            when(groupRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(group));
             when(groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
                     userId,
                     group,
@@ -163,7 +163,7 @@ class GroupInviteServiceTest {
                     () -> assertThat(result.expiredAt()).isNotNull()
             );
 
-            verify(groupRepository).findById(1L);
+            verify(groupRepository).findByIdForUpdate(1L);
             verify(groupMemberRepository).existsByUser_UserIdAndGroupAndStatus(
                     userId,
                     group,
@@ -184,7 +184,7 @@ class GroupInviteServiceTest {
             UUID userId = UUID.randomUUID();
             Group homeGroup = createGroup(1L, "리더의 그룹", GroupType.HOME);
 
-            when(groupRepository.findById(1L)).thenReturn(Optional.of(homeGroup));
+            when(groupRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(homeGroup));
 
             BusinessException exception = assertThrows(
                     BusinessException.class,
@@ -206,7 +206,7 @@ class GroupInviteServiceTest {
             UUID userId = UUID.randomUUID();
             Group group = createGroup(1L, "테스트 그룹", GroupType.SHARED);
 
-            when(groupRepository.findById(1L)).thenReturn(Optional.of(group));
+            when(groupRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(group));
             when(groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
                     userId,
                     group,

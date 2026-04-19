@@ -102,7 +102,7 @@ public class GroupService {
 
     @Transactional
     public GroupInviteInfo createInviteCode(Long groupId, UUID userId) {
-        Group group = groupRepository.findById(groupId)
+        Group group = groupRepository.findByIdForUpdate(groupId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
 
         if (group.isHomeGroup()) {
