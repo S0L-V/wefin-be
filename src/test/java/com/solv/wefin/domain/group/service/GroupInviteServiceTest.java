@@ -252,7 +252,7 @@ class GroupInviteServiceTest {
                     GroupInvite.InviteStatus.PENDING
             );
 
-            when(groupRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(group));
+            when(groupRepository.findById(1L)).thenReturn(Optional.of(group));
             when(groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
                     userId,
                     group,
@@ -275,7 +275,7 @@ class GroupInviteServiceTest {
                     () -> assertThat(result.expiredAt()).isNotNull()
             );
 
-            verify(groupRepository).findByIdForUpdate(1L);
+            verify(groupRepository).findById(1L);
             verify(groupMemberRepository).existsByUser_UserIdAndGroupAndStatus(
                     userId,
                     group,
@@ -295,7 +295,7 @@ class GroupInviteServiceTest {
 
             Group group = createGroup(1L, "테스트 그룹", GroupType.SHARED);
 
-            when(groupRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(group));
+            when(groupRepository.findById(1L)).thenReturn(Optional.of(group));
             when(groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
                     userId,
                     group,
@@ -313,6 +313,26 @@ class GroupInviteServiceTest {
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_INVITE_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("홈 그룹이면 최신 초대 코드 조회가 불가하다")
+        void getLatestInviteCode_fail_when_home_group() throws Exception {
+            UUID userId = UUID.randomUUID();
+            Group homeGroup = createGroup(1L, "리더의 그룹", GroupType.HOME);
+
+            when(groupRepository.findById(1L)).thenReturn(Optional.of(homeGroup));
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> groupService.getLatestInviteCode(1L, userId)
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_HOME_INVITE_NOT_ALLOWED);
+            verify(groupMemberRepository, never()).existsByUser_UserIdAndGroupAndStatus(any(), any(), any());
+            verify(groupInviteRepository, never()).findFirstByGroupAndStatusAndExpiredAtAfterOrderByCreatedAtDesc(
+                    any(), any(), any()
+            );
         }
     }
 }

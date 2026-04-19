@@ -136,8 +136,12 @@ public class GroupService {
     }
 
     public GroupInviteInfo getLatestInviteCode(Long groupId, UUID userId) {
-        Group group = groupRepository.findByIdForUpdate(groupId)
+        Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
+
+        if (group.isHomeGroup()) {
+            throw new BusinessException(ErrorCode.GROUP_HOME_INVITE_NOT_ALLOWED);
+        }
 
         boolean isMember = groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
                 userId,

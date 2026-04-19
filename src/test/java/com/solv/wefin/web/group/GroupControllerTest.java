@@ -6,6 +6,8 @@ import com.solv.wefin.domain.group.dto.LeaveGroupInfo;
 import com.solv.wefin.domain.group.entity.GroupInvite;
 import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.global.config.security.JwtProvider;
+import com.solv.wefin.global.error.BusinessException;
+import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -137,6 +139,23 @@ class GroupControllerTest {
                 .andExpect(jsonPath("$.data.inviteCode").value("550e8400-e29b-41d4-a716-446655440000"))
                 .andExpect(jsonPath("$.data.status").value("PENDING"))
                 .andExpect(jsonPath("$.data.expiredAt").exists());
+    }
+
+    @Test
+    @DisplayName("홈 그룹이면 최신 초대 코드 조회에 실패한다")
+    void getLatestInviteCode_fail_when_home_group() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        given(groupService.getLatestInviteCode(1L, userId))
+                .willThrow(new BusinessException(ErrorCode.GROUP_HOME_INVITE_NOT_ALLOWED));
+
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(userId, null, List.of());
+
+        mockMvc.perform(get("/api/groups/{groupId}/invite-codes/latest", 1L)
+                        .with(authentication(authentication)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("GROUP_HOME_INVITE_NOT_ALLOWED"));
     }
 
     @Test
