@@ -7,6 +7,8 @@ import com.solv.wefin.domain.game.room.repository.GameRoomRepository;
 import com.solv.wefin.domain.game.stock.entity.StockDaily;
 import com.solv.wefin.domain.game.stock.entity.StockInfo;
 import com.solv.wefin.domain.game.stock.repository.StockDailyRepository;
+import com.solv.wefin.domain.game.stock.repository.StockInfoRepository;
+import com.solv.wefin.domain.game.stock.repository.StockInfoRepository.SectorKeywordCount;
 import com.solv.wefin.domain.game.turn.entity.GameTurn;
 import com.solv.wefin.domain.game.turn.entity.TurnStatus;
 import com.solv.wefin.domain.game.turn.repository.GameTurnRepository;
@@ -32,6 +34,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -52,6 +56,9 @@ class StockSearchServiceTest {
 
     @Mock
     private StockDailyRepository stockDailyRepository;
+
+    @Mock
+    private StockInfoRepository stockInfoRepository;
 
     private static final UUID TEST_USER_ID = UUID.fromString("00000000-0000-4000-a000-000000000001");
     private static final Long TEST_GROUP_ID = 1L;
@@ -224,6 +231,212 @@ class StockSearchServiceTest {
         verify(stockDailyRepository, never()).searchByKeywordAndTradeDate(any(), any(), any());
     }
 
+    // === 섹터 목록 조회 테스트 ===
+
+    @Test
+    @DisplayName("섹터 목록 조회 성공 — 섹터별 키워드 개수 반환")
+    void getSectors_success() {
+        // Given
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        GameParticipant participant = GameParticipant.createLeader(gameRoom, TEST_USER_ID);
+
+        given(gameRoomRepository.findById(roomId)).willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, TEST_USER_ID))
+                .willReturn(Optional.of(participant));
+
+        SectorKeywordCount it = createSectorKeywordCount("IT", 5L);
+        SectorKeywordCount finance = createSectorKeywordCount("금융", 6L);
+        given(stockInfoRepository.findSectorsWithKeywordCount()).willReturn(List.of(it, finance));
+
+        // When
+        List<SectorKeywordCount> result = stockSearchService.getSectors(roomId, TEST_USER_ID);
+
+        // Then
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getSector()).isEqualTo("IT");
+        assertThat(result.get(0).getKeywordCount()).isEqualTo(5L);
+        assertThat(result.get(1).getSector()).isEqualTo("금융");
+    }
+
+    @Test
+    @DisplayName("섹터 목록 조회 실패 — 참가자가 아니면 ROOM_NOT_PARTICIPANT")
+    void getSectors_notParticipant() {
+        // Given
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        UUID outsider = UUID.fromString("00000000-0000-4000-a000-000000000099");
+
+        given(gameRoomRepository.findById(roomId)).willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, outsider))
+                .willReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> stockSearchService.getSectors(roomId, outsider))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.ROOM_NOT_PARTICIPANT));
+
+        verify(stockInfoRepository, never()).findSectorsWithKeywordCount();
+    }
+
+    // === 키워드 목록 조회 테스트 ===
+
+    @Test
+    @DisplayName("키워드 목록 조회 성공 — 해당 섹터의 키워드 반환")
+    void getKeywords_success() {
+        // Given
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        GameParticipant participant = GameParticipant.createLeader(gameRoom, TEST_USER_ID);
+
+        given(gameRoomRepository.findById(roomId)).willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, TEST_USER_ID))
+                .willReturn(Optional.of(participant));
+        given(stockInfoRepository.findKeywordsBySector("IT"))
+                .willReturn(List.of("반도체", "소프트웨어", "하드웨어"));
+
+        // When
+        List<String> result = stockSearchService.getKeywords(roomId, TEST_USER_ID, "IT");
+
+        // Then
+        assertThat(result).hasSize(3);
+        assertThat(result).containsExactly("반도체", "소프트웨어", "하드웨어");
+    }
+
+    @Test
+    @DisplayName("키워드 목록 조회 — 존재하지 않는 섹터면 빈 리스트 반환")
+    void getKeywords_emptySector() {
+        // Given
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        GameParticipant participant = GameParticipant.createLeader(gameRoom, TEST_USER_ID);
+
+        given(gameRoomRepository.findById(roomId)).willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, TEST_USER_ID))
+                .willReturn(Optional.of(participant));
+        given(stockInfoRepository.findKeywordsBySector("없는섹터"))
+                .willReturn(Collections.emptyList());
+
+        // When
+        List<String> result = stockSearchService.getKeywords(roomId, TEST_USER_ID, "없는섹터");
+
+        // Then
+        assertThat(result).isEmpty();
+    }
+
+    // === 섹터+키워드 종목 목록 조회 테스트 ===
+
+    @Test
+    @DisplayName("종목 목록 조회 성공 — 종가 포함, 이름순 정렬")
+    void getStocksByKeyword_success() {
+        // Given
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        GameParticipant participant = GameParticipant.createLeader(gameRoom, TEST_USER_ID);
+        GameTurn activeTurn = GameTurn.createFirst(gameRoom);
+
+        StockInfo samsung = StockInfo.create("005930", "삼성전자", "KOSPI", "IT");
+        StockInfo samsungSDI = StockInfo.create("006400", "삼성SDI", "KOSPI", "IT");
+        StockDaily daily1 = createStockDaily(samsung, TURN_DATE, new BigDecimal("71000"));
+        StockDaily daily2 = createStockDaily(samsungSDI, TURN_DATE, new BigDecimal("450000"));
+
+        given(gameRoomRepository.findById(roomId)).willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, TEST_USER_ID))
+                .willReturn(Optional.of(participant));
+        given(gameTurnRepository.findByGameRoomAndStatus(gameRoom, TurnStatus.ACTIVE))
+                .willReturn(Optional.of(activeTurn));
+        given(stockInfoRepository.findBySectorAndKeywordOrderByStockNameAsc("IT", "반도체"))
+                .willReturn(List.of(samsung, samsungSDI));
+        given(stockDailyRepository.findAllByStockInfoInAndTradeDate(List.of(samsung, samsungSDI), TURN_DATE))
+                .willReturn(List.of(daily1, daily2));
+
+        // When
+        List<StockDaily> result = stockSearchService.getStocksByKeyword(roomId, TEST_USER_ID, "IT", "반도체");
+
+        // Then
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getStockInfo().getStockName()).isEqualTo("삼성전자");
+        assertThat(result.get(1).getStockInfo().getStockName()).isEqualTo("삼성SDI");
+    }
+
+    @Test
+    @DisplayName("종목 목록 조회 — 해당 키워드에 종목이 없으면 빈 리스트")
+    void getStocksByKeyword_noStocks() {
+        // Given
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        GameParticipant participant = GameParticipant.createLeader(gameRoom, TEST_USER_ID);
+        GameTurn activeTurn = GameTurn.createFirst(gameRoom);
+
+        given(gameRoomRepository.findById(roomId)).willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, TEST_USER_ID))
+                .willReturn(Optional.of(participant));
+        given(gameTurnRepository.findByGameRoomAndStatus(gameRoom, TurnStatus.ACTIVE))
+                .willReturn(Optional.of(activeTurn));
+        given(stockInfoRepository.findBySectorAndKeywordOrderByStockNameAsc("없는섹터", "없는키워드"))
+                .willReturn(Collections.emptyList());
+
+        // When
+        List<StockDaily> result = stockSearchService.getStocksByKeyword(roomId, TEST_USER_ID, "없는섹터", "없는키워드");
+
+        // Then
+        assertThat(result).isEmpty();
+        verify(stockDailyRepository, never()).findAllByStockInfoInAndTradeDate(any(), any());
+    }
+
+    @Test
+    @DisplayName("종목 목록 조회 — 턴 날짜에 종가 없는 종목은 제외")
+    void getStocksByKeyword_excludeNoPriceStocks() {
+        // Given — 종목 2개 중 1개만 해당 날짜에 종가 존재
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        GameParticipant participant = GameParticipant.createLeader(gameRoom, TEST_USER_ID);
+        GameTurn activeTurn = GameTurn.createFirst(gameRoom);
+
+        StockInfo withPrice = StockInfo.create("005930", "삼성전자", "KOSPI", "IT");
+        StockInfo noPrice = StockInfo.create("999999", "상장폐지종목", "KOSPI", "IT");
+        StockDaily daily = createStockDaily(withPrice, TURN_DATE, new BigDecimal("71000"));
+
+        given(gameRoomRepository.findById(roomId)).willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, TEST_USER_ID))
+                .willReturn(Optional.of(participant));
+        given(gameTurnRepository.findByGameRoomAndStatus(gameRoom, TurnStatus.ACTIVE))
+                .willReturn(Optional.of(activeTurn));
+        given(stockInfoRepository.findBySectorAndKeywordOrderByStockNameAsc("IT", "반도체"))
+                .willReturn(List.of(withPrice, noPrice));
+        given(stockDailyRepository.findAllByStockInfoInAndTradeDate(List.of(withPrice, noPrice), TURN_DATE))
+                .willReturn(List.of(daily));
+
+        // When
+        List<StockDaily> result = stockSearchService.getStocksByKeyword(roomId, TEST_USER_ID, "IT", "반도체");
+
+        // Then — 종가 있는 1개만 반환
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getStockInfo().getStockName()).isEqualTo("삼성전자");
+    }
+
+    @Test
+    @DisplayName("종목 목록 조회 실패 — ACTIVE 턴 없으면 GAME_NOT_STARTED")
+    void getStocksByKeyword_gameNotStarted() {
+        // Given
+        GameRoom gameRoom = createGameRoom();
+        UUID roomId = gameRoom.getRoomId();
+        GameParticipant participant = GameParticipant.createLeader(gameRoom, TEST_USER_ID);
+
+        given(gameRoomRepository.findById(roomId)).willReturn(Optional.of(gameRoom));
+        given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, TEST_USER_ID))
+                .willReturn(Optional.of(participant));
+        given(gameTurnRepository.findByGameRoomAndStatus(gameRoom, TurnStatus.ACTIVE))
+                .willReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> stockSearchService.getStocksByKeyword(roomId, TEST_USER_ID, "IT", "반도체"))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.GAME_NOT_STARTED));
+    }
+
     // === 헬퍼 메서드 ===
 
     private GameRoom createGameRoom() {
@@ -239,5 +452,12 @@ class StockSearchServiceTest {
                 openPrice.add(new BigDecimal("500")),
                 new BigDecimal("1000000"),
                 new BigDecimal("1.5"));
+    }
+
+    private SectorKeywordCount createSectorKeywordCount(String sector, Long keywordCount) {
+        SectorKeywordCount projection = mock(SectorKeywordCount.class);
+        lenient().when(projection.getSector()).thenReturn(sector);
+        lenient().when(projection.getKeywordCount()).thenReturn(keywordCount);
+        return projection;
     }
 }
