@@ -86,6 +86,9 @@ public class StockSearchService {
         if (sector == null || sector.isBlank() || keyword == null || keyword.isBlank()) {
             return List.of();
         }
+        String trimmedSector = sector.trim();
+        String trimmedKeyword = keyword.trim();
+
         GameRoom gameRoom = validateParticipant(roomId, userId);
 
         GameTurn activeTurn = gameTurnRepository.findByGameRoomAndStatus(gameRoom, TurnStatus.ACTIVE)
@@ -95,7 +98,7 @@ public class StockSearchService {
 
         // 해당 섹터+키워드 종목 목록 조회 (이름순)
         List<StockInfo> stockInfos = stockInfoRepository
-                .findBySectorAndKeywordOrderByStockNameAsc(sector, keyword);
+                .findBySectorAndKeywordOrderByStockNameAsc(trimmedSector, trimmedKeyword);
 
         if (stockInfos.isEmpty()) {
             return List.of();
