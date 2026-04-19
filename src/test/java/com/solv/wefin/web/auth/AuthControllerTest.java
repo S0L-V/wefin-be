@@ -371,10 +371,10 @@ class AuthControllerTest {
 
         private String logoutRequest(String refreshToken) {
             return """
-        {
-          "refreshToken": "%s"
-        }
-        """.formatted(refreshToken);
+    {
+      "refreshToken": "%s"
+    }
+    """.formatted(refreshToken);
         }
 
         @Test
@@ -405,10 +405,10 @@ class AuthControllerTest {
         @DisplayName("refreshToken이 비어 있으면 validation 에러를 반환한다")
         void logout_fail_when_refresh_token_blank() throws Exception {
             String requestBody = """
-                {
-                  "refreshToken": ""
-                }
-                """;
+            {
+              "refreshToken": ""
+            }
+            """;
 
             mockMvc.perform(post("/api/auth/logout")
                             .with(csrf())
@@ -446,6 +446,125 @@ class AuthControllerTest {
                     .andExpect(jsonPath("$.status").value(401))
                     .andExpect(jsonPath("$.code").value("AUTH_INVALID_TOKEN"))
                     .andExpect(jsonPath("$.message").value("유효하지 않은 인증 토큰입니다."));
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/auth/password/change")
+    class ChangePasswordTest {
+
+        private String changePasswordRequest(String currentPassword, String newPassword) {
+            return """
+    {
+      "currentPassword": "%s",
+      "newPassword": "%s"
+    }
+    """.formatted(currentPassword, newPassword);
+        }
+
+        @Test
+        @DisplayName("비밀번호 변경 성공 시 200을 반환한다")
+        void changePassword_success() throws Exception {
+            UUID userId = UUID.randomUUID();
+            String requestBody = changePasswordRequest("oldpass123", "newpass123");
+
+            mockMvc.perform(post("/api/auth/password/change")
+                            .with(csrf())
+                            .with(authentication(
+                                    new UsernamePasswordAuthenticationToken(
+                                            userId,
+                                            null,
+                                            AuthorityUtils.NO_AUTHORITIES
+                                    )
+                            ))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value(200))
+                    .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.nullValue()));
+
+            verify(authService).changePassword(userId, "oldpass123", "newpass123");
+        }
+
+        @Test
+        @DisplayName("새 비밀번호가 비어 있으면 validation 에러를 반환한다")
+        void changePassword_fail_when_new_password_blank() throws Exception {
+            UUID userId = UUID.randomUUID();
+
+            String requestBody = """
+        {
+          "currentPassword": "oldpass123",
+          "newPassword": ""
+        }
+        """;
+
+            mockMvc.perform(post("/api/auth/password/change")
+                            .with(csrf())
+                            .with(authentication(
+                                    new UsernamePasswordAuthenticationToken(
+                                            userId,
+                                            null,
+                                            AuthorityUtils.NO_AUTHORITIES
+                                    )
+                            ))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.code").value("AUTH_VALIDATION_FAILED"))
+                    .andExpect(jsonPath("$.data.newPassword").exists());
+        }
+
+        @Test
+        @DisplayName("현재 비밀번호가 일치하지 않으면 400 에러를 반환한다")
+        void changePassword_fail_when_password_mismatch() throws Exception {
+            UUID userId = UUID.randomUUID();
+            String requestBody = changePasswordRequest("wrongpass", "newpass123");
+
+            doThrow(new BusinessException(ErrorCode.AUTH_PASSWORD_MISMATCH))
+                    .when(authService).changePassword(userId, "wrongpass", "newpass123");
+
+            mockMvc.perform(post("/api/auth/password/change")
+                            .with(csrf())
+                            .with(authentication(
+                                    new UsernamePasswordAuthenticationToken(
+                                            userId,
+                                            null,
+                                            AuthorityUtils.NO_AUTHORITIES
+                                    )
+                            ))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.code").value("AUTH_PASSWORD_MISMATCH"))
+                    .andExpect(jsonPath("$.message").value("현재 비밀번호가 일치하지 않습니다."));
+        }
+
+        @Test
+        @DisplayName("새 비밀번호가 기존과 같으면 400 에러를 반환한다")
+        void changePassword_fail_when_same_as_old() throws Exception {
+            UUID userId = UUID.randomUUID();
+            String requestBody = changePasswordRequest("oldpass123", "oldpass123");
+
+            doThrow(new BusinessException(ErrorCode.AUTH_PASSWORD_SAME_AS_OLD))
+                    .when(authService).changePassword(userId, "oldpass123", "oldpass123");
+
+            mockMvc.perform(post("/api/auth/password/change")
+                            .with(csrf())
+                            .with(authentication(
+                                    new UsernamePasswordAuthenticationToken(
+                                            userId,
+                                            null,
+                                            AuthorityUtils.NO_AUTHORITIES
+                                    )
+                            ))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.code").value("AUTH_PASSWORD_SAME_AS_OLD"))
+                    .andExpect(jsonPath("$.message").value("새 비밀번호는 기존 비밀번호와 달라야 합니다."));
         }
     }
 }

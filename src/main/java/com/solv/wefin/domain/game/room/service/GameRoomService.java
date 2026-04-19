@@ -57,11 +57,11 @@ public class GameRoomService {
             throw new BusinessException(ErrorCode.ROOM_HOST_ALREADY_EXISTS);
         }
 
-        // 방장 횟수 제한 1일 1회
+        // 방장 횟수 제한 1일 3회
         OffsetDateTime todayStart = LocalDate.now().atStartOfDay().atZone(ZoneId.systemDefault()).toOffsetDateTime();
         OffsetDateTime todayEnd = todayStart.plusDays(1);
 
-        if (gameRoomRepository.existsByUserIdAndStartedAtBetween(userId, todayStart, todayEnd)) {
+        if (gameRoomRepository.countByUserIdAndStartedAtBetween(userId, todayStart, todayEnd) >= 3) {
             throw new BusinessException(ErrorCode.ROOM_HOST_DAILY_LIMIT);
         }
 
@@ -243,11 +243,11 @@ public class GameRoomService {
             throw new BusinessException(ErrorCode.ROOM_NOT_HOST);
         }
 
-        // 4. ACTIVE 참가자 2명 이상인지 확인
+        // 4. ACTIVE 참가자 1명 이상인지 확인
         List<GameParticipant> activeParticipants = gameParticipantRepository
                 .findByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE);
 
-        if (activeParticipants.size() < 2) {
+        if (activeParticipants.isEmpty()) {
             throw new BusinessException(ErrorCode.ROOM_MIN_PLAYERS);
         }
 

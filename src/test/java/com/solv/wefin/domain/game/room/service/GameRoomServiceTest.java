@@ -75,9 +75,9 @@ class GameRoomServiceTest {
                 .willReturn(false);
         given(gameRoomRepository.existsByUserIdAndStatusIn(any(UUID.class), any(List.class)))
                 .willReturn(false);
-        given(gameRoomRepository.existsByUserIdAndStartedAtBetween(
+        given(gameRoomRepository.countByUserIdAndStartedAtBetween(
                 any(UUID.class), any(OffsetDateTime.class), any(OffsetDateTime.class)))
-                .willReturn(false);
+                .willReturn(0L);
         // DB 최초 거래일 — 방 생성 시 시작일 범위 하한
         given(stockDailyRepository.findEarliestTradeDate())
                 .willReturn(Optional.of(LocalDate.of(2021, 1, 4)));
@@ -108,9 +108,9 @@ class GameRoomServiceTest {
                 .willReturn(false);
         given(gameRoomRepository.existsByUserIdAndStatusIn(any(UUID.class), any(List.class)))
                 .willReturn(false);
-        given(gameRoomRepository.existsByUserIdAndStartedAtBetween(
+        given(gameRoomRepository.countByUserIdAndStartedAtBetween(
                 any(UUID.class), any(OffsetDateTime.class), any(OffsetDateTime.class)))
-                .willReturn(false);
+                .willReturn(0L);
         given(stockDailyRepository.findEarliestTradeDate())
                 .willReturn(Optional.of(LocalDate.of(2021, 1, 4)));
         LocalDate adjustedTradeDate = LocalDate.of(2022, 1, 3);
@@ -128,16 +128,16 @@ class GameRoomServiceTest {
     }
 
     @Test
-    @DisplayName("게임방 생성 실패 — 방장 1일 1회 제한 위반 시 예외 발생")
+    @DisplayName("게임방 생성 실패 — 방장 1일 3회 제한 위반 시 예외 발생")
     void createRoom_dailyLimitExceeded() {
         // Given — 그룹/방장 활성 방 없음, 오늘 이미 게임 시작 이력 있음
         given(gameRoomRepository.existsByGroupIdAndStatusIn(any(Long.class), any(List.class)))
                 .willReturn(false);
         given(gameRoomRepository.existsByUserIdAndStatusIn(any(UUID.class), any(List.class)))
                 .willReturn(false);
-        given(gameRoomRepository.existsByUserIdAndStartedAtBetween(
+        given(gameRoomRepository.countByUserIdAndStartedAtBetween(
                 any(UUID.class), any(OffsetDateTime.class), any(OffsetDateTime.class)))
-                .willReturn(true);
+                .willReturn(3L);
 
         CreateRoomCommand request = createCommand();
 
@@ -695,9 +695,9 @@ class GameRoomServiceTest {
     }
 
     @Test
-    @DisplayName("게임 시작 실패 — 참가자 2명 미만")
+    @DisplayName("게임 시작 실패 — ACTIVE 참가자 0명이면 ROOM_MIN_PLAYERS")
     void startRoom_minPlayers() {
-        // Given — 방장 1명만 있는 방
+        // Given — ACTIVE 참가자가 아무도 없는 방 (전원 퇴장 등)
         GameRoom gameRoom = createGameRoom();
         UUID roomId = gameRoom.getRoomId();
         GameParticipant leader = GameParticipant.createLeader(gameRoom, TEST_USER_ID);
@@ -707,7 +707,7 @@ class GameRoomServiceTest {
         given(gameParticipantRepository.findByGameRoomAndUserId(gameRoom, TEST_USER_ID))
                 .willReturn(Optional.of(leader));
         given(gameParticipantRepository.findByGameRoomAndStatus(gameRoom, ParticipantStatus.ACTIVE))
-                .willReturn(List.of(leader)); // 1명만
+                .willReturn(List.of()); // 0명
 
         // When & Then
         assertThatThrownBy(() -> gameRoomService.startRoom(roomId, TEST_USER_ID))
