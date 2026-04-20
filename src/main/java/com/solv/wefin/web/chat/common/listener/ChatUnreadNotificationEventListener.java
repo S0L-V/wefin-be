@@ -37,17 +37,22 @@ public class ChatUnreadNotificationEventListener {
                 .toList();
 
         for (UUID recipientId : recipientIds) {
-            sendUnreadNotification(
-                    recipientId,
-                    ChatUnreadNotificationResponse.of(
-                            "GLOBAL",
-                            event.getMessageId(),
-                            null,
-                            event.getSender(),
-                            event.getContent(),
-                            chatReadStateService.getUnreadInfoSnapshot(recipientId)
-                    )
-            );
+            try {
+                ChatUnreadInfo info = chatReadStateService.getUnreadInfoSnapshot(recipientId);
+                sendUnreadNotification(
+                        recipientId,
+                        ChatUnreadNotificationResponse.of(
+                                "GLOBAL",
+                                event.getMessageId(),
+                                null,
+                                event.getSender(),
+                                event.getContent(),
+                                info
+                        )
+                );
+            } catch (RuntimeException e) {
+                log.warn("chat unread snapshot failed userId={}", recipientId, e);
+            }
         }
     }
 

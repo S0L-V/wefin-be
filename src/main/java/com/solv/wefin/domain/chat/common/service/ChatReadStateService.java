@@ -13,8 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -52,24 +52,18 @@ public class ChatReadStateService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        GroupMember groupMember = groupMemberRepository.findByUser_UserIdAndStatus(
-                        userId,
-                        GroupMember.GroupMemberStatus.ACTIVE
-                )
-                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_MEMBER_FORBIDDEN));
-
+        Optional<GroupMember> groupMemberOpt = groupMemberRepository
+                .findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE);
         long globalUnreadCount = countGlobalUnread(user.getLastReadGlobalMessageId(), userId);
-        long groupUnreadCount = countGroupUnread(
-                groupMember.getGroup().getId(),
-                groupMember.getLastReadChatMessageId(),
-                userId
-        );
+        long groupUnreadCount = groupMemberOpt
+                .map(gm -> countGroupUnread(gm.getGroup().getId(), gm.getLastReadChatMessageId(), userId))
+                .orElse(0L);
 
         return new ChatUnreadInfo(
                 globalUnreadCount,
                 groupUnreadCount,
                 user.getLastReadGlobalMessageId(),
-                groupMember.getLastReadChatMessageId()
+                groupMemberOpt.map(GroupMember::getLastReadChatMessageId).orElse(null)
         );
     }
 
