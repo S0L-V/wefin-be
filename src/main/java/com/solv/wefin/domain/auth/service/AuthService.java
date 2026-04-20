@@ -10,9 +10,10 @@ import com.solv.wefin.domain.auth.entity.VerificationPurpose;
 import com.solv.wefin.domain.auth.repository.RefreshTokenRepository;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.group.entity.Group;
+import com.solv.wefin.domain.group.entity.GroupMember;
+import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.domain.quest.entity.QuestEventType;
-import com.solv.wefin.domain.quest.entity.UserQuest;
 import com.solv.wefin.domain.quest.service.QuestProgressService;
 import com.solv.wefin.domain.quest.service.UserQuestService;
 import com.solv.wefin.domain.trading.account.service.VirtualAccountService;
@@ -28,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -49,6 +51,7 @@ public class AuthService {
     private final QuestProgressService questProgressService;
     private final VirtualAccountService virtualAccountService;
     private final UserQuestService userQuestService;
+    private final GroupMemberRepository groupMemberRepository;
 
     @Transactional
     public SignupInfo signup(SignupCommand command) {
@@ -232,6 +235,34 @@ public class AuthService {
             throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
         }
         savedToken.revoke();
+    }
+
+    @Transactional
+    public void withdraw(UUID userId, String password) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.AUTH_UNAUTHORIZED);
+        }
+
+        User user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new BusinessException(ErrorCode.AUTH_PASSWORD_MISMATCH);
+        }
+
+        List<GroupMember> activeMembers = groupMemberRepository.findAllByUser_UserIdAndStatus(
+                userId,
+                GroupMember.GroupMemberStatus.ACTIVE
+        );
+
+        for (GroupMember activeMember : activeMembers) {
+            activeMember.deactivate();
+        }
+
+        refreshTokenRepository.findById(userId)
+                .ifPresent(RefreshToken::revoke);
+
+        user.withdraw();
     }
 
     private RefreshToken getValidRefreshTokenForUpdate(String refreshToken) {

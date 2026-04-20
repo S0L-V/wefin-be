@@ -10,6 +10,8 @@ import com.solv.wefin.domain.auth.entity.VerificationPurpose;
 import com.solv.wefin.domain.auth.repository.RefreshTokenRepository;
 import com.solv.wefin.domain.auth.repository.UserRepository;
 import com.solv.wefin.domain.group.entity.Group;
+import com.solv.wefin.domain.group.entity.GroupMember;
+import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.domain.group.service.GroupService;
 import com.solv.wefin.domain.quest.entity.QuestEventType;
 import com.solv.wefin.domain.quest.service.QuestProgressService;
@@ -33,6 +35,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -72,6 +75,9 @@ class AuthServiceTest {
 
     @Mock
     private UserQuestService userQuestService;
+
+    @Mock
+    private GroupMemberRepository groupMemberRepository;
 
     @InjectMocks
     private AuthService authService;
@@ -617,6 +623,70 @@ class AuthServiceTest {
             );
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("withdraw")
+    class WithdrawTest {
+
+        @Test
+        @DisplayName("회원 탈퇴에 성공한다")
+        void withdraw_success() {
+            UUID userId = UUID.randomUUID();
+
+            User user = User.builder()
+                    .email("test@example.com")
+                    .nickname("testuser")
+                    .password("encoded-password")
+                    .build();
+
+            ReflectionTestUtils.setField(user, "userId", userId);
+
+            when(userRepository.findByIdForUpdate(userId))
+                    .thenReturn(Optional.of(user));
+            when(passwordEncoder.matches("pass1234", "encoded-password"))
+                    .thenReturn(true);
+            when(groupMemberRepository.findAllByUser_UserIdAndStatus(
+                    userId,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            )).thenReturn(List.of());
+            when(refreshTokenRepository.findById(userId))
+                    .thenReturn(Optional.empty());
+
+            authService.withdraw(userId, "pass1234");
+
+            assertThat(user.getStatus()).isEqualTo(UserStatus.WITHDRAWN);
+            assertThat(user.getHomeGroup()).isNull();
+            verify(refreshTokenRepository).findById(userId);
+        }
+
+        @Test
+        @DisplayName("비밀번호가 일치하지 않으면 탈퇴에 실패한다")
+        void withdraw_fail_when_password_mismatch() {
+            UUID userId = UUID.randomUUID();
+
+            User user = User.builder()
+                    .email("test@example.com")
+                    .nickname("testuser")
+                    .password("encoded-password")
+                    .build();
+
+            ReflectionTestUtils.setField(user, "userId", userId);
+
+            when(userRepository.findByIdForUpdate(userId))
+                    .thenReturn(Optional.of(user));
+            when(passwordEncoder.matches("wrong-password", "encoded-password"))
+                    .thenReturn(false);
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.withdraw(userId, "wrong-password")
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.AUTH_PASSWORD_MISMATCH);
+            verify(groupMemberRepository, never()).findAllByUser_UserIdAndStatus(any(), any());
+            verify(refreshTokenRepository, never()).findById(any());
         }
     }
 }

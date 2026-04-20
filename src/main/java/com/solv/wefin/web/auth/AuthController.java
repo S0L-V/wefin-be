@@ -126,4 +126,13 @@ public class AuthController {
 
         return ApiResponse.success(null);
     }
+
+    @DeleteMapping("/me")
+    public ApiResponse<Void> withdraw(
+            @AuthenticationPrincipal UUID userId,
+            @RequestBody @Valid WithdrawRequest request
+    ) {
+        authService.withdraw(userId, request.getPassword());
+        return ApiResponse.success(null);
+    }
 }
