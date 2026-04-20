@@ -16,6 +16,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -36,6 +37,7 @@ public class ClusterInteractionService {
     private final UserNewsClusterFeedbackRepository feedbackRepository;
     private final ClusterInterestWeightService interestWeightService;
     private final NewsHotProperties newsHotProperties;
+    private final Clock clock;
 
     /**
      * 클러스터 읽음을 기록한다.
@@ -56,7 +58,7 @@ public class ClusterInteractionService {
     public void markRead(UUID userId, Long clusterId) {
         validateActiveCluster(clusterId);
 
-        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now(clock);
         OffsetDateTime staleThreshold = now.minusSeconds(newsHotProperties.markReadThrottleSeconds());
 
         int inserted = readRepository.insertIfAbsent(userId, clusterId, now);

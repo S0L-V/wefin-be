@@ -10,6 +10,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 
 /**
@@ -30,6 +31,11 @@ public class HotAggregationRunner {
     private final HotAggregationMetaRepository metaRepository;
     private final NewsHotProperties newsHotProperties;
     private final JdbcTemplate jdbcTemplate;
+    /**
+     * 윈도우 시작 시각을 산출할 때 사용하는 시계.
+     * 테스트에서 {@code Clock.fixed(...)} 를 주입하면 배치 집계 로직을 시간 의존 없이 검증할 수 있다.
+     */
+    private final Clock clock;
 
     /**
      * 최근 N시간 윈도우 조회수를 ACTIVE 클러스터에 대해 재계산하고 메타 row 를 갱신한다.
@@ -46,7 +52,7 @@ public class HotAggregationRunner {
         }
 
         long start = System.currentTimeMillis(); // 수행 시간 측정 시작
-        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now(clock);
         // 최근 N시간 윈도우 시작 시각 계산
         OffsetDateTime windowStart = now.minusHours(newsHotProperties.windowHours());
 

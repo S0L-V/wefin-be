@@ -41,12 +41,15 @@ class ClusterInteractionServiceTest {
     // windowHours=3, aggIntervalSeconds=300, initialDelaySeconds=30, maxSize=20, throttleSeconds=60
     private static final NewsHotProperties HOT_PROPS =
             new NewsHotProperties(3, 300, 30, 20, 60);
+    // 결정론적 검증을 위해 고정 시각을 주입 (2026-04-20T12:00:00Z)
+    private static final java.time.Clock FIXED_CLOCK = java.time.Clock.fixed(
+            java.time.Instant.parse("2026-04-20T12:00:00Z"), java.time.ZoneOffset.UTC);
 
     @org.junit.jupiter.api.BeforeEach
     void setUp() {
         service = new ClusterInteractionService(
                 newsClusterRepository, readRepository, feedbackRepository,
-                interestWeightService, HOT_PROPS);
+                interestWeightService, HOT_PROPS, FIXED_CLOCK);
     }
 
     @Test
@@ -74,6 +77,26 @@ class ClusterInteractionServiceTest {
 
         verify(newsClusterRepository, never()).incrementUniqueViewerCount(anyLong(), any());
         verify(readRepository).touchReadAtIfStale(eq(USER_ID), eq(CLUSTER_ID), any(), any());
+    }
+
+    @Test
+    @DisplayName("markRead — 고정 Clock 으로 now / staleThreshold 계산이 결정론적임을 검증")
+    void markRead_revisit_passesDeterministicTimestamps() {
+        OffsetDateTime expectedNow = OffsetDateTime.ofInstant(
+                java.time.Instant.parse("2026-04-20T12:00:00Z"), java.time.ZoneOffset.UTC);
+        // throttleSeconds=60 → staleThreshold = now - 60s
+        OffsetDateTime expectedThreshold = expectedNow.minusSeconds(60);
+
+        given(newsClusterRepository.findById(CLUSTER_ID)).willReturn(Optional.of(activeCluster()));
+        given(readRepository.insertIfAbsent(eq(USER_ID), eq(CLUSTER_ID), eq(expectedNow))).willReturn(0);
+        given(readRepository.touchReadAtIfStale(
+                eq(USER_ID), eq(CLUSTER_ID), eq(expectedNow), eq(expectedThreshold))).willReturn(1);
+
+        service.markRead(USER_ID, CLUSTER_ID);
+
+        // Clock.fixed 로 주입된 시각이 그대로 쿼리 파라미터에 전달되는지 확인
+        verify(readRepository).touchReadAtIfStale(
+                eq(USER_ID), eq(CLUSTER_ID), eq(expectedNow), eq(expectedThreshold));
     }
 
     @Test
