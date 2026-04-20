@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -631,7 +632,7 @@ class AuthServiceTest {
     class WithdrawTest {
 
         @Test
-        @DisplayName("회원 탈퇴에 성공한다")
+        @DisplayName("회원 탈퇴 시 ACTIVE 그룹 멤버가 모두 비활성화되고 refresh token이 revoke된다")
         void withdraw_success() {
             UUID userId = UUID.randomUUID();
 
@@ -643,6 +644,10 @@ class AuthServiceTest {
 
             ReflectionTestUtils.setField(user, "userId", userId);
 
+            GroupMember member1 = mock(GroupMember.class);
+            GroupMember member2 = mock(GroupMember.class);
+            RefreshToken refreshToken = mock(RefreshToken.class);
+
             when(userRepository.findByIdForUpdate(userId))
                     .thenReturn(Optional.of(user));
             when(passwordEncoder.matches("pass1234", "encoded-password"))
@@ -650,15 +655,74 @@ class AuthServiceTest {
             when(groupMemberRepository.findAllByUser_UserIdAndStatus(
                     userId,
                     GroupMember.GroupMemberStatus.ACTIVE
-            )).thenReturn(List.of());
+            )).thenReturn(List.of(member1, member2));
+            when(refreshTokenRepository.findById(userId))
+                    .thenReturn(Optional.of(refreshToken));
+
+            authService.withdraw(userId, "pass1234");
+
+            verify(member1).deactivate();
+            verify(member2).deactivate();
+            verify(refreshToken).revoke();
+            assertThat(user.getStatus()).isEqualTo(UserStatus.WITHDRAWN);
+            assertThat(user.getHomeGroup()).isNull();
+        }
+
+        @Test
+        @DisplayName("shared group 리더가 탈퇴하면 다음 ACTIVE 멤버에게 리더가 승계된다")
+        void withdraw_transfers_leadership_when_leader_leaves_shared_group() {
+            UUID userId = UUID.randomUUID();
+
+            User user = User.builder()
+                    .email("test@example.com")
+                    .nickname("testuser")
+                    .password("encoded-password")
+                    .build();
+
+            ReflectionTestUtils.setField(user, "userId", userId);
+
+            Group sharedGroup = Group.createSharedGroup("공유 그룹");
+
+            GroupMember leaderMember = mock(GroupMember.class);
+            GroupMember nextLeader = mock(GroupMember.class);
+
+            when(userRepository.findByIdForUpdate(userId))
+                    .thenReturn(Optional.of(user));
+            when(passwordEncoder.matches("pass1234", "encoded-password"))
+                    .thenReturn(true);
+
+            when(groupMemberRepository.findAllByUser_UserIdAndStatus(
+                    userId,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            )).thenReturn(List.of(leaderMember));
+
+            when(leaderMember.isLeader()).thenReturn(true);
+            when(leaderMember.getGroup()).thenReturn(sharedGroup);
+
+            when(groupMemberRepository.countByGroupAndStatus(
+                    sharedGroup,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            )).thenReturn(1L);
+
+            when(groupMemberRepository.findFirstByGroupAndStatusAndUser_UserIdNotOrderByIdAsc(
+                    sharedGroup,
+                    GroupMember.GroupMemberStatus.ACTIVE,
+                    userId
+            )).thenReturn(Optional.of(nextLeader));
+
             when(refreshTokenRepository.findById(userId))
                     .thenReturn(Optional.empty());
 
             authService.withdraw(userId, "pass1234");
 
+            InOrder inOrder = inOrder(leaderMember, groupMemberRepository, nextLeader);
+
+            inOrder.verify(leaderMember).changeRoleToMember();
+            inOrder.verify(leaderMember).deactivate();
+            inOrder.verify(groupMemberRepository).flush();
+            inOrder.verify(nextLeader).changeRoleToLeader();
+
             assertThat(user.getStatus()).isEqualTo(UserStatus.WITHDRAWN);
-            assertThat(user.getHomeGroup()).isNull();
-            verify(refreshTokenRepository).findById(userId);
         }
 
         @Test

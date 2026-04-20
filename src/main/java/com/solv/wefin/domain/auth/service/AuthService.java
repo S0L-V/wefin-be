@@ -256,7 +256,34 @@ public class AuthService {
         );
 
         for (GroupMember activeMember : activeMembers) {
+            boolean wasLeader = activeMember.isLeader();
+            Group group = activeMember.getGroup();
+
+            if (wasLeader) {
+                activeMember.changeRoleToMember();
+            }
+
             activeMember.deactivate();
+            groupMemberRepository.flush();
+
+            if (wasLeader && group.isSharedGroup()) {
+                long remainingActiveMemberCount = groupMemberRepository.countByGroupAndStatus(
+                        group,
+                        GroupMember.GroupMemberStatus.ACTIVE
+                );
+
+                if (remainingActiveMemberCount > 0) {
+                    GroupMember nextLeader = groupMemberRepository
+                            .findFirstByGroupAndStatusAndUser_UserIdNotOrderByIdAsc(
+                                    group,
+                                    GroupMember.GroupMemberStatus.ACTIVE,
+                                    userId
+                            )
+                            .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_LEADER_TRANSFER_FAILED));
+
+                    nextLeader.changeRoleToLeader();
+                }
+            }
         }
 
         refreshTokenRepository.findById(userId)
