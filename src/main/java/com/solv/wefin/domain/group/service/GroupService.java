@@ -135,6 +135,7 @@ public class GroupService {
         return GroupInviteInfo.from(invite);
     }
 
+    @Transactional(readOnly = true)
     public GroupInviteInfo getLatestInviteCode(Long groupId, UUID userId) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
