@@ -7,6 +7,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -249,4 +250,83 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
             @Param("tagType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType tagType,
             @Param("tagCodes") List<String> tagCodes,
             Pageable pageable);
+
+    // --- 피드 목록: 조회수 정렬 (sort=view, Top N 고정, cursor 미지원) ---
+    // publishedAt NULLS LAST: publishedAt == null 이면 정렬 상단에 끼지 않도록 명시.
+    // cold start 시 동점(recent_view_count = 0) 에서 최신 우선 배치 의도 유지.
+
+    @Query("SELECT c FROM NewsCluster c " +
+            "WHERE c.status = :status " +
+            "AND c.summaryStatus IN :summaryStatuses " +
+            "AND c.title IS NOT NULL " +
+            "ORDER BY c.recentViewCount DESC, c.publishedAt DESC NULLS LAST, c.id DESC")
+    List<NewsCluster> findHotClusters(
+            @Param("status") ClusterStatus status,
+            @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
+            Pageable pageable);
+
+    @Query("SELECT DISTINCT c FROM NewsCluster c " +
+            "WHERE c.status = :status " +
+            "AND c.summaryStatus IN :summaryStatuses " +
+            "AND c.title IS NOT NULL " +
+            "AND EXISTS (SELECT 1 FROM NewsClusterArticle nca " +
+            "            JOIN NewsArticleTag t ON t.newsArticleId = nca.newsArticleId " +
+            "            WHERE nca.newsClusterId = c.id " +
+            "            AND t.tagType = :tagType " +
+            "            AND t.tagCode IN :tagCodes) " +
+            "ORDER BY c.recentViewCount DESC, c.publishedAt DESC NULLS LAST, c.id DESC")
+    List<NewsCluster> findHotClustersByTags(
+            @Param("status") ClusterStatus status,
+            @Param("summaryStatuses") List<SummaryStatus> summaryStatuses,
+            @Param("tagType") com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType tagType,
+            @Param("tagCodes") List<String> tagCodes,
+            Pageable pageable);
+
+    // --- 조회수 카운트 업데이트 (JPQL 원자 UPDATE로 Lost Update 방지) ---
+
+    /**
+     * ACTIVE 클러스터의 고유 뷰어 누적 카운트를 1 증가시킨다.
+     *
+     * {@code markRead} 에서 신규 INSERT가 성공한 경우에만 호출한다.
+     *
+     * {@code status = 'ACTIVE'} 가드는 {@code validateActiveCluster} 와 insert 사이 TOCTOU race 에서
+     * 방금 INACTIVE 로 전환된 클러스터의 count 가 누적되지 않도록 방어한다. affected=0 이면 race 신호로 경고 로그.
+     *
+     * {@code clearAutomatically=true} 는 같은 트랜잭션에서 이후 JPA 로 NewsCluster 를 읽을 때
+     * 네이티브/JPQL UPDATE 로 인한 L1 캐시 stale entity 를 피하기 위한 선방어.
+     *
+     * @param id 대상 클러스터 ID
+     * @return 영향받은 row 수 — 정상이면 1, 0 이면 INACTIVE 전환 race 가능성으로 경고 로그 남겨야 함
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE NewsCluster c SET c.uniqueViewerCount = c.uniqueViewerCount + 1 " +
+            "WHERE c.id = :id AND c.status = NewsCluster.ClusterStatus.ACTIVE")
+    int incrementUniqueViewerCount(@Param("id") Long id);
+
+    /**
+     * 최근 N시간 윈도우 내 고유 뷰어 수를 ACTIVE 클러스터 전체에 대해 일괄 갱신한다.
+     *
+     * - 단일 UPDATE로 윈도우 스캔 1회만 수행 (2-step 분리보다 효율적)
+     * - {@code IS DISTINCT FROM COALESCE(agg.cnt, 0)} 가드로 실제 값이 변한 row만 write — vacuum 부담 최소화
+     * - 윈도우 밖으로 빠진 클러스터는 {@code agg.cnt IS NULL} → {@code COALESCE(0)} 로 자동 0 리셋
+     *
+     * @param windowStart 집계 대상 시각 하한(exclusive). 이 시각 이후의 read만 카운트됨
+     * @return 실제로 값이 바뀌어 UPDATE된 row 수
+     */
+    @Modifying(clearAutomatically = true)
+    @Query(value = """
+            UPDATE news_cluster c
+            SET recent_view_count = COALESCE(agg.cnt, 0)
+            FROM news_cluster active
+            LEFT JOIN (
+                SELECT news_cluster_id AS id, COUNT(*) AS cnt
+                FROM user_news_cluster_read
+                WHERE read_at > :windowStart
+                GROUP BY news_cluster_id
+            ) agg ON agg.id = active.news_cluster_id
+            WHERE c.news_cluster_id = active.news_cluster_id
+              AND active.status = 'ACTIVE'
+              AND c.recent_view_count IS DISTINCT FROM COALESCE(agg.cnt, 0)
+            """, nativeQuery = true)
+    int refreshRecentViewCounts(@Param("windowStart") OffsetDateTime windowStart);
 }
