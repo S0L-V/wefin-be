@@ -66,17 +66,22 @@ public class ChatUnreadNotificationEventListener {
                 .toList();
 
         for (UUID recipientId : recipientIds) {
-            sendUnreadNotification(
-                    recipientId,
-                    ChatUnreadNotificationResponse.of(
-                            "GROUP",
-                            event.getMessage().messageId(),
-                            event.getGroupId(),
-                            event.getMessage().sender(),
-                            event.getMessage().content(),
-                            chatReadStateService.getUnreadInfoSnapshot(recipientId)
-                    )
-            );
+            try {
+                ChatUnreadInfo info = chatReadStateService.getUnreadInfoSnapshot(recipientId);
+                sendUnreadNotification(
+                        recipientId,
+                        ChatUnreadNotificationResponse.of(
+                                "GROUP",
+                                event.getMessage().messageId(),
+                                event.getGroupId(),
+                                event.getMessage().sender(),
+                                event.getMessage().content(),
+                                info
+                        )
+                );
+            } catch (RuntimeException e) {
+                log.warn("chat unread snapshot failed userId={}", recipientId, e);
+            }
         }
     }
 

@@ -8,6 +8,3 @@ ALTER TABLE group_member
 
 CREATE INDEX idx_chat_message_group_message_id
     ON chat_message (group_id, message_id);
-
-CREATE INDEX idx_global_chat_message_message_id
-    ON global_chat_message (message_id);
