@@ -1,0 +1,89 @@
+package com.solv.wefin.web.chat.common.listener;
+
+import com.solv.wefin.domain.auth.repository.UserRepository;
+import com.solv.wefin.domain.chat.common.dto.info.ChatUnreadInfo;
+import com.solv.wefin.domain.chat.common.service.ChatReadStateService;
+import com.solv.wefin.domain.chat.globalChat.event.GlobalChatMessageCreatedEvent;
+import com.solv.wefin.domain.chat.groupChat.event.ChatMessageCreatedEvent;
+import com.solv.wefin.domain.group.entity.GroupMember;
+import com.solv.wefin.domain.group.repository.GroupMemberRepository;
+import com.solv.wefin.web.chat.common.dto.response.ChatUnreadNotificationResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+
+import java.util.List;
+import java.util.UUID;
+
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class ChatUnreadNotificationEventListener {
+
+    private static final String USER_QUEUE_DESTINATION = "/queue/chat-unread";
+
+    private final SimpMessagingTemplate messagingTemplate;
+    private final ChatReadStateService chatReadStateService;
+    private final UserRepository userRepository;
+    private final GroupMemberRepository groupMemberRepository;
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleGlobalChatCreated(GlobalChatMessageCreatedEvent event) {
+        List<UUID> recipientIds = userRepository.findAllActiveUserIds().stream()
+                .filter(userId -> !userId.equals(event.getUserId()))
+                .toList();
+
+        for (UUID recipientId : recipientIds) {
+            sendUnreadNotification(
+                    recipientId,
+                    ChatUnreadNotificationResponse.of(
+                            "GLOBAL",
+                            event.getMessageId(),
+                            null,
+                            event.getSender(),
+                            event.getContent(),
+                            chatReadStateService.getUnreadInfoSnapshot(recipientId)
+                    )
+            );
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleGroupChatCreated(ChatMessageCreatedEvent event) {
+        List<UUID> recipientIds = groupMemberRepository.findUserIdsByGroupIdAndStatus(
+                event.getGroupId(),
+                GroupMember.GroupMemberStatus.ACTIVE
+        ).stream()
+                .filter(userId -> !userId.equals(event.getMessage().userId()))
+                .toList();
+
+        for (UUID recipientId : recipientIds) {
+            sendUnreadNotification(
+                    recipientId,
+                    ChatUnreadNotificationResponse.of(
+                            "GROUP",
+                            event.getMessage().messageId(),
+                            event.getGroupId(),
+                            event.getMessage().sender(),
+                            event.getMessage().content(),
+                            chatReadStateService.getUnreadInfoSnapshot(recipientId)
+                    )
+            );
+        }
+    }
+
+    private void sendUnreadNotification(UUID recipientId, ChatUnreadNotificationResponse payload) {
+        try {
+            messagingTemplate.convertAndSendToUser(
+                    recipientId.toString(),
+                    USER_QUEUE_DESTINATION,
+                    payload
+            );
+        } catch (RuntimeException e) {
+            log.warn("chat unread notification send failed userId={}", recipientId, e);
+        }
+    }
+}

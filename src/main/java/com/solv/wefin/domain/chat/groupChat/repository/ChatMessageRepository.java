@@ -50,7 +50,16 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 
     Optional<ChatMessage> findByIdAndGroup_Id(Long messageId, Long groupId);
 
-    long countByGroup_IdAndIdGreaterThan(Long groupId, Long messageId);
+    @Query("""
+        select count(m)
+        from ChatMessage m
+        where m.group.id = :groupId
+          and m.id > :messageId
+          and (m.user is null or m.user.userId <> :userId)
+    """)
+    long countUnreadAfterMessageId(@Param("groupId") Long groupId,
+                                   @Param("messageId") Long messageId,
+                                   @Param("userId") UUID userId);
 
     @Query("""
         select max(m.id)

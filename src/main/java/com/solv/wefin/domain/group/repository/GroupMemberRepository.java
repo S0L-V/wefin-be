@@ -57,5 +57,16 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             @Param("status") GroupMember.GroupMemberStatus status
     );
 
+    @Query("""
+            select gm.user.userId
+            from GroupMember gm
+            where gm.group.id = :groupId
+              and gm.status = :status
+            """)
+    List<UUID> findUserIdsByGroupIdAndStatus(
+            @Param("groupId") Long groupId,
+            @Param("status") GroupMember.GroupMemberStatus status
+    );
+
     long countByGroupAndStatus(Group group, GroupMember.GroupMemberStatus status);
 }

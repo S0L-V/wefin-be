@@ -1,6 +1,7 @@
 package com.solv.wefin.web.chat.globalChat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.solv.wefin.domain.chat.common.service.ChatReadStateService;
 import com.solv.wefin.domain.chat.globalChat.dto.command.GlobalProfitShareCommand;
 import com.solv.wefin.domain.chat.globalChat.service.GlobalChatService;
 import com.solv.wefin.global.config.security.JwtProvider;
@@ -14,12 +15,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -37,6 +43,9 @@ class GlobalChatControllerTest {
 
     @MockitoBean
     private GlobalChatService globalChatService;
+
+    @MockitoBean
+    private ChatReadStateService chatReadStateService;
 
     @MockitoBean
     private JwtProvider jwtProvider;
@@ -118,5 +127,23 @@ class GlobalChatControllerTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    @DisplayName("markRead updates global chat read state")
+    void markRead_success() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        mockMvc.perform(post("/api/chat/global/read")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userId,
+                                null,
+                                AuthorityUtils.NO_AUTHORITIES
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200));
+
+        verify(chatReadStateService).markGlobalChatRead(userId);
     }
 }

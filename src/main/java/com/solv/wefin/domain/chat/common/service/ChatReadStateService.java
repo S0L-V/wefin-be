@@ -39,7 +39,12 @@ public class ChatReadStateService {
         long globalUnreadCount = initializeAndCountGlobalUnread(user);
         long groupUnreadCount = initializeAndCountGroupUnread(groupMember);
 
-        return new ChatUnreadInfo(globalUnreadCount, groupUnreadCount);
+        return new ChatUnreadInfo(
+                globalUnreadCount,
+                groupUnreadCount,
+                user.getLastReadGlobalMessageId(),
+                groupMember.getLastReadChatMessageId()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -53,10 +58,19 @@ public class ChatReadStateService {
                 )
                 .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_MEMBER_FORBIDDEN));
 
-        long globalUnreadCount = countGlobalUnread(user.getLastReadGlobalMessageId());
-        long groupUnreadCount = countGroupUnread(groupMember.getGroup().getId(), groupMember.getLastReadChatMessageId());
+        long globalUnreadCount = countGlobalUnread(user.getLastReadGlobalMessageId(), userId);
+        long groupUnreadCount = countGroupUnread(
+                groupMember.getGroup().getId(),
+                groupMember.getLastReadChatMessageId(),
+                userId
+        );
 
-        return new ChatUnreadInfo(globalUnreadCount, groupUnreadCount);
+        return new ChatUnreadInfo(
+                globalUnreadCount,
+                groupUnreadCount,
+                user.getLastReadGlobalMessageId(),
+                groupMember.getLastReadChatMessageId()
+        );
     }
 
     @Transactional
@@ -87,7 +101,7 @@ public class ChatReadStateService {
             return 0L;
         }
 
-        return countGlobalUnread(lastReadMessageId);
+        return countGlobalUnread(lastReadMessageId, user.getUserId());
     }
 
     private long initializeAndCountGroupUnread(GroupMember groupMember) {
@@ -99,22 +113,22 @@ public class ChatReadStateService {
             return 0L;
         }
 
-        return countGroupUnread(groupMember.getGroup().getId(), lastReadMessageId);
+        return countGroupUnread(groupMember.getGroup().getId(), lastReadMessageId, groupMember.getUser().getUserId());
     }
 
-    private long countGlobalUnread(Long lastReadMessageId) {
+    private long countGlobalUnread(Long lastReadMessageId, UUID userId) {
         if (lastReadMessageId == null) {
             return 0L;
         }
 
-        return globalChatMessageRepository.countByIdGreaterThan(lastReadMessageId);
+        return globalChatMessageRepository.countUnreadAfterMessageId(lastReadMessageId, userId);
     }
 
-    private long countGroupUnread(Long groupId, Long lastReadMessageId) {
+    private long countGroupUnread(Long groupId, Long lastReadMessageId, UUID userId) {
         if (lastReadMessageId == null) {
             return 0L;
         }
 
-        return chatMessageRepository.countByGroup_IdAndIdGreaterThan(groupId, lastReadMessageId);
+        return chatMessageRepository.countUnreadAfterMessageId(groupId, lastReadMessageId, userId);
     }
 }
