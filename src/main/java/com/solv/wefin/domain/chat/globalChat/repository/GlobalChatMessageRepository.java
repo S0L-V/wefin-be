@@ -29,4 +29,12 @@ public interface GlobalChatMessageRepository extends JpaRepository<GlobalChatMes
     List<GlobalChatMessage> findMessagesBefore(Long beforeMessageId, Pageable pageable);
 
     long countByUser_UserIdAndCreatedAtAfter(UUID userId, OffsetDateTime time);
+
+    long countByIdGreaterThan(Long messageId);
+
+    @Query("""
+        select max(m.id)
+        from GlobalChatMessage m
+    """)
+    Long findLatestMessageId();
 }

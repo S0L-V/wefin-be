@@ -49,4 +49,13 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     long countByGroup_IdAndUser_UserIdAndCreatedAtAfter(Long groupId, UUID userId, OffsetDateTime time);
 
     Optional<ChatMessage> findByIdAndGroup_Id(Long messageId, Long groupId);
+
+    long countByGroup_IdAndIdGreaterThan(Long groupId, Long messageId);
+
+    @Query("""
+        select max(m.id)
+        from ChatMessage m
+        where m.group.id = :groupId
+    """)
+    Long findLatestMessageIdByGroupId(@Param("groupId") Long groupId);
 }
