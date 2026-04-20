@@ -4,10 +4,10 @@ import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.ClusterStatus;
 import com.solv.wefin.domain.news.cluster.entity.UserNewsClusterFeedback;
 import com.solv.wefin.domain.news.cluster.entity.UserNewsClusterFeedback.FeedbackType;
-import com.solv.wefin.domain.news.cluster.entity.UserNewsClusterRead;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.news.cluster.repository.UserNewsClusterFeedbackRepository;
 import com.solv.wefin.domain.news.cluster.repository.UserNewsClusterReadRepository;
+import com.solv.wefin.domain.news.config.NewsHotProperties;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -16,12 +16,13 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
  * 클러스터 읽음 처리 및 피드백 서비스
  *
- * 읽음: 중복 시 무시 (idempotent)
+ * 읽음: UPSERT 기반 — 첫 방문 시 insert 후 uniqueViewerCount 증가, 재방문 시 read_at 갱신(짧은 간격은 throttle)
  * 피드백: 1회만 가능, 중복 시 409
  * 가중치 업데이트는 ClusterInterestWeightService에서 별도 트랜잭션으로 처리
  */
@@ -34,23 +35,47 @@ public class ClusterInteractionService {
     private final UserNewsClusterReadRepository readRepository;
     private final UserNewsClusterFeedbackRepository feedbackRepository;
     private final ClusterInterestWeightService interestWeightService;
+    private final NewsHotProperties newsHotProperties;
 
     /**
      * 클러스터 읽음을 기록한다.
-     * 이미 읽은 경우 무시한다 (idempotent).
-     * 동시 요청 시 unique violation을 잡아 무시한다
+     *
+     * 동작:
+     * - 해당 유저가 처음 보는 클러스터면 INSERT 하고 {@code unique_viewer_count} 를 원자적으로 +1
+     * - 이미 본 클러스터면 read_at 을 현재 시각으로 갱신 (단, 최근 throttle 윈도우 내 재호출이면 skip)
+     *
+     * {@code recent_view_count} 는 배치가 집계하므로 여기서 건드리지 않는다.
+     * 동시 INSERT 는 unique 제약 + {@code ON CONFLICT DO NOTHING} 으로 한쪽만 성공하도록 보장.
+     *
+     * 관측:
+     * - result=throttled: 같은 userId+clusterId 가 throttle 윈도우(기본 60s) 내 반복 호출 →
+     *   FE 가 세션 debounce 계약을 지키지 않거나 어뷰저 가능성. debug 로그로 집계하여 이상치 탐지.
+     * - increment_missed: insertIfAbsent 는 성공했으나 status 가드에 걸려 count 증가 실패 → INACTIVE race
      */
     @Transactional
     public void markRead(UUID userId, Long clusterId) {
         validateActiveCluster(clusterId);
 
-        if (readRepository.existsByUserIdAndNewsClusterId(userId, clusterId)) {
+        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime staleThreshold = now.minusSeconds(newsHotProperties.markReadThrottleSeconds());
+
+        int inserted = readRepository.insertIfAbsent(userId, clusterId, now);
+
+        if (inserted == 1) {
+            int affected = newsClusterRepository.incrementUniqueViewerCount(clusterId);
+            if (affected == 0) {
+                log.warn("[markRead] result=increment_missed reason=inactive_race_or_deleted clusterId={}",
+                        clusterId);
+            }
             return;
         }
-        try {
-            readRepository.save(UserNewsClusterRead.create(userId, clusterId));
-        } catch (DataIntegrityViolationException e) {
-            log.debug("읽음 중복 저장 무시 — userId: {}, clusterId: {}", userId, clusterId);
+
+        // 재방문 — 최근 throttle 윈도우 내라면 자연스럽게 touchAffected=0 이 되어 write 없이 종료.
+        // 양쪽 모두 0이면 throttle 내 반복 호출이라는 의미 → FE 계약 위반 / 어뷰징 신호.
+        int touchAffected = readRepository.touchReadAtIfStale(userId, clusterId, now, staleThreshold);
+        if (touchAffected == 0) {
+            log.debug("[markRead] result=throttled userId={} clusterId={} thresholdSeconds={}",
+                    userId, clusterId, newsHotProperties.markReadThrottleSeconds());
         }
     }
 

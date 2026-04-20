@@ -6,12 +6,12 @@ import com.solv.wefin.domain.news.cluster.entity.UserNewsClusterFeedback.Feedbac
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.news.cluster.repository.UserNewsClusterFeedbackRepository;
 import com.solv.wefin.domain.news.cluster.repository.UserNewsClusterReadRepository;
+import com.solv.wefin.domain.news.config.NewsHotProperties;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -34,32 +34,59 @@ class ClusterInteractionServiceTest {
     @Mock private UserNewsClusterFeedbackRepository feedbackRepository;
     @Mock private ClusterInterestWeightService interestWeightService;
 
-    @InjectMocks
     private ClusterInteractionService service;
 
     private static final UUID USER_ID = UUID.randomUUID();
     private static final Long CLUSTER_ID = 1L;
+    // windowHours=3, aggIntervalSeconds=300, initialDelaySeconds=30, maxSize=20, throttleSeconds=60
+    private static final NewsHotProperties HOT_PROPS =
+            new NewsHotProperties(3, 300, 30, 20, 60);
 
-    @Test
-    @DisplayName("markRead — 정상 저장")
-    void markRead_success() {
-        given(newsClusterRepository.findById(CLUSTER_ID)).willReturn(Optional.of(activeCluster()));
-        given(readRepository.existsByUserIdAndNewsClusterId(USER_ID, CLUSTER_ID)).willReturn(false);
-
-        service.markRead(USER_ID, CLUSTER_ID);
-
-        verify(readRepository).save(any());
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        service = new ClusterInteractionService(
+                newsClusterRepository, readRepository, feedbackRepository,
+                interestWeightService, HOT_PROPS);
     }
 
     @Test
-    @DisplayName("markRead — 중복 호출 시 idempotent")
-    void markRead_duplicate_ignored() {
+    @DisplayName("markRead — 첫 방문: UPSERT INSERT 성공 시 unique_viewer_count +1 호출")
+    void markRead_firstVisit_incrementsUniqueViewer() {
         given(newsClusterRepository.findById(CLUSTER_ID)).willReturn(Optional.of(activeCluster()));
-        given(readRepository.existsByUserIdAndNewsClusterId(USER_ID, CLUSTER_ID)).willReturn(true);
+        given(readRepository.insertIfAbsent(eq(USER_ID), eq(CLUSTER_ID), any())).willReturn(1);
+        given(newsClusterRepository.incrementUniqueViewerCount(CLUSTER_ID)).willReturn(1);
 
         service.markRead(USER_ID, CLUSTER_ID);
 
-        verify(readRepository, never()).save(any());
+        verify(newsClusterRepository).incrementUniqueViewerCount(CLUSTER_ID);
+        verify(readRepository, never()).touchReadAtIfStale(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("markRead — 재방문: INSERT skip → touchReadAtIfStale 호출 (throttle 조건으로 DB가 판단)")
+    void markRead_revisit_callsTouch() {
+        given(newsClusterRepository.findById(CLUSTER_ID)).willReturn(Optional.of(activeCluster()));
+        given(readRepository.insertIfAbsent(eq(USER_ID), eq(CLUSTER_ID), any())).willReturn(0);
+        given(readRepository.touchReadAtIfStale(eq(USER_ID), eq(CLUSTER_ID), any(), any()))
+                .willReturn(1);
+
+        service.markRead(USER_ID, CLUSTER_ID);
+
+        verify(newsClusterRepository, never()).incrementUniqueViewerCount(anyLong());
+        verify(readRepository).touchReadAtIfStale(eq(USER_ID), eq(CLUSTER_ID), any(), any());
+    }
+
+    @Test
+    @DisplayName("markRead — INSERT 성공했지만 increment 결과 0이면 경고 로그 후 정상 반환")
+    void markRead_firstVisit_incrementMiss_logsWarn() {
+        given(newsClusterRepository.findById(CLUSTER_ID)).willReturn(Optional.of(activeCluster()));
+        given(readRepository.insertIfAbsent(eq(USER_ID), eq(CLUSTER_ID), any())).willReturn(1);
+        given(newsClusterRepository.incrementUniqueViewerCount(CLUSTER_ID)).willReturn(0);
+
+        service.markRead(USER_ID, CLUSTER_ID);
+
+        verify(newsClusterRepository).incrementUniqueViewerCount(CLUSTER_ID);
+        verify(readRepository, never()).touchReadAtIfStale(any(), any(), any(), any());
     }
 
     @Test
