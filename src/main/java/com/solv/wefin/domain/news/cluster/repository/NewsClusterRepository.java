@@ -285,23 +285,28 @@ public interface NewsClusterRepository extends JpaRepository<NewsCluster, Long> 
     // --- 조회수 카운트 업데이트 (JPQL 원자 UPDATE로 Lost Update 방지) ---
 
     /**
-     * ACTIVE 클러스터의 고유 뷰어 누적 카운트를 1 증가시킨다.
+     * 지정한 상태의 클러스터에 한해 고유 뷰어 누적 카운트를 1 증가시킨다.
      *
      * {@code markRead} 에서 신규 INSERT가 성공한 경우에만 호출한다.
      *
-     * {@code status = 'ACTIVE'} 가드는 {@code validateActiveCluster} 와 insert 사이 TOCTOU race 에서
+     * status 가드는 {@code validateActiveCluster} 와 insert 사이 TOCTOU race 에서
      * 방금 INACTIVE 로 전환된 클러스터의 count 가 누적되지 않도록 방어한다. affected=0 이면 race 신호로 경고 로그.
+     * 호출부는 보통 {@link ClusterStatus#ACTIVE} 를 전달한다.
+     *
+     * JPQL 에서 enum 리터럴을 인라인으로 쓰면 Hibernate 6 파서가 엔티티 이름과 혼동해
+     * SemanticException 을 던지므로 파라미터 바인딩으로 전달한다.
      *
      * {@code clearAutomatically=true} 는 같은 트랜잭션에서 이후 JPA 로 NewsCluster 를 읽을 때
-     * 네이티브/JPQL UPDATE 로 인한 L1 캐시 stale entity 를 피하기 위한 선방어.
+     * JPQL UPDATE 로 인한 L1 캐시 stale entity 를 피하기 위한 선방어.
      *
      * @param id 대상 클러스터 ID
+     * @param status 가드에 걸릴 상태 값 (보통 ACTIVE)
      * @return 영향받은 row 수 — 정상이면 1, 0 이면 INACTIVE 전환 race 가능성으로 경고 로그 남겨야 함
      */
     @Modifying(clearAutomatically = true)
     @Query("UPDATE NewsCluster c SET c.uniqueViewerCount = c.uniqueViewerCount + 1 " +
-            "WHERE c.id = :id AND c.status = NewsCluster.ClusterStatus.ACTIVE")
-    int incrementUniqueViewerCount(@Param("id") Long id);
+            "WHERE c.id = :id AND c.status = :status")
+    int incrementUniqueViewerCount(@Param("id") Long id, @Param("status") ClusterStatus status);
 
     /**
      * 최근 N시간 윈도우 내 고유 뷰어 수를 ACTIVE 클러스터 전체에 대해 일괄 갱신한다.

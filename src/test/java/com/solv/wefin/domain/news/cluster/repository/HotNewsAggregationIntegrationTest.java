@@ -144,9 +144,9 @@ class HotNewsAggregationIntegrationTest {
         Long inactiveId = seedInactiveCluster();
 
         int affectedActive = transactionTemplate.execute(tx ->
-                newsClusterRepository.incrementUniqueViewerCount(activeId));
+                newsClusterRepository.incrementUniqueViewerCount(activeId, ClusterStatus.ACTIVE));
         int affectedInactive = transactionTemplate.execute(tx ->
-                newsClusterRepository.incrementUniqueViewerCount(inactiveId));
+                newsClusterRepository.incrementUniqueViewerCount(inactiveId, ClusterStatus.ACTIVE));
 
         assertThat(affectedActive).isEqualTo(1);
         assertThat(affectedInactive).isEqualTo(0);

@@ -54,11 +54,11 @@ class ClusterInteractionServiceTest {
     void markRead_firstVisit_incrementsUniqueViewer() {
         given(newsClusterRepository.findById(CLUSTER_ID)).willReturn(Optional.of(activeCluster()));
         given(readRepository.insertIfAbsent(eq(USER_ID), eq(CLUSTER_ID), any())).willReturn(1);
-        given(newsClusterRepository.incrementUniqueViewerCount(CLUSTER_ID)).willReturn(1);
+        given(newsClusterRepository.incrementUniqueViewerCount(CLUSTER_ID, ClusterStatus.ACTIVE)).willReturn(1);
 
         service.markRead(USER_ID, CLUSTER_ID);
 
-        verify(newsClusterRepository).incrementUniqueViewerCount(CLUSTER_ID);
+        verify(newsClusterRepository).incrementUniqueViewerCount(CLUSTER_ID, ClusterStatus.ACTIVE);
         verify(readRepository, never()).touchReadAtIfStale(any(), any(), any(), any());
     }
 
@@ -72,7 +72,7 @@ class ClusterInteractionServiceTest {
 
         service.markRead(USER_ID, CLUSTER_ID);
 
-        verify(newsClusterRepository, never()).incrementUniqueViewerCount(anyLong());
+        verify(newsClusterRepository, never()).incrementUniqueViewerCount(anyLong(), any());
         verify(readRepository).touchReadAtIfStale(eq(USER_ID), eq(CLUSTER_ID), any(), any());
     }
 
@@ -81,11 +81,11 @@ class ClusterInteractionServiceTest {
     void markRead_firstVisit_incrementMiss_logsWarn() {
         given(newsClusterRepository.findById(CLUSTER_ID)).willReturn(Optional.of(activeCluster()));
         given(readRepository.insertIfAbsent(eq(USER_ID), eq(CLUSTER_ID), any())).willReturn(1);
-        given(newsClusterRepository.incrementUniqueViewerCount(CLUSTER_ID)).willReturn(0);
+        given(newsClusterRepository.incrementUniqueViewerCount(CLUSTER_ID, ClusterStatus.ACTIVE)).willReturn(0);
 
         service.markRead(USER_ID, CLUSTER_ID);
 
-        verify(newsClusterRepository).incrementUniqueViewerCount(CLUSTER_ID);
+        verify(newsClusterRepository).incrementUniqueViewerCount(CLUSTER_ID, ClusterStatus.ACTIVE);
         verify(readRepository, never()).touchReadAtIfStale(any(), any(), any(), any());
     }
 

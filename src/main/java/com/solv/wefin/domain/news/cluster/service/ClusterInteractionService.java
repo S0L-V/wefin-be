@@ -62,7 +62,7 @@ public class ClusterInteractionService {
         int inserted = readRepository.insertIfAbsent(userId, clusterId, now);
 
         if (inserted == 1) {
-            int affected = newsClusterRepository.incrementUniqueViewerCount(clusterId);
+            int affected = newsClusterRepository.incrementUniqueViewerCount(clusterId, ClusterStatus.ACTIVE);
             if (affected == 0) {
                 log.warn("[markRead] result=increment_missed reason=inactive_race_or_deleted clusterId={}",
                         clusterId);
