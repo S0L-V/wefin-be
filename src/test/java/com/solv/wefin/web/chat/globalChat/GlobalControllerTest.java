@@ -2,8 +2,12 @@ package com.solv.wefin.web.chat.globalChat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solv.wefin.domain.chat.common.service.ChatReadStateService;
+import com.solv.wefin.domain.chat.globalChat.dto.info.GlobalChatMessagesInfo;
 import com.solv.wefin.domain.chat.globalChat.dto.command.GlobalProfitShareCommand;
 import com.solv.wefin.domain.chat.globalChat.service.GlobalChatService;
+import com.solv.wefin.global.config.SecurityConfig;
+import com.solv.wefin.global.config.security.JwtAuthenticationEntryPoint;
+import com.solv.wefin.global.config.security.JwtAuthenticationFilter;
 import com.solv.wefin.global.config.security.JwtProvider;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
@@ -29,10 +33,16 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(GlobalChatController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({
+        GlobalExceptionHandler.class,
+        SecurityConfig.class,
+        JwtAuthenticationFilter.class,
+        JwtAuthenticationEntryPoint.class
+})
 class GlobalChatControllerTest {
 
     @Autowired
@@ -49,6 +59,25 @@ class GlobalChatControllerTest {
 
     @MockitoBean
     private JwtProvider jwtProvider;
+
+    @Test
+    @DisplayName("비로그인 사용자도 전체 채팅 메시지를 조회할 수 있다")
+    void getRecentMessages_success_withoutAuthentication() throws Exception {
+        GlobalChatMessagesInfo info = new GlobalChatMessagesInfo(
+                java.util.List.of(),
+                null,
+                false
+        );
+
+        org.mockito.BDDMockito.given(globalChatService.getMessages(null, 30))
+                .willReturn(info);
+
+        mockMvc.perform(get("/api/chat/global/messages"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.messages").isArray())
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+    }
 
     @Test
     @DisplayName("수익 공유 요청이 들어오면 command로 변환해 서비스에 전달한다")
