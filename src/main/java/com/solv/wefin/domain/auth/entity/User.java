@@ -58,5 +58,7 @@ public class User extends BaseEntity {
     public void withdraw() {
         this.status = UserStatus.WITHDRAWN;
         this.homeGroup = null;
+        this.email = "withdrawn_" + this.userId + "@deleted.local";
+        this.nickname = "wd_" + this.userId.toString().substring(0, 8);
     }
 }
