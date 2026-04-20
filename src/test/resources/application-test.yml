@@ -25,6 +25,12 @@ news:
     display: 10
   collect:
     cron: "-"
+  hot:
+    window-hours: 3
+    aggregation-interval-seconds: 300
+    initial-delay-seconds: 99999
+    max-size: 20
+    mark-read-throttle-seconds: 60
 
 market:
   bok:
