@@ -135,6 +135,38 @@ public class GroupService {
         return GroupInviteInfo.from(invite);
     }
 
+    @Transactional(readOnly = true)
+    public GroupInviteInfo getLatestInviteCode(Long groupId, UUID userId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
+
+        if (group.isHomeGroup()) {
+            throw new BusinessException(ErrorCode.GROUP_HOME_INVITE_NOT_ALLOWED);
+        }
+
+        boolean isMember = groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
+                userId,
+                group,
+                GroupMember.GroupMemberStatus.ACTIVE
+        );
+
+        if (!isMember) {
+            throw new BusinessException(ErrorCode.GROUP_INVITE_FORBIDDEN);
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        GroupInvite invite = groupInviteRepository
+                .findFirstByGroupAndStatusAndExpiredAtAfterOrderByCreatedAtDesc(
+                        group,
+                        GroupInvite.InviteStatus.PENDING,
+                        now
+                )
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_INVITE_NOT_FOUND));
+
+        return GroupInviteInfo.from(invite);
+    }
+
     @Transactional
     public GroupMemberInfo joinGroup(UUID userId, UUID inviteCode) {
         GroupInvite invite = groupInviteRepository.findByInviteCode(inviteCode)
