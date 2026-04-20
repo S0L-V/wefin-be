@@ -297,8 +297,10 @@ class HotNewsAggregationIntegrationTest {
     }
 
     private long readRecentView(Long clusterId) {
-        entityManager.flush();
-        entityManager.clear();
+        // refreshRecentViewCounts 는 바로 앞의 transactionTemplate 에서 이미 commit 되었으므로
+        // 네이티브 SELECT 만으로 최신 DB 상태를 읽을 수 있다.
+        // flush/clear 를 직접 호출하면 이 메서드가 트랜잭션 밖에서 동작하기 때문에
+        // TransactionRequiredException 이 발생한다 → 호출 불필요.
         Number n = (Number) entityManager.createNativeQuery(
                 "SELECT recent_view_count FROM news_cluster WHERE news_cluster_id = ?")
                 .setParameter(1, clusterId).getSingleResult();
