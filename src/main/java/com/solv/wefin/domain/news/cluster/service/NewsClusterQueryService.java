@@ -5,6 +5,7 @@ import com.solv.wefin.domain.news.article.repository.NewsArticleRepository;
 import com.solv.wefin.domain.news.cluster.entity.ClusterSuggestedQuestion;
 import com.solv.wefin.domain.news.cluster.entity.ClusterSummarySection;
 import com.solv.wefin.domain.news.cluster.entity.ClusterSummarySectionSource;
+import com.solv.wefin.domain.news.cluster.entity.HotAggregationMeta;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.ClusterStatus;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.SummaryStatus;
@@ -13,6 +14,7 @@ import com.solv.wefin.domain.news.cluster.entity.UserNewsClusterRead;
 import com.solv.wefin.domain.news.cluster.repository.ClusterSuggestedQuestionRepository;
 import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionRepository;
 import com.solv.wefin.domain.news.cluster.repository.ClusterSummarySectionSourceRepository;
+import com.solv.wefin.domain.news.cluster.repository.HotAggregationMetaRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterArticleRepository;
 import com.solv.wefin.domain.news.cluster.repository.NewsClusterRepository;
 import com.solv.wefin.domain.news.cluster.repository.UserNewsClusterFeedbackRepository;
@@ -58,6 +60,7 @@ public class NewsClusterQueryService {
     private final ClusterSuggestedQuestionRepository questionRepository;
     private final ClusterSummarySectionRepository sectionRepository;
     private final ClusterSummarySectionSourceRepository sectionSourceRepository;
+    private final HotAggregationMetaRepository hotAggregationMetaRepository;
     private final ClusterTagAggregator tagAggregator;
 
     /**
@@ -87,8 +90,7 @@ public class NewsClusterQueryService {
     public ClusterFeedResult getFeed(OffsetDateTime cursorTime, Long cursorId,
                                      int pageSize, UUID userId, String tab, String sortBy,
                                      TagType tagType, List<String> tagCodes) {
-        int fetchSize = pageSize + 1;
-        boolean sortByUpdatedAt = "updatedAt".equalsIgnoreCase(sortBy);
+        SortMode sortMode = SortMode.from(sortBy);
 
         List<String> filterTagCodes;
         TagType filterTagType;
@@ -101,20 +103,24 @@ public class NewsClusterQueryService {
             filterTagCodes = categoryCode != null ? List.of(categoryCode) : null;
         }
 
+        // sort=view: 페이지네이션 미지원 — Top N 고정, cursor 무시, hasNext=false
+        // 커서 갱신으로 인한 정렬 키 흔들림(페이지 중복/누락)을 원천 차단
+        int fetchSize = sortMode == SortMode.VIEW ? pageSize : pageSize + 1;
         List<NewsCluster> clusters = fetchClusters(cursorTime, cursorId, fetchSize,
-                filterTagType, filterTagCodes, sortByUpdatedAt);
+                filterTagType, filterTagCodes, sortMode);
 
-        // 다음 페이지 존재 여부
-        boolean hasNext = clusters.size() > pageSize;
-
-        // pageSize만큼 실제 반환
+        boolean hasNext = sortMode != SortMode.VIEW && clusters.size() > pageSize;
         if (hasNext) {
             clusters = clusters.subList(0, pageSize);
         }
 
-        // 결과 없으면 빈 응답 반환
+        OffsetDateTime lastAggregatedAt = sortMode == SortMode.VIEW
+                ? hotAggregationMetaRepository.findSingleton()
+                        .map(HotAggregationMeta::getLastSuccessAt).orElse(null)
+                : null;
+
         if (clusters.isEmpty()) {
-            return ClusterFeedResult.empty();
+            return ClusterFeedResult.empty(lastAggregatedAt);
         }
 
         /* 부가 정보 일괄 조회 */
@@ -149,15 +155,32 @@ public class NewsClusterQueryService {
                         sourcesMap.getOrDefault(c.getId(), List.of()),
                         stocksMap.getOrDefault(c.getId(), List.of()),
                         topicsMap.getOrDefault(c.getId(), List.of()),
-                        readClusterIds.contains(c.getId())
+                        readClusterIds.contains(c.getId()),
+                        c.getRecentViewCount()
                 ))
                 .toList();
 
-        // 다음 커서 생성 (마지막 데이터 기준, 정렬 필드에 맞춰 커서 시각 결정)
-        NewsCluster last = clusters.get(clusters.size() - 1);
-        OffsetDateTime nextCursorTime = sortByUpdatedAt ? last.getUpdatedAt() : last.getPublishedAt();
+        // 다음 커서 생성 (sort=view 는 커서 없음)
+        if (!hasNext) {
+            return new ClusterFeedResult(items, false, null, null, lastAggregatedAt);
+        }
 
-        return new ClusterFeedResult(items, hasNext, nextCursorTime, last.getId());
+        NewsCluster last = clusters.get(clusters.size() - 1);
+        OffsetDateTime nextCursorTime = sortMode == SortMode.UPDATED_AT
+                ? last.getUpdatedAt() : last.getPublishedAt();
+
+        return new ClusterFeedResult(items, true, nextCursorTime, last.getId(), lastAggregatedAt);
+    }
+
+    /** 내부 정렬 모드 표현 — 컨트롤러 sort 문자열을 한 번만 해석한다 */
+    private enum SortMode {
+        PUBLISHED_AT, UPDATED_AT, VIEW;
+
+        static SortMode from(String sortBy) {
+            if ("updatedAt".equalsIgnoreCase(sortBy)) return UPDATED_AT;
+            if ("view".equalsIgnoreCase(sortBy)) return VIEW;
+            return PUBLISHED_AT;
+        }
     }
 
     /**
@@ -189,44 +212,56 @@ public class NewsClusterQueryService {
     /**
      * 태그 필터 + 커서 조건 + 정렬 기준에 따라 클러스터를 조회한다.
      *
+     * sort=view 는 cursor 를 무시하고 Top N 을 반환한다 (페이지네이션 미지원).
+     *
      * @param filterTagType 태그 유형 (null이면 필터 없음)
      * @param filterTagCodes 태그 코드 목록 (null 또는 빈 리스트면 필터 없음)
      */
     private List<NewsCluster> fetchClusters(OffsetDateTime cursorTime, Long cursorId,
                                              int fetchSize, TagType filterTagType,
-                                             List<String> filterTagCodes, boolean sortByUpdatedAt) {
-        boolean hasCursor = cursorTime != null && cursorId != null;
+                                             List<String> filterTagCodes, SortMode sortMode) {
         Pageable pageable = PageRequest.of(0, fetchSize);
+        boolean hasTagFilter = filterTagType != null
+                && filterTagCodes != null && !filterTagCodes.isEmpty();
 
-        if (filterTagCodes == null || filterTagCodes.isEmpty() || filterTagType == null) {
+        if (sortMode == SortMode.VIEW) {
+            return hasTagFilter
+                    ? newsClusterRepository.findHotClustersByTags(
+                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, filterTagType, filterTagCodes, pageable)
+                    : newsClusterRepository.findHotClusters(
+                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, pageable);
+        }
+
+        boolean hasCursor = cursorTime != null && cursorId != null;
+        boolean sortByUpdatedAt = sortMode == SortMode.UPDATED_AT;
+
+        if (!hasTagFilter) {
             if (sortByUpdatedAt) {
                 return hasCursor
                         ? newsClusterRepository.findForFeedAfterCursorByUpdatedAt(
                                 ClusterStatus.ACTIVE, VISIBLE_STATUSES, cursorTime, cursorId, pageable)
                         : newsClusterRepository.findForFeedFirstPageByUpdatedAt(
                                 ClusterStatus.ACTIVE, VISIBLE_STATUSES, pageable);
-            } else {
-                return hasCursor
-                        ? newsClusterRepository.findForFeedAfterCursorByPublishedAt(
-                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, cursorTime, cursorId, pageable)
-                        : newsClusterRepository.findForFeedFirstPageByPublishedAt(
-                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, pageable);
             }
-        } else {
-            if (sortByUpdatedAt) {
-                return hasCursor
-                        ? newsClusterRepository.findForFeedByTagsAfterCursorByUpdatedAt(
-                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, filterTagType, filterTagCodes, cursorTime, cursorId, pageable)
-                        : newsClusterRepository.findForFeedByTagsFirstPageByUpdatedAt(
-                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, filterTagType, filterTagCodes, pageable);
-            } else {
-                return hasCursor
-                        ? newsClusterRepository.findForFeedByTagsAfterCursorByPublishedAt(
-                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, filterTagType, filterTagCodes, cursorTime, cursorId, pageable)
-                        : newsClusterRepository.findForFeedByTagsFirstPageByPublishedAt(
-                                ClusterStatus.ACTIVE, VISIBLE_STATUSES, filterTagType, filterTagCodes, pageable);
-            }
+            return hasCursor
+                    ? newsClusterRepository.findForFeedAfterCursorByPublishedAt(
+                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, cursorTime, cursorId, pageable)
+                    : newsClusterRepository.findForFeedFirstPageByPublishedAt(
+                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, pageable);
         }
+
+        if (sortByUpdatedAt) {
+            return hasCursor
+                    ? newsClusterRepository.findForFeedByTagsAfterCursorByUpdatedAt(
+                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, filterTagType, filterTagCodes, cursorTime, cursorId, pageable)
+                    : newsClusterRepository.findForFeedByTagsFirstPageByUpdatedAt(
+                            ClusterStatus.ACTIVE, VISIBLE_STATUSES, filterTagType, filterTagCodes, pageable);
+        }
+        return hasCursor
+                ? newsClusterRepository.findForFeedByTagsAfterCursorByPublishedAt(
+                        ClusterStatus.ACTIVE, VISIBLE_STATUSES, filterTagType, filterTagCodes, cursorTime, cursorId, pageable)
+                : newsClusterRepository.findForFeedByTagsFirstPageByPublishedAt(
+                        ClusterStatus.ACTIVE, VISIBLE_STATUSES, filterTagType, filterTagCodes, pageable);
     }
 
     /**
@@ -372,16 +407,21 @@ public class NewsClusterQueryService {
     // --- Result Records ---
 
     /**
-     * 커서 기반 페이징 결과
+     * 커서 기반 페이징 결과.
+     *
+     * sort=view 응답은 {@code hasNext=false}, cursor 필드는 null 이며
+     * {@code lastAggregatedAt} 에 배치 마지막 성공 시각이 들어간다
+     * (첫 배포 전이면 null — FE가 "준비 중" UX 또는 폴백 처리).
      */
     public record ClusterFeedResult(
             List<ClusterFeedItem> items,
             boolean hasNext,
             OffsetDateTime nextCursorPublishedAt,
-            Long nextCursorId
+            Long nextCursorId,
+            OffsetDateTime lastAggregatedAt
     ) {
-        public static ClusterFeedResult empty() {
-            return new ClusterFeedResult(List.of(), false, null, null);
+        public static ClusterFeedResult empty(OffsetDateTime lastAggregatedAt) {
+            return new ClusterFeedResult(List.of(), false, null, null, lastAggregatedAt);
         }
     }
 
@@ -398,7 +438,8 @@ public class NewsClusterQueryService {
             List<SourceInfo> sources,
             List<StockInfo> relatedStocks,
             List<String> marketTags,
-            boolean isRead
+            boolean isRead,
+            long recentViewCount
     ) {
     }
 

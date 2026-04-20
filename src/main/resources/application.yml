@@ -68,6 +68,14 @@ summary:
   collect:
     cron: ${SUMMARY_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
 
+news:
+  hot:
+    window-hours: ${NEWS_HOT_WINDOW_HOURS:3}
+    aggregation-interval-seconds: ${NEWS_HOT_AGG_INTERVAL_SECONDS:300}
+    initial-delay-seconds: ${NEWS_HOT_INITIAL_DELAY_SECONDS:30}
+    max-size: ${NEWS_HOT_MAX_SIZE:20}
+    mark-read-throttle-seconds: ${NEWS_HOT_MARK_READ_THROTTLE_SECONDS:60}
+
 market:
   trend:
     cron: ${MARKET_TREND_CRON:${MARKET_BATCH_CRON:0 */30 * * * *}}

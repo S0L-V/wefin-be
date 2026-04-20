@@ -12,6 +12,7 @@ import com.solv.wefin.domain.news.article.repository.NewsArticleTagRepository;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.ClusterStatus;
 import com.solv.wefin.domain.news.cluster.entity.NewsCluster.SummaryStatus;
+import com.solv.wefin.domain.news.cluster.entity.HotAggregationMeta;
 import com.solv.wefin.domain.news.cluster.entity.NewsClusterArticle;
 import com.solv.wefin.domain.news.cluster.entity.UserNewsClusterRead;
 import com.solv.wefin.domain.news.cluster.repository.ClusterSuggestedQuestionRepository;
@@ -58,6 +59,7 @@ class NewsClusterQueryServiceTest {
     @Mock private ClusterSummarySectionRepository sectionRepository;
     @Mock private ClusterSuggestedQuestionRepository questionRepository;
     @Mock private ClusterSummarySectionSourceRepository sectionSourceRepository;
+    @Mock private com.solv.wefin.domain.news.cluster.repository.HotAggregationMetaRepository hotAggregationMetaRepository;
 
     private NewsClusterQueryService queryService;
 
@@ -69,7 +71,7 @@ class NewsClusterQueryServiceTest {
                 newsClusterRepository, clusterArticleRepository,
                 newsArticleRepository, readRepository, feedbackRepository,
                 questionRepository, sectionRepository, sectionSourceRepository,
-                tagAggregator);
+                hotAggregationMetaRepository, tagAggregator);
     }
 
     @Test
@@ -420,6 +422,83 @@ class NewsClusterQueryServiceTest {
         assertThat(result.relatedSectors().get(0).code()).isEqualTo("BIO");
         assertThat(result.relatedSectors().get(0).name()).isEqualTo("바이오");
     }
+
+    // --- sort=view 분기 ---
+
+    @Test
+    @DisplayName("sort=view — findHotClusters 호출 + 페이지네이션 미지원 + lastAggregatedAt 포함")
+    void getFeed_sortView_callsHotClusterQuery() {
+        OffsetDateTime publishedAt = OffsetDateTime.now();
+        NewsCluster hot = createCluster(7L, "핫뉴스", "요약", publishedAt, 5);
+        ReflectionTestUtils.setField(hot, "recentViewCount", 999L);
+
+        given(newsClusterRepository.findHotClusters(any(), any(), any())).willReturn(List.of(hot));
+        given(clusterArticleRepository.findByNewsClusterIdIn(any())).willReturn(List.of());
+
+        OffsetDateTime aggTime = OffsetDateTime.now().minusMinutes(2);
+        HotAggregationMeta meta = HotAggregationMeta.forTest(
+                aggTime, aggTime.minusHours(3), 42, 120);
+        given(hotAggregationMetaRepository.findSingleton()).willReturn(Optional.of(meta));
+
+        ClusterFeedResult result = queryService.getFeed(null, null, 10, null, null, "view");
+
+        assertThat(result.items()).hasSize(1);
+        assertThat(result.items().get(0).recentViewCount()).isEqualTo(999L);
+        assertThat(result.hasNext()).isFalse();
+        assertThat(result.nextCursorPublishedAt()).isNull();
+        assertThat(result.nextCursorId()).isNull();
+        assertThat(result.lastAggregatedAt()).isEqualTo(aggTime);
+
+        // 일반 피드 쿼리는 호출되지 않음
+        verify(newsClusterRepository).findHotClusters(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("sort=view — 메타 비어있으면 lastAggregatedAt=null (첫 배포 케이스)")
+    void getFeed_sortView_metaEmpty_lastAggregatedAtNull() {
+        given(newsClusterRepository.findHotClusters(any(), any(), any())).willReturn(List.of());
+        given(hotAggregationMetaRepository.findSingleton()).willReturn(Optional.empty());
+
+        ClusterFeedResult result = queryService.getFeed(null, null, 10, null, null, "view");
+
+        assertThat(result.items()).isEmpty();
+        assertThat(result.lastAggregatedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("sort=view — cursor 파라미터 수신해도 무시하고 Top N 반환")
+    void getFeed_sortView_ignoresCursor() {
+        NewsCluster hot = createCluster(1L, "핫", "요약", OffsetDateTime.now(), 1);
+        given(newsClusterRepository.findHotClusters(any(), any(), any())).willReturn(List.of(hot));
+        given(hotAggregationMetaRepository.findSingleton()).willReturn(Optional.empty());
+        given(clusterArticleRepository.findByNewsClusterIdIn(any())).willReturn(List.of());
+
+        OffsetDateTime bogusCursor = OffsetDateTime.now();
+        ClusterFeedResult result = queryService.getFeed(bogusCursor, 999L, 10, null, null, "view");
+
+        assertThat(result.items()).hasSize(1);
+        // cursor 가 findHot 쿼리에 전달되지 않았음을 간접 검증 — cursor 기반 find 메서드 미호출
+        verify(newsClusterRepository).findHotClusters(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("sort=view + tagType/tagCodes — findHotClustersByTags 호출")
+    void getFeed_sortView_withTagFilter() {
+        NewsCluster hot = createCluster(1L, "핫", "요약", OffsetDateTime.now(), 1);
+        given(newsClusterRepository.findHotClustersByTags(any(), any(), eq(TagType.SECTOR), any(), any()))
+                .willReturn(List.of(hot));
+        given(hotAggregationMetaRepository.findSingleton()).willReturn(Optional.empty());
+        given(clusterArticleRepository.findByNewsClusterIdIn(any())).willReturn(List.of());
+
+        ClusterFeedResult result = queryService.getFeed(
+                null, null, 10, null, "ALL", "view",
+                TagType.SECTOR, List.of("FINANCE"));
+
+        assertThat(result.items()).hasSize(1);
+        verify(newsClusterRepository).findHotClustersByTags(any(), any(), eq(TagType.SECTOR), any(), any());
+    }
+
+    // --- getDetail 테스트 계속 ---
 
     @Test
     @DisplayName("상세 조회 — 존재하지 않는 clusterId는 예외")
