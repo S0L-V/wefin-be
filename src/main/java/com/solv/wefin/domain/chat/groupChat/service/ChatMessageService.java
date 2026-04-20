@@ -2,10 +2,16 @@ package com.solv.wefin.domain.chat.groupChat.service;
 
 import com.solv.wefin.domain.auth.entity.User;
 import com.solv.wefin.domain.auth.repository.UserRepository;
+import com.solv.wefin.domain.chat.aiChat.client.OpenAiChatClient;
 import com.solv.wefin.domain.chat.common.constant.ChatScope;
 import com.solv.wefin.domain.chat.common.service.ChatSpamGuard;
 import com.solv.wefin.domain.chat.groupChat.dto.command.ShareNewsCommand;
-import com.solv.wefin.domain.chat.groupChat.dto.info.*;
+import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessageInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessagesInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.NewsShareInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.ReplyMessageInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.VoteShareInfo;
+import com.solv.wefin.domain.chat.groupChat.dto.info.VoteShareOptionInfo;
 import com.solv.wefin.domain.chat.groupChat.entity.ChatMessage;
 import com.solv.wefin.domain.chat.groupChat.entity.ChatMessageNewsShare;
 import com.solv.wefin.domain.chat.groupChat.entity.MessageType;
@@ -32,6 +38,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
@@ -49,6 +56,17 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ChatMessageService {
 
+    private static final long SPAM_WINDOW_SECONDS = 3L;
+    private static final String WEFINI_COMMAND_PREFIX = "/wefini";
+    private static final String YOUNG_COMMAND_LITERAL = "/영";
+    private static final String YOUNG_DISPLAY_MESSAGE_LITERAL = "영";
+    private static final String YOUNG_RESPONSE_LITERAL = "차";
+    private static final String WEFINI_FAILURE_MESSAGE = "AI 응답을 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+    private static final String WEFINI_USAGE_MESSAGE = "/wefini 뒤에 질문을 함께 입력해 주세요.";
+    private static final String SYSTEM = "시스템";
+    private static final int MAX_MESSAGE_LENGTH = 1000;
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final ChatMessageRepository chatMessageRepository;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
@@ -57,17 +75,14 @@ public class ChatMessageService {
     private final QuestProgressService questProgressService;
     private final VoteRepository voteRepository;
     private final VoteOptionRepository voteOptionRepository;
-
-    private static final long SPAM_WINDOW_SECONDS = 3L;
-    private static final String SYSTEM = "시스템";
-    private static final int MAX_MESSAGE_LENGTH = 1000;
-    private static final int MAX_PAGE_SIZE = 100;
-
-    private final Map<String, Object> chatLocks = new ConcurrentHashMap<>();
+    private final OpenAiChatClient openAiChatClient;
+    private final ChatMessageWriteService chatMessageWriteService;
     private final NewsClusterRepository newsClusterRepository;
     private final ChatMessageNewsShareService chatMessageNewsShareService;
 
-    @Transactional
+    private final Map<String, Object> chatLocks = new ConcurrentHashMap<>();
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void sendMessage(String content, UUID userId, Long replyToMessageId) {
         if (userId == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
@@ -77,8 +92,6 @@ public class ChatMessageService {
 
         Group group = findActiveUserGroup(userId);
         Long groupId = group.getId();
-
-        ChatMessage replyTarget = findReplyTarget(replyToMessageId, groupId);
 
         String blockKey = ChatScope.groupKey(groupId, userId);
         Object lock = chatLocks.computeIfAbsent(blockKey, key -> new Object());
@@ -97,14 +110,57 @@ public class ChatMessageService {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-            ChatMessage savedMessage = chatMessageRepository.save(
-                    ChatMessage.createUserMessage(user, group, content, replyTarget)
-            );
+            if (handleCommandMessage(content, userId, user, group)) {
+                return;
+            }
 
-            eventPublisher.publishEvent(toEvent(savedMessage));
+            ChatMessage replyTarget = findReplyTarget(replyToMessageId, groupId);
+            chatMessageWriteService.publishUserMessage(user, group, content, replyTarget);
         }
 
         questProgressService.handleEvent(userId, QuestEventType.SEND_GROUP_CHAT);
+    }
+
+    private boolean handleCommandMessage(String content, UUID userId, User user, Group group) {
+        String trimmed = content.trim();
+
+        if (trimmed.equals(YOUNG_COMMAND_LITERAL)) {
+            chatMessageWriteService.publishUserMessage(user, group, YOUNG_DISPLAY_MESSAGE_LITERAL, null);
+            chatMessageWriteService.publishSystemMessage(group, YOUNG_RESPONSE_LITERAL);
+            handleQuestEventSafely(userId, QuestEventType.SEND_GROUP_CHAT);
+            return true;
+        }
+
+        if (trimmed.equals(WEFINI_COMMAND_PREFIX)) {
+            chatMessageWriteService.publishSystemMessage(group, WEFINI_USAGE_MESSAGE);
+            return true;
+        }
+
+        if (!trimmed.startsWith(WEFINI_COMMAND_PREFIX + " ")) {
+            return false;
+        }
+
+        String question = trimmed.substring(WEFINI_COMMAND_PREFIX.length()).trim();
+        if (question.isBlank()) {
+            chatMessageWriteService.publishSystemMessage(group, WEFINI_USAGE_MESSAGE);
+            return true;
+        }
+
+        chatMessageWriteService.publishUserMessage(user, group, trimmed, null);
+
+        String answer;
+        try {
+            answer = openAiChatClient.ask(List.of(), question, null);
+        } catch (BusinessException e) {
+            log.warn("AI 응답 실패 userId={}, code={}", userId, e.getErrorCode(), e);
+            chatMessageWriteService.publishSystemMessage(group, WEFINI_FAILURE_MESSAGE);
+            return true;
+        }
+
+        chatMessageWriteService.publishSystemMessage(group, answer);
+        handleQuestEventSafely(userId, QuestEventType.USE_AI_CHAT);
+        handleQuestEventSafely(userId, QuestEventType.SEND_GROUP_CHAT);
+        return true;
     }
 
     @Transactional
@@ -129,7 +185,6 @@ public class ChatMessageService {
         chatMessageNewsShareService.save(chatMessage, newsCluster);
 
         ChatMessageInfo info = toInfo(chatMessage);
-
         eventPublisher.publishEvent(new ChatMessageCreatedEvent(group.getId(), info));
 
         handleQuestEventSafely(userId, QuestEventType.SHARE_NEWS);
@@ -171,16 +226,13 @@ public class ChatMessageService {
         );
 
         ChatMessageInfo info = toInfo(chatMessage);
-
         eventPublisher.publishEvent(new ChatMessageCreatedEvent(vote.getGroup().getId(), info));
 
         handleQuestEventSafely(userId, QuestEventType.SEND_GROUP_CHAT);
-
         return info;
     }
 
     public ChatMessagesInfo getMessages(UUID userId, Long beforeMessageId, int size) {
-
         Group group = findActiveUserGroup(userId);
         Long groupId = group.getId();
 
@@ -198,7 +250,7 @@ public class ChatMessageService {
 
         Long nextCursor = hasNext && !fetched.isEmpty()
                 ? fetched.get(fetched.size() - 1).getId()
-                :null;
+                : null;
 
         List<Long> voteIds = fetched.stream()
                 .filter(message -> message.getRefType() == RefType.VOTE && message.getRefId() != null)
@@ -209,12 +261,12 @@ public class ChatMessageService {
         Map<Long, Vote> voteMap = voteIds.isEmpty()
                 ? Map.of()
                 : voteRepository.findAllByVoteIdIn(voteIds).stream()
-                        .collect(Collectors.toMap(Vote::getVoteId, Function.identity()));
+                .collect(Collectors.toMap(Vote::getVoteId, Function.identity()));
 
         Map<Long, List<VoteOption>> voteOptionMap = voteIds.isEmpty()
                 ? Map.of()
                 : voteOptionRepository.findAllByVote_VoteIdInOrderByVote_VoteIdAscIdAsc(voteIds).stream()
-                        .collect(Collectors.groupingBy(option -> option.getVote().getVoteId()));
+                .collect(Collectors.groupingBy(option -> option.getVote().getVoteId()));
 
         List<ChatMessageInfo> messages = fetched.stream()
                 .sorted(Comparator.comparing(ChatMessage::getId))
@@ -289,7 +341,7 @@ public class ChatMessageService {
     }
 
     private ReplyMessageInfo toReplyInfo(ChatMessage replyMessage) {
-        if(replyMessage == null) {
+        if (replyMessage == null) {
             return null;
         }
 
@@ -300,15 +352,8 @@ public class ChatMessageService {
         );
     }
 
-    private ChatMessageCreatedEvent toEvent(ChatMessage message) {
-        return new ChatMessageCreatedEvent(
-                extractGroupId(message),
-                toInfo(message)
-        );
-    }
-
     private void validateShareNewsCommand(ShareNewsCommand command) {
-        if(command == null || command.newsClusterId() == null) {
+        if (command == null || command.newsClusterId() == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
     }
@@ -369,12 +414,11 @@ public class ChatMessageService {
     }
 
     private ChatMessage findReplyTarget(Long replyToMessageId, Long groupId) {
-        if(replyToMessageId == null) {
+        if (replyToMessageId == null) {
             return null;
         }
 
         return chatMessageRepository.findByIdAndGroup_Id(replyToMessageId, groupId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_FOUND));
     }
-
 }
