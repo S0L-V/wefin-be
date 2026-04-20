@@ -10,6 +10,7 @@ import com.solv.wefin.domain.group.repository.GroupMemberRepository;
 import com.solv.wefin.web.chat.common.dto.response.ChatUnreadNotificationResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -30,6 +31,7 @@ public class ChatUnreadNotificationEventListener {
     private final UserRepository userRepository;
     private final GroupMemberRepository groupMemberRepository;
 
+    @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleGlobalChatCreated(GlobalChatMessageCreatedEvent event) {
         List<UUID> recipientIds = userRepository.findAllActiveUserIds().stream()
@@ -56,6 +58,7 @@ public class ChatUnreadNotificationEventListener {
         }
     }
 
+    @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleGroupChatCreated(ChatMessageCreatedEvent event) {
         List<UUID> recipientIds = groupMemberRepository.findUserIdsByGroupIdAndStatus(

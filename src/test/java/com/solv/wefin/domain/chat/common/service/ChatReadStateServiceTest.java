@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
@@ -181,6 +182,30 @@ class ChatReadStateServiceTest {
 
         // then
         assertEquals(ErrorCode.GROUP_MEMBER_FORBIDDEN, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("snapshot 조회는 그룹 미가입자여도 글로벌 unread 정보는 반환한다")
+    void getUnreadInfoSnapshot_success_without_group_member() {
+        // given
+        UUID userId = UUID.randomUUID();
+        User user = createUser(userId);
+        ReflectionTestUtils.setField(user, "lastReadGlobalMessageId", 12L);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(groupMemberRepository.findByUser_UserIdAndStatus(userId, GroupMember.GroupMemberStatus.ACTIVE))
+                .thenReturn(Optional.empty());
+        when(globalChatMessageRepository.countUnreadAfterMessageId(12L, userId)).thenReturn(3L);
+
+        // when
+        ChatUnreadInfo result = chatReadStateService.getUnreadInfoSnapshot(userId);
+
+        // then
+        assertEquals(3L, result.globalUnreadCount());
+        assertEquals(0L, result.groupUnreadCount());
+        assertEquals(12L, result.lastReadGlobalMessageId());
+        assertNull(result.lastReadGroupMessageId());
+        verify(chatMessageRepository, never()).countUnreadAfterMessageId(anyLong(), anyLong(), any());
     }
 
     private User createUser(UUID userId) {
