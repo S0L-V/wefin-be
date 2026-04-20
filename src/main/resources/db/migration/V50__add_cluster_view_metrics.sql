@@ -5,11 +5,27 @@ ALTER TABLE news_cluster
     ADD COLUMN unique_viewer_count BIGINT NOT NULL DEFAULT 0,
     ADD COLUMN recent_view_count   BIGINT NOT NULL DEFAULT 0;
 
+-- 기존 user_news_cluster_read 데이터 기반으로 unique_viewer_count 백필
+-- (user_id, news_cluster_id) UNIQUE 제약(uk_user_news_cluster_read_user_cluster)이 있어
+-- COUNT(*) = COUNT(DISTINCT user_id) 이므로 COUNT(*) 사용
+-- 단일 UPDATE 로 수행. user_news_cluster_read 규모가 큰 환경에선 별도 데이터 마이그레이션 도구로 분리 고려
+-- recent_view_count 는 배포 후 첫 집계 배치가 채우므로 백필 불필요
+UPDATE news_cluster c
+SET unique_viewer_count = agg.cnt
+FROM (
+    SELECT news_cluster_id, COUNT(*) AS cnt
+    FROM user_news_cluster_read
+    GROUP BY news_cluster_id
+) agg
+WHERE c.news_cluster_id = agg.news_cluster_id;
+
 -- sort=view 피드 조회 성능을 위한 partial index
 -- ACTIVE 상태의 클러스터만 대상으로 recent_view_count 기반 정렬을 최적화
 -- (recent_view_count → published_at → news_cluster_id) 순으로 타이브레이커까지 포함한 안정 정렬
+-- NULLS LAST 명시: findHotClusters 의 ORDER BY "published_at DESC NULLS LAST" 와 B-tree 정렬을 일치시켜
+--                  index-only ORDER BY 활용 가능 (Postgres 는 DESC 시 기본 NULLS FIRST)
 CREATE INDEX idx_news_cluster_hot
-    ON news_cluster (recent_view_count DESC, published_at DESC, news_cluster_id DESC)
+    ON news_cluster (recent_view_count DESC, published_at DESC NULLS LAST, news_cluster_id DESC)
     WHERE status = 'ACTIVE';
 
 -- 최근 시간 윈도우 집계(batch aggregation) 최적화를 위한 인덱스

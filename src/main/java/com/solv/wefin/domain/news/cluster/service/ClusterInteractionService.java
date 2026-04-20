@@ -72,10 +72,12 @@ public class ClusterInteractionService {
 
         // 재방문 — 최근 throttle 윈도우 내라면 자연스럽게 touchAffected=0 이 되어 write 없이 종료.
         // 양쪽 모두 0이면 throttle 내 반복 호출이라는 의미 → FE 계약 위반 / 어뷰징 신호.
+        // 로그에는 userId 를 남기지 않는다(PII). 어뷰저 단위 집계는 추후 Micrometer 도입 시
+        // IP/Account-hash 기반 태그로 재구성.
         int touchAffected = readRepository.touchReadAtIfStale(userId, clusterId, now, staleThreshold);
         if (touchAffected == 0) {
-            log.debug("[markRead] result=throttled userId={} clusterId={} thresholdSeconds={}",
-                    userId, clusterId, newsHotProperties.markReadThrottleSeconds());
+            log.debug("[markRead] result=throttled clusterId={} thresholdSeconds={}",
+                    clusterId, newsHotProperties.markReadThrottleSeconds());
         }
     }
 
