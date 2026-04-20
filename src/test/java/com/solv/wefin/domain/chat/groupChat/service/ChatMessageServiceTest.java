@@ -208,7 +208,7 @@ class ChatMessageServiceTest {
                 .user(user)
                 .group(group)
                 .messageType(MessageType.CHAT)
-                .content("\uC601")
+                .content("영")
                 .createdAt(OffsetDateTime.now())
                 .build();
         ReflectionTestUtils.setField(savedUserMessage, "id", 22L);
@@ -216,7 +216,7 @@ class ChatMessageServiceTest {
         ChatMessage savedSystemMessage = ChatMessage.builder()
                 .group(group)
                 .messageType(MessageType.SYSTEM)
-                .content("\uCC28")
+                .content("차")
                 .createdAt(OffsetDateTime.now())
                 .build();
         ReflectionTestUtils.setField(savedSystemMessage, "id", 23L);

@@ -61,7 +61,7 @@ public class ChatMessageService {
     private static final String YOUNG_COMMAND_LITERAL = "/영";
     private static final String YOUNG_DISPLAY_MESSAGE_LITERAL = "영";
     private static final String YOUNG_RESPONSE_LITERAL = "차";
-    private static final String WEFINI_FAILURE_MESSAGE = "AI AI 응답을 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+    private static final String WEFINI_FAILURE_MESSAGE = "AI 응답을 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.";
     private static final String WEFINI_USAGE_MESSAGE = "/wefini 뒤에 질문을 함께 입력해 주세요.";
     private static final String SYSTEM = "시스템";
     private static final int MAX_MESSAGE_LENGTH = 1000;
