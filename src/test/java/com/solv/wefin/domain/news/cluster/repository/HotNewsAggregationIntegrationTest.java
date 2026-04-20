@@ -67,6 +67,9 @@ class HotNewsAggregationIntegrationTest {
             entityManager.createNativeQuery("DELETE FROM user_news_cluster_read").executeUpdate();
             entityManager.createNativeQuery("DELETE FROM news_cluster").executeUpdate();
             entityManager.createNativeQuery("DELETE FROM hot_aggregation_meta").executeUpdate();
+            entityManager.createNativeQuery(
+                            "DELETE FROM users WHERE email LIKE 'hot-news-agg-%@test'")
+                    .executeUpdate();
         });
     }
 
@@ -76,7 +79,7 @@ class HotNewsAggregationIntegrationTest {
     @DisplayName("insertIfAbsent — 첫 호출은 1 반환, 동일 (user,cluster) 재호출은 0")
     void insertIfAbsent_upsertSemantics() {
         Long clusterId = seedActiveCluster();
-        UUID userId = UUID.randomUUID();
+        UUID userId = seedUser();
         OffsetDateTime now = OffsetDateTime.now();
 
         int first = transactionTemplate.execute(tx ->
@@ -100,7 +103,7 @@ class HotNewsAggregationIntegrationTest {
     @DisplayName("touchReadAtIfStale — threshold 이내 호출은 0 반환 (skip), 이전 값은 유지")
     void touchReadAtIfStale_withinThreshold_skips() {
         Long clusterId = seedActiveCluster();
-        UUID userId = UUID.randomUUID();
+        UUID userId = seedUser();
         OffsetDateTime initial = OffsetDateTime.now().minusSeconds(10);
 
         transactionTemplate.executeWithoutResult(tx ->
@@ -120,7 +123,7 @@ class HotNewsAggregationIntegrationTest {
     @DisplayName("touchReadAtIfStale — threshold 초과하면 1 반환하고 read_at 갱신")
     void touchReadAtIfStale_beyondThreshold_updates() {
         Long clusterId = seedActiveCluster();
-        UUID userId = UUID.randomUUID();
+        UUID userId = seedUser();
         OffsetDateTime oldTime = OffsetDateTime.now().minusMinutes(10);
 
         transactionTemplate.executeWithoutResult(tx ->
@@ -252,10 +255,11 @@ class HotNewsAggregationIntegrationTest {
 
     private Long seedCluster(ClusterStatus status) {
         return transactionTemplate.execute(tx -> {
+            // representativeArticleId 는 news_cluster → news_article FK 가 있어 실 기사 seed 없이는 세팅 불가.
+            // 이 테스트는 기사 참조가 필요 없으므로 null 로 둔다 (컬럼은 NULL 허용).
             NewsCluster cluster = NewsCluster.builder()
                     .clusterType(NewsCluster.ClusterType.GENERAL)
                     .centroidVector(new float[]{0.1f})
-                    .representativeArticleId(1L)
                     .publishedAt(OffsetDateTime.now())
                     .build();
             ReflectionTestUtils.setField(cluster, "title", "테스트 클러스터");
@@ -267,9 +271,29 @@ class HotNewsAggregationIntegrationTest {
         });
     }
 
-    private void seedReadAt(Long clusterId, OffsetDateTime readAt) {
+    /**
+     * user_news_cluster_read.user_id 는 users 테이블 FK 가 있어 임의 UUID 로는 insert 불가.
+     * 유효 UUID 를 만들기 위해 users row 를 한 건 삽입하고 그 UUID 를 반환한다.
+     */
+    private UUID seedUser() {
+        UUID userId = UUID.randomUUID();
+        String nickname = userId.toString().substring(0, 8);
         transactionTemplate.executeWithoutResult(tx ->
-                userReadRepository.insertIfAbsent(UUID.randomUUID(), clusterId, readAt));
+                entityManager.createNativeQuery(
+                                "INSERT INTO users(user_id, email, nickname, password) " +
+                                "VALUES (?, ?, ?, ?) ON CONFLICT (user_id) DO NOTHING")
+                        .setParameter(1, userId)
+                        .setParameter(2, "hot-news-agg-" + userId + "@test")
+                        .setParameter(3, "han-" + nickname)
+                        .setParameter(4, "x")
+                        .executeUpdate());
+        return userId;
+    }
+
+    private void seedReadAt(Long clusterId, OffsetDateTime readAt) {
+        UUID userId = seedUser();
+        transactionTemplate.executeWithoutResult(tx ->
+                userReadRepository.insertIfAbsent(userId, clusterId, readAt));
     }
 
     private long readRecentView(Long clusterId) {
