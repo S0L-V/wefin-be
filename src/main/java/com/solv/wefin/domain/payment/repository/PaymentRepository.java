@@ -21,6 +21,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Payment> findWithLockByOrderIdAndUserUserId(String orderId, UUID userId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<Payment> findWithLockByPaymentId(Long paymentId);
+
     // 같은 사용자 / 같은 플랜의 기존 READY결제 재사용 여부 확인
     Optional<Payment> findTopByUserUserIdAndPlanPlanIdAndProviderAndStatusOrderByRequestedAtDesc(
             UUID userId,

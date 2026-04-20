@@ -74,8 +74,9 @@ class VoteServiceTest {
     }
 
     @Test
-    @DisplayName("createVote saves vote options and shares chat message")
+    @DisplayName("투표 생성 시 선택지를 저장하고 채팅 공유를 수행한다")
     void createVote_success() {
+        // given
         UUID userId = UUID.randomUUID();
         User user = createUser(userId);
         Group group = createGroup(1L);
@@ -100,8 +101,10 @@ class VoteServiceTest {
             return vote;
         });
 
+        // when
         VoteInfo result = voteService.createVote(userId, command);
 
+        // then
         assertThat(result.voteId()).isEqualTo(10L);
         assertThat(result.title()).isEqualTo("Lunch menu vote");
         assertThat(result.maxSelectCount()).isEqualTo(1);
@@ -112,8 +115,9 @@ class VoteServiceTest {
     }
 
     @Test
-    @DisplayName("createVote fails when user is not an active group member")
+    @DisplayName("활성 그룹 멤버가 아니면 투표 생성에 실패한다")
     void createVote_fail_when_user_is_not_active_member() {
+        // given
         UUID userId = UUID.randomUUID();
         User user = createUser(userId);
         Group group = createGroup(1L);
@@ -133,18 +137,21 @@ class VoteServiceTest {
                 GroupMember.GroupMemberStatus.ACTIVE
         )).willReturn(false);
 
+        // when
         assertThatThrownBy(() -> voteService.createVote(userId, command))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_MEMBER_FORBIDDEN);
 
+        // then
         verify(voteRepository, never()).save(any(Vote.class));
         verify(voteOptionRepository, never()).saveAll(any());
         verify(chatMessageService, never()).shareVote(any(), any());
     }
 
     @Test
-    @DisplayName("createVote fails when options contain duplicates after trimming")
+    @DisplayName("선택지를 trim한 뒤 중복이 있으면 투표 생성에 실패한다")
     void createVote_fail_when_options_are_duplicated() {
+        // given
         UUID userId = UUID.randomUUID();
         CreateVoteCommand command = new CreateVoteCommand(
                 1L,
@@ -154,17 +161,20 @@ class VoteServiceTest {
                 1L
         );
 
+        // when
         assertThatThrownBy(() -> voteService.createVote(userId, command))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
 
+        // then
         verify(userRepository, never()).findById(any());
         verify(voteRepository, never()).save(any(Vote.class));
     }
 
     @Test
-    @DisplayName("submitVote replaces existing selections when user changes vote")
+    @DisplayName("투표를 다시 제출하면 기존 선택을 대체한다")
     void submitVote_success_when_replacing_existing_selection() {
+        // given
         UUID userId = UUID.randomUUID();
         User user = createUser(userId);
         Vote vote = createVoteEntity(5L, 2);
@@ -188,8 +198,10 @@ class VoteServiceTest {
         given(voteAnswerRepository.countByVoteIdGroupByOptionId(5L))
                 .willReturn(List.<Object[]>of(new Object[]{102L, 1L}));
 
+        // when
         VoteResultInfo result = voteService.submitVote(userId, 5L, new SubmitVoteCommand(List.of(102L)));
 
+        // then
         assertThat(result.voteId()).isEqualTo(5L);
         assertThat(result.options()).hasSize(2);
         assertThat(result.options().stream().filter(option -> option.selectedByMe())).hasSize(1);
@@ -206,8 +218,9 @@ class VoteServiceTest {
     }
 
     @Test
-    @DisplayName("submitVote returns result for valid option")
+    @DisplayName("유효한 선택지로 투표하면 결과를 반환한다")
     void submitVote_success() {
+        // given
         UUID userId = UUID.randomUUID();
         User user = createUser(userId);
         Vote vote = createVoteEntity(7L, 2);
@@ -230,8 +243,10 @@ class VoteServiceTest {
         given(voteAnswerRepository.countByVoteIdGroupByOptionId(7L))
                 .willReturn(List.<Object[]>of(new Object[]{201L, 1L}));
 
+        // when
         VoteResultInfo result = voteService.submitVote(userId, 7L, new SubmitVoteCommand(List.of(201L)));
 
+        // then
         assertThat(result.voteId()).isEqualTo(7L);
         assertThat(result.participantCount()).isEqualTo(1L);
         assertThat(result.options()).hasSize(1);

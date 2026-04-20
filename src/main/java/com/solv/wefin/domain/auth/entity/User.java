@@ -54,4 +54,11 @@ public class User extends BaseEntity {
     public void changePassword(String password) {
         this.password = password;
     }
+
+    public void withdraw() {
+        this.status = UserStatus.WITHDRAWN;
+        this.homeGroup = null;
+        this.email = "withdrawn_" + this.userId + "@deleted.local";
+        this.nickname = "wd_" + this.userId.toString().substring(0, 8);
+    }
 }

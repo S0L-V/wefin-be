@@ -33,6 +33,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 
 @WebMvcTest(AuthController.class)
 @Import(AuthExceptionHandler.class)
@@ -565,6 +566,97 @@ class AuthControllerTest {
                     .andExpect(jsonPath("$.status").value(400))
                     .andExpect(jsonPath("$.code").value("AUTH_PASSWORD_SAME_AS_OLD"))
                     .andExpect(jsonPath("$.message").value("새 비밀번호는 기존 비밀번호와 달라야 합니다."));
+        }
+    }
+
+    @Nested
+    @DisplayName("DELETE /api/auth/me")
+    class WithdrawTest {
+
+        private String withdrawRequest(String password) {
+            return """
+        {
+          "password": "%s"
+        }
+        """.formatted(password);
+        }
+
+        @Test
+        @DisplayName("회원 탈퇴 성공 시 200을 반환한다")
+        void withdraw_success() throws Exception {
+            UUID userId = UUID.randomUUID();
+            String requestBody = withdrawRequest("pass1234");
+
+            mockMvc.perform(delete("/api/auth/me")
+                            .with(csrf())
+                            .with(authentication(
+                                    new UsernamePasswordAuthenticationToken(
+                                            userId,
+                                            null,
+                                            AuthorityUtils.NO_AUTHORITIES
+                                    )
+                            ))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value(200))
+                    .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.nullValue()));
+
+            verify(authService).withdraw(userId, "pass1234");
+        }
+
+        @Test
+        @DisplayName("비밀번호가 비어 있으면 validation 에러를 반환한다")
+        void withdraw_fail_when_password_blank() throws Exception {
+            UUID userId = UUID.randomUUID();
+
+            String requestBody = """
+        {
+          "password": ""
+        }
+        """;
+
+            mockMvc.perform(delete("/api/auth/me")
+                            .with(csrf())
+                            .with(authentication(
+                                    new UsernamePasswordAuthenticationToken(
+                                            userId,
+                                            null,
+                                            AuthorityUtils.NO_AUTHORITIES
+                                    )
+                            ))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.code").value("AUTH_VALIDATION_FAILED"))
+                    .andExpect(jsonPath("$.data.password").exists());
+        }
+
+        @Test
+        @DisplayName("비밀번호가 일치하지 않으면 400 에러를 반환한다")
+        void withdraw_fail_when_password_mismatch() throws Exception {
+            UUID userId = UUID.randomUUID();
+            String requestBody = withdrawRequest("wrong-password");
+
+            doThrow(new BusinessException(ErrorCode.AUTH_PASSWORD_MISMATCH))
+                    .when(authService).withdraw(userId, "wrong-password");
+
+            mockMvc.perform(delete("/api/auth/me")
+                            .with(csrf())
+                            .with(authentication(
+                                    new UsernamePasswordAuthenticationToken(
+                                            userId,
+                                            null,
+                                            AuthorityUtils.NO_AUTHORITIES
+                                    )
+                            ))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.code").value("AUTH_PASSWORD_MISMATCH"))
+                    .andExpect(jsonPath("$.message").value("현재 비밀번호가 일치하지 않습니다."));
         }
     }
 }

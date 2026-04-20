@@ -19,6 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,7 +29,8 @@ import static com.solv.wefin.domain.group.service.support.GroupTestFixtures.crea
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.any;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -56,9 +58,8 @@ class GroupInviteServiceTest {
     class CreateInviteCodeTest {
 
         @Test
-        @DisplayName("공유 그룹의 ACTIVE 멤버면 초대 코드를 생성한다")
-        void createInviteCode_success() throws Exception {
-            // given
+        @DisplayName("유효한 초대 코드가 없으면 새 초대 코드를 생성한다")
+        void createInviteCode_success_create_new_invite() throws Exception {
             UUID userId = UUID.randomUUID();
 
             Group group = createGroup(1L, "테스트 그룹", GroupType.SHARED);
@@ -69,7 +70,181 @@ class GroupInviteServiceTest {
                     "encoded-password"
             );
 
-            GroupInvite invite = createGroupInvite(
+            GroupInvite savedInvite = createGroupInvite(
+                    10L,
+                    group,
+                    user,
+                    UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+                    GroupInvite.InviteStatus.PENDING
+            );
+
+            when(groupRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(group));
+            when(groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
+                    userId,
+                    group,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            )).thenReturn(true);
+            when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+            when(groupInviteRepository.findFirstByGroupAndStatusAndExpiredAtAfterOrderByCreatedAtDesc(
+                    eq(group),
+                    eq(GroupInvite.InviteStatus.PENDING),
+                    any(OffsetDateTime.class)
+            )).thenReturn(Optional.empty());
+            when(groupInviteRepository.save(any(GroupInvite.class))).thenReturn(savedInvite);
+
+            GroupInviteInfo result = groupService.createInviteCode(1L, userId);
+
+            assertAll(
+                    () -> assertThat(result.codeId()).isEqualTo(10L),
+                    () -> assertThat(result.groupId()).isEqualTo(1L),
+                    () -> assertThat(result.inviteCode())
+                            .isEqualTo(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")),
+                    () -> assertThat(result.status()).isEqualTo(GroupInvite.InviteStatus.PENDING),
+                    () -> assertThat(result.expiredAt()).isNotNull()
+            );
+
+            verify(groupRepository).findByIdForUpdate(1L);
+            verify(groupMemberRepository).existsByUser_UserIdAndGroupAndStatus(
+                    userId,
+                    group,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            );
+            verify(userRepository).findById(userId);
+            verify(groupInviteRepository).findFirstByGroupAndStatusAndExpiredAtAfterOrderByCreatedAtDesc(
+                    eq(group),
+                    eq(GroupInvite.InviteStatus.PENDING),
+                    any(OffsetDateTime.class)
+            );
+            verify(groupInviteRepository).save(any(GroupInvite.class));
+        }
+
+        @Test
+        @DisplayName("유효한 기존 초대 코드가 있으면 재사용한다")
+        void createInviteCode_success_reuse_existing_invite() throws Exception {
+            UUID userId = UUID.randomUUID();
+
+            Group group = createGroup(1L, "테스트 그룹", GroupType.SHARED);
+            var user = createUser(
+                    userId,
+                    "leader@test.com",
+                    "리더",
+                    "encoded-password"
+            );
+
+            GroupInvite existingInvite = createGroupInvite(
+                    10L,
+                    group,
+                    user,
+                    UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+                    GroupInvite.InviteStatus.PENDING
+            );
+
+            when(groupRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(group));
+            when(groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
+                    userId,
+                    group,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            )).thenReturn(true);
+            when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+            when(groupInviteRepository.findFirstByGroupAndStatusAndExpiredAtAfterOrderByCreatedAtDesc(
+                    eq(group),
+                    eq(GroupInvite.InviteStatus.PENDING),
+                    any(OffsetDateTime.class)
+            )).thenReturn(Optional.of(existingInvite));
+
+            GroupInviteInfo result = groupService.createInviteCode(1L, userId);
+
+            assertAll(
+                    () -> assertThat(result.codeId()).isEqualTo(10L),
+                    () -> assertThat(result.groupId()).isEqualTo(1L),
+                    () -> assertThat(result.inviteCode())
+                            .isEqualTo(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")),
+                    () -> assertThat(result.status()).isEqualTo(GroupInvite.InviteStatus.PENDING),
+                    () -> assertThat(result.expiredAt()).isNotNull()
+            );
+
+            verify(groupRepository).findByIdForUpdate(1L);
+            verify(groupMemberRepository).existsByUser_UserIdAndGroupAndStatus(
+                    userId,
+                    group,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            );
+            verify(userRepository).findById(userId);
+            verify(groupInviteRepository).findFirstByGroupAndStatusAndExpiredAtAfterOrderByCreatedAtDesc(
+                    eq(group),
+                    eq(GroupInvite.InviteStatus.PENDING),
+                    any(OffsetDateTime.class)
+            );
+            verify(groupInviteRepository, never()).save(any(GroupInvite.class));
+        }
+
+        @Test
+        @DisplayName("홈 그룹이면 초대 코드 생성이 불가하다")
+        void createInviteCode_fail_when_home_group() throws Exception {
+            UUID userId = UUID.randomUUID();
+            Group homeGroup = createGroup(1L, "리더의 그룹", GroupType.HOME);
+
+            when(groupRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(homeGroup));
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> groupService.createInviteCode(1L, userId)
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_HOME_INVITE_NOT_ALLOWED);
+            verify(groupMemberRepository, never()).existsByUser_UserIdAndGroupAndStatus(any(), any(), any());
+            verify(userRepository, never()).findById(any());
+            verify(groupInviteRepository, never()).findFirstByGroupAndStatusAndExpiredAtAfterOrderByCreatedAtDesc(
+                    any(), any(), any()
+            );
+            verify(groupInviteRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("공유 그룹의 ACTIVE 멤버가 아니면 예외가 발생한다")
+        void createInviteCode_fail_when_not_member() throws Exception {
+            UUID userId = UUID.randomUUID();
+            Group group = createGroup(1L, "테스트 그룹", GroupType.SHARED);
+
+            when(groupRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(group));
+            when(groupMemberRepository.existsByUser_UserIdAndGroupAndStatus(
+                    userId,
+                    group,
+                    GroupMember.GroupMemberStatus.ACTIVE
+            )).thenReturn(false);
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> groupService.createInviteCode(1L, userId)
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_INVITE_FORBIDDEN);
+            verify(userRepository, never()).findById(any());
+            verify(groupInviteRepository, never()).findFirstByGroupAndStatusAndExpiredAtAfterOrderByCreatedAtDesc(
+                    any(), any(), any()
+            );
+            verify(groupInviteRepository, never()).save(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("getLatestInviteCode")
+    class GetLatestInviteCodeTest {
+
+        @Test
+        @DisplayName("유효한 초대 코드가 있으면 반환한다")
+        void success() throws Exception {
+            UUID userId = UUID.randomUUID();
+
+            Group group = createGroup(1L, "테스트 그룹", GroupType.SHARED);
+            var user = createUser(
+                    userId,
+                    "leader@test.com",
+                    "리더",
+                    "encoded-password"
+            );
+
+            GroupInvite existingInvite = createGroupInvite(
                     10L,
                     group,
                     user,
@@ -83,18 +258,19 @@ class GroupInviteServiceTest {
                     group,
                     GroupMember.GroupMemberStatus.ACTIVE
             )).thenReturn(true);
-            when(userRepository.findById(userId))
-                    .thenReturn(Optional.of(user));
-            when(groupInviteRepository.save(any(GroupInvite.class))).thenReturn(invite);
+            when(groupInviteRepository.findFirstByGroupAndStatusAndExpiredAtAfterOrderByCreatedAtDesc(
+                    eq(group),
+                    eq(GroupInvite.InviteStatus.PENDING),
+                    any(OffsetDateTime.class)
+            )).thenReturn(Optional.of(existingInvite));
 
-            // when
-            GroupInviteInfo result = groupService.createInviteCode(1L, userId);
+            GroupInviteInfo result = groupService.getLatestInviteCode(1L, userId);
 
-            // then
             assertAll(
                     () -> assertThat(result.codeId()).isEqualTo(10L),
                     () -> assertThat(result.groupId()).isEqualTo(1L),
-                    () -> assertThat(result.inviteCode()).isEqualTo(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")),
+                    () -> assertThat(result.inviteCode())
+                            .isEqualTo(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")),
                     () -> assertThat(result.status()).isEqualTo(GroupInvite.InviteStatus.PENDING),
                     () -> assertThat(result.expiredAt()).isNotNull()
             );
@@ -105,37 +281,18 @@ class GroupInviteServiceTest {
                     group,
                     GroupMember.GroupMemberStatus.ACTIVE
             );
-            verify(userRepository).findById(userId);
-            verify(groupInviteRepository).save(any(GroupInvite.class));
-        }
-
-        @Test
-        @DisplayName("홈 그룹이면 초대 코드 생성이 불가하다")
-        void createInviteCode_fail_when_home_group() throws Exception {
-            // given
-            UUID userId = UUID.randomUUID();
-            Group homeGroup = createGroup(1L, "리더의 그룹", GroupType.HOME);
-
-            when(groupRepository.findById(1L)).thenReturn(Optional.of(homeGroup));
-
-            // when
-            BusinessException exception = assertThrows(
-                    BusinessException.class,
-                    () -> groupService.createInviteCode(1L, userId)
+            verify(groupInviteRepository).findFirstByGroupAndStatusAndExpiredAtAfterOrderByCreatedAtDesc(
+                    eq(group),
+                    eq(GroupInvite.InviteStatus.PENDING),
+                    any(OffsetDateTime.class)
             );
-
-            // then
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_HOME_INVITE_NOT_ALLOWED);
-            verify(groupMemberRepository, never()).existsByUser_UserIdAndGroupAndStatus(any(), any(), any());
-            verify(userRepository, never()).findById(any());
-            verify(groupInviteRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("공유 그룹의 ACTIVE 멤버가 아니면 예외가 발생한다")
-        void createInviteCode_fail_when_not_member() throws Exception {
-            // given
+        @DisplayName("초대 코드가 없으면 예외가 발생한다")
+        void fail_not_found() throws Exception {
             UUID userId = UUID.randomUUID();
+
             Group group = createGroup(1L, "테스트 그룹", GroupType.SHARED);
 
             when(groupRepository.findById(1L)).thenReturn(Optional.of(group));
@@ -143,18 +300,39 @@ class GroupInviteServiceTest {
                     userId,
                     group,
                     GroupMember.GroupMemberStatus.ACTIVE
-            )).thenReturn(false);
+            )).thenReturn(true);
+            when(groupInviteRepository.findFirstByGroupAndStatusAndExpiredAtAfterOrderByCreatedAtDesc(
+                    eq(group),
+                    eq(GroupInvite.InviteStatus.PENDING),
+                    any(OffsetDateTime.class)
+            )).thenReturn(Optional.empty());
 
-            // when
             BusinessException exception = assertThrows(
                     BusinessException.class,
-                    () -> groupService.createInviteCode(1L, userId)
+                    () -> groupService.getLatestInviteCode(1L, userId)
             );
 
-            // then
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_INVITE_FORBIDDEN);
-            verify(userRepository, never()).findById(any());
-            verify(groupInviteRepository, never()).save(any());
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_INVITE_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("홈 그룹이면 최신 초대 코드 조회가 불가하다")
+        void getLatestInviteCode_fail_when_home_group() throws Exception {
+            UUID userId = UUID.randomUUID();
+            Group homeGroup = createGroup(1L, "리더의 그룹", GroupType.HOME);
+
+            when(groupRepository.findById(1L)).thenReturn(Optional.of(homeGroup));
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> groupService.getLatestInviteCode(1L, userId)
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.GROUP_HOME_INVITE_NOT_ALLOWED);
+            verify(groupMemberRepository, never()).existsByUser_UserIdAndGroupAndStatus(any(), any(), any());
+            verify(groupInviteRepository, never()).findFirstByGroupAndStatusAndExpiredAtAfterOrderByCreatedAtDesc(
+                    any(), any(), any()
+            );
         }
     }
 }

@@ -104,6 +104,19 @@ public class ChatMessage {
                 .build();
     }
 
+    public static ChatMessage createSystemMessage(Group group, String content) {
+        return ChatMessage.builder()
+                .user(null)
+                .group(group)
+                .messageType(MessageType.SYSTEM)
+                .content(content)
+                .refType(null)
+                .refId(null)
+                .replyToMessage(null)
+                .createdAt(OffsetDateTime.now())
+                .build();
+    }
+
     public void attachNewsShare(ChatMessageNewsShare newsShare) {
         this.newsShare = newsShare;
     }
