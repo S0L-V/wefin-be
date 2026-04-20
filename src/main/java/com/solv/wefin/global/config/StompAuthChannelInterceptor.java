@@ -16,7 +16,6 @@ import org.springframework.stereotype.Component;
 
 import java.security.Principal;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -25,10 +24,6 @@ import java.util.UUID;
 public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
     private static final String BEARER_PREFIX = "Bearer ";
-    private static final Set<String> ANONYMOUS_SUBSCRIBE_DESTINATIONS = Set.of(
-            "/topic/chat/global"
-    );
-
     private final JwtProvider jwtProvider;
     private final UserRepository userRepository;
 
@@ -109,7 +104,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
     private void handleSubscribe(StompHeaderAccessor accessor) {
         String destination = accessor.getDestination();
 
-        if (!isAuthenticated(accessor) && !ANONYMOUS_SUBSCRIBE_DESTINATIONS.contains(destination)) {
+        if (!isAuthenticated(accessor) && !isAnonymousSubscribeAllowed(destination)) {
             throw new BusinessException(ErrorCode.AUTH_UNAUTHORIZED);
         }
 
@@ -133,6 +128,10 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
         Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
         return sessionAttributes != null && sessionAttributes.get("userId") instanceof UUID;
+    }
+
+    private boolean isAnonymousSubscribeAllowed(String destination) {
+        return "/topic/chat/global".equals(destination);
     }
 
     private record StompPrincipal(String value) implements Principal {

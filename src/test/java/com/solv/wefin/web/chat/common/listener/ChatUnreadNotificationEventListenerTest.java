@@ -75,6 +75,11 @@ class ChatUnreadNotificationEventListenerTest {
                 eq("/queue/chat-unread"),
                 payloadCaptor.capture()
         );
+        verify(messagingTemplate, never()).convertAndSendToUser(
+                eq(senderId.toString()),
+                eq("/queue/chat-unread"),
+                any()
+        );
         verify(chatReadStateService, never()).getUnreadInfoSnapshot(senderId);
 
         ChatUnreadNotificationResponse payload = payloadCaptor.getValue();
@@ -121,6 +126,11 @@ class ChatUnreadNotificationEventListenerTest {
                 eq(receiverId.toString()),
                 eq("/queue/chat-unread"),
                 payloadCaptor.capture()
+        );
+        verify(messagingTemplate, never()).convertAndSendToUser(
+                eq(senderId.toString()),
+                eq("/queue/chat-unread"),
+                any()
         );
         verify(chatReadStateService, never()).getUnreadInfoSnapshot(senderId);
 
