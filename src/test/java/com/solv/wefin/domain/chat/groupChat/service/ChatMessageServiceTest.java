@@ -79,6 +79,11 @@ class ChatMessageServiceTest {
         voteOptionRepository = mock(VoteOptionRepository.class);
         openAiChatClient = mock(OpenAiChatClient.class);
 
+        ChatMessageWriteService chatMessageWriteService = new ChatMessageWriteService(
+                chatMessageRepository,
+                eventPublisher
+        );
+
         chatMessageService = new ChatMessageService(
                 chatMessageRepository,
                 userRepository,
@@ -89,6 +94,7 @@ class ChatMessageServiceTest {
                 voteRepository,
                 voteOptionRepository,
                 openAiChatClient,
+                chatMessageWriteService,
                 newsClusterRepository,
                 chatMessageNewsShareService
         );
@@ -141,10 +147,10 @@ class ChatMessageServiceTest {
         chatMessageService.sendMessage(content, userId, null);
 
         // then
-        verify(chatMessageRepository, times(1))
-                .countByGroup_IdAndUser_UserIdAndCreatedAtAfter(eq(1L), eq(userId), any(OffsetDateTime.class));
-        verify(chatSpamGuard, times(1))
-                .validate(eq(ChatScope.groupKey(1L, userId)), eq(0L), any(OffsetDateTime.class));
+        verify(chatMessageRepository).countByGroup_IdAndUser_UserIdAndCreatedAtAfter(
+                eq(1L), eq(userId), any(OffsetDateTime.class)
+        );
+        verify(chatSpamGuard).validate(eq(ChatScope.groupKey(1L, userId)), eq(0L), any(OffsetDateTime.class));
         verify(chatMessageRepository).save(captor.capture());
         verify(eventPublisher).publishEvent(any(ChatMessageCreatedEvent.class));
         verify(questProgressService).handleEvent(userId, QuestEventType.SEND_GROUP_CHAT);
@@ -164,8 +170,10 @@ class ChatMessageServiceTest {
         UUID userId = UUID.randomUUID();
 
         // when
-        BusinessException exception = assertThrows(BusinessException.class,
-                () -> chatMessageService.sendMessage(" ", userId, null));
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> chatMessageService.sendMessage(" ", userId, null)
+        );
 
         // then
         assertEquals(ErrorCode.CHAT_MESSAGE_EMPTY, exception.getErrorCode());
@@ -200,7 +208,7 @@ class ChatMessageServiceTest {
                 .user(user)
                 .group(group)
                 .messageType(MessageType.CHAT)
-                .content("영")
+                .content("\uC601")
                 .createdAt(OffsetDateTime.now())
                 .build();
         ReflectionTestUtils.setField(savedUserMessage, "id", 22L);
@@ -208,7 +216,7 @@ class ChatMessageServiceTest {
         ChatMessage savedSystemMessage = ChatMessage.builder()
                 .group(group)
                 .messageType(MessageType.SYSTEM)
-                .content("차")
+                .content("\uCC28")
                 .createdAt(OffsetDateTime.now())
                 .build();
         ReflectionTestUtils.setField(savedSystemMessage, "id", 23L);
@@ -307,7 +315,10 @@ class ChatMessageServiceTest {
         assertEquals(MessageType.CHAT, capturedMessages.get(0).getMessageType());
         assertEquals("/wefini 질문", capturedMessages.get(0).getContent());
         assertEquals(MessageType.SYSTEM, capturedMessages.get(1).getMessageType());
-        assertEquals("AI 응답을 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.", capturedMessages.get(1).getContent());
+        assertEquals(
+                "AI 응답을 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+                capturedMessages.get(1).getContent()
+        );
         assertNull(capturedMessages.get(1).getUser());
     }
 
