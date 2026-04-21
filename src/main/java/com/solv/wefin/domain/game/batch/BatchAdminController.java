@@ -23,7 +23,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/admin/batch")
 @RequiredArgsConstructor
-@Profile({"local", "dev"})
+@Profile({"local", "dev", "desktop"})
 public class BatchAdminController {
 
     private final StockInitService stockInitService;

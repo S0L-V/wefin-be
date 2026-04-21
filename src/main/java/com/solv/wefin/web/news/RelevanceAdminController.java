@@ -20,7 +20,7 @@ import java.util.List;
 /**
  * 금융 관련성 재판정 관리자 엔드포인트 (local/dev only).
  */
-@Profile({"local", "dev"})
+@Profile({"local", "dev", "desktop"})
 @RestController
 @RequestMapping("/api/admin/news/relevance")
 @RequiredArgsConstructor
