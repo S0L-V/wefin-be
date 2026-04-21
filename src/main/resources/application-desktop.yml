@@ -1,0 +1,89 @@
+spring:
+  config:
+    activate:
+      on-profile: desktop
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+ai:
+  server:
+    url: ${AI_SERVER_URL}
+
+jwt:
+  secret: ${JWT_SECRET}
+
+news:
+  naver:
+    client-id: ${NAVER_CLIENT_ID}
+    client-secret: ${NAVER_CLIENT_SECRET}
+    display: ${NAVER_NEWS_DISPLAY:100}
+  collect:
+    cron: ${NEWS_COLLECT_CRON:${NEWS_BATCH_CRON:0 0 */2 * * *}}
+
+server:
+  forward-headers-strategy: native
+
+market:
+  bok:
+    api-key: ${BOK_API_KEY:}
+    base-url: ${BOK_BASE_URL:https://ecos.bok.or.kr/api}
+  collect:
+    cron: ${MARKET_COLLECT_CRON:${MARKET_BATCH_CRON:0 */5 * * * *}}
+
+embedding:
+  collect:
+    cron: ${EMBEDDING_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
+
+tagging:
+  collect:
+    cron: ${TAGGING_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
+
+clustering:
+  collect:
+    cron: ${CLUSTERING_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
+  merge:
+    cron: ${CLUSTER_MERGE_CRON:${NEWS_BATCH_CRON:0 0 */6 * * *}}
+
+summary:
+  collect:
+    cron: ${SUMMARY_COLLECT_CRON:${NEWS_BATCH_CRON:0 */30 * * * *}}
+
+batch:
+  news:
+    crawl-size: ${NEWS_CRAWL_BATCH_SIZE:500}
+    embedding-size: ${NEWS_EMBEDDING_BATCH_SIZE:500}
+    tagging-size: ${NEWS_TAGGING_BATCH_SIZE:500}
+    clustering-size: ${NEWS_CLUSTERING_BATCH_SIZE:500}
+    summary-size: ${NEWS_SUMMARY_BATCH_SIZE:50}
+    rejudge-max-limit: ${NEWS_REJUDGE_MAX_LIMIT:500}
+wefin-news:
+  api:
+    base-url: ${WEFIN_NEWS_BASE_URL:https://wefin.shinhanacademy.co.kr/}
+
+websocket:
+  allowed-origins:
+    - https://wefin.ai.kr
+    - https://wefin.shinhanacademy.co.kr
