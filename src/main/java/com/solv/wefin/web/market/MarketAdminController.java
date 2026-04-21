@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@Profile({"local", "dev"})
+@Profile({"local", "dev", "desktop"})
 @RestController
 @RequestMapping("/api/admin/market")
 @RequiredArgsConstructor
