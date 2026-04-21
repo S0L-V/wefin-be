@@ -2,6 +2,7 @@ package com.solv.wefin.web.chat.groupChat;
 
 import com.solv.wefin.domain.chat.groupChat.dto.command.ShareNewsCommand;
 import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessagesInfo;
+import com.solv.wefin.domain.chat.common.service.ChatReadStateService;
 import com.solv.wefin.domain.chat.groupChat.service.ChatMessageService;
 import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.global.common.ApiResponse;
@@ -25,6 +26,7 @@ import java.util.UUID;
 public class GroupChatController {
 
     private final ChatMessageService chatMessageService;
+    private final ChatReadStateService chatReadStateService;
 
     @GetMapping("/messages")
     public ApiResponse<GroupChatMessagesResponse> getRecentMessages(
@@ -57,5 +59,13 @@ public class GroupChatController {
         Group group = chatMessageService.getMyGroup(userId);
 
         return ApiResponse.success(GroupChatMetaResponse.from(group));
+    }
+
+    @PostMapping("/read")
+    public ApiResponse<Void> markRead(
+            @AuthenticationPrincipal UUID userId
+    ) {
+        chatReadStateService.markGroupChatRead(userId);
+        return ApiResponse.success(null);
     }
 }

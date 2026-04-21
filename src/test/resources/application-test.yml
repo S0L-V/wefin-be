@@ -25,6 +25,14 @@ news:
     display: 10
   collect:
     cron: "-"
+  hot:
+    window-hours: 3
+    aggregation-interval-seconds: 300
+    # NewsHotProperties.@Max(600) 상한 내에서 최대치. 단위 테스트는 수초 내 종료되므로
+    # 600초 초기 지연이면 테스트 중 배치가 실행되지 않음
+    initial-delay-seconds: 600
+    max-size: 20
+    mark-read-throttle-seconds: 60
 
 market:
   bok:

@@ -66,6 +66,12 @@ public class NewsCluster extends BaseEntity {
     @Column(name = "article_count", nullable = false)
     private int articleCount = 0;
 
+    @Column(name = "unique_viewer_count", nullable = false)
+    private long uniqueViewerCount = 0L;
+
+    @Column(name = "recent_view_count", nullable = false)
+    private long recentViewCount = 0L;
+
     public enum ClusterStatus {
         ACTIVE, INACTIVE
     }

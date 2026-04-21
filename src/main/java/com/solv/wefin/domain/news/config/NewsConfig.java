@@ -7,7 +7,7 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
 @Configuration
-@EnableConfigurationProperties(NewsBatchProperties.class)
+@EnableConfigurationProperties({NewsBatchProperties.class, NewsHotProperties.class})
 public class NewsConfig {
 
     @Bean

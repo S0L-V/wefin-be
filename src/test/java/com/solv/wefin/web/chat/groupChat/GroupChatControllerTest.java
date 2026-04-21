@@ -4,6 +4,7 @@ import com.solv.wefin.domain.chat.groupChat.dto.command.ShareNewsCommand;
 import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessageInfo;
 import com.solv.wefin.domain.chat.groupChat.dto.info.ChatMessagesInfo;
 import com.solv.wefin.domain.chat.groupChat.dto.info.NewsShareInfo;
+import com.solv.wefin.domain.chat.common.service.ChatReadStateService;
 import com.solv.wefin.domain.chat.groupChat.service.ChatMessageService;
 import com.solv.wefin.domain.group.entity.Group;
 import com.solv.wefin.global.config.security.JwtProvider;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -44,6 +46,9 @@ class GroupChatControllerTest {
 
     @MockitoBean
     private ChatMessageService chatMessageService;
+
+    @MockitoBean
+    private ChatReadStateService chatReadStateService;
 
     @MockitoBean
     private JwtProvider jwtProvider;
@@ -197,5 +202,23 @@ class GroupChatControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.code").value("NEWS_CLUSTER_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("markRead updates current group chat read state")
+    void markRead_success() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        mockMvc.perform(post("/api/chat/group/read")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userId,
+                                null,
+                                AuthorityUtils.NO_AUTHORITIES
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200));
+
+        verify(chatReadStateService).markGroupChatRead(userId);
     }
 }

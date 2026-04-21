@@ -78,8 +78,8 @@ class GameRoomServiceTest {
         given(gameRoomRepository.countByUserIdAndStartedAtBetween(
                 any(UUID.class), any(OffsetDateTime.class), any(OffsetDateTime.class)))
                 .willReturn(0L);
-        // DB 최초 거래일 — 방 생성 시 시작일 범위 하한
-        given(stockDailyRepository.findEarliestTradeDate())
+        // 2021년 이후 최초 거래일 — 방 생성 시 시작일 범위 하한
+        given(stockDailyRepository.findEarliestTradeDateAfter(LocalDate.of(2020, 12, 31)))
                 .willReturn(Optional.of(LocalDate.of(2021, 1, 4)));
         // 랜덤으로 뽑힌 날짜는 이하에서 가장 가까운 거래일로 보정
         given(stockDailyRepository.findLatestTradeDateOnOrBefore(any(LocalDate.class)))
@@ -111,7 +111,7 @@ class GameRoomServiceTest {
         given(gameRoomRepository.countByUserIdAndStartedAtBetween(
                 any(UUID.class), any(OffsetDateTime.class), any(OffsetDateTime.class)))
                 .willReturn(0L);
-        given(stockDailyRepository.findEarliestTradeDate())
+        given(stockDailyRepository.findEarliestTradeDateAfter(LocalDate.of(2020, 12, 31)))
                 .willReturn(Optional.of(LocalDate.of(2021, 1, 4)));
         LocalDate adjustedTradeDate = LocalDate.of(2022, 1, 3);
         given(stockDailyRepository.findLatestTradeDateOnOrBefore(any(LocalDate.class)))

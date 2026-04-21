@@ -5,6 +5,7 @@ import com.solv.wefin.domain.news.article.entity.NewsArticleTag.TagType;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterDetailResult;
 import com.solv.wefin.domain.news.cluster.service.NewsClusterQueryService.ClusterFeedResult;
+import com.solv.wefin.domain.news.config.NewsHotProperties;
 import com.solv.wefin.global.common.ApiResponse;
 import com.solv.wefin.global.error.BusinessException;
 import com.solv.wefin.global.error.ErrorCode;
@@ -34,10 +35,12 @@ public class NewsClusterController {
     private static final int DEFAULT_PAGE_SIZE = 10;
     private static final int MAX_PAGE_SIZE = 50;
     private static final int MAX_TAG_CODES = 20;
-    private static final Set<String> VALID_SORT_VALUES = Set.of("publishedAt", "updatedAt");
+    private static final String SORT_VIEW = "view";
+    private static final Set<String> VALID_SORT_VALUES = Set.of("publishedAt", "updatedAt", SORT_VIEW);
 
     private final NewsClusterQueryService newsClusterQueryService;
     private final ClusterInteractionService clusterInteractionService;
+    private final NewsHotProperties newsHotProperties;
 
     /**
      * 뉴스 클러스터 피드 목록을 조회한다.
@@ -46,18 +49,26 @@ public class NewsClusterController {
      * - tab: 홈 카테고리 탭 (ALL/FINANCE/TECH/INDUSTRY/ENERGY/BIO/CRYPTO)
      * - tagType + tagCodes: 특정 태그들로 필터 (SECTOR/STOCK + 태그코드 목록)
      *
-     * @param cursor "timestamp_id" 형식의 커서 (첫 페이지면 null)
-     * @param pageSize 페이지 크기 (기본 10, 최대 50)
+     * 정렬 옵션:
+     * - publishedAt / updatedAt: 시간 기준 커서 페이지네이션 지원 (size 최대 50)
+     * - view: 최근 N시간(기본 3h) 윈도우 내 고유 뷰어 수 기준 Top N. 페이지네이션 미지원,
+     *   size 는 {@code news.hot.max-size} 상한 (초과 시 400 INVALID_INPUT).
+     *   cursor 를 보내도 무시되며 {@code hasNext=false}, {@code nextCursor=null}.
+     *   응답의 {@code lastAggregatedAt} 은 배치 마지막 성공 시각이며, 첫 배치 전이면 null.
+     *   FE 는 임계(예: 15분) 초과 시 {@code sort=publishedAt} 으로 자동 폴백 권장.
+     *
+     * @param cursor "timestamp_id" 형식의 커서 (첫 페이지면 null, sort=view 면 무시)
+     * @param pageSize 페이지 크기 (기본 10, 최대 50 / sort=view 는 news.hot.max-size)
      * @param tab 카테고리 탭 (기본 ALL)
      * @param tagType 태그 유형 (SECTOR 또는 STOCK)
      * @param tagCodes 태그 코드 목록 (tagType과 함께 사용)
-     * @param sort 정렬 기준 (publishedAt 또는 updatedAt, 기본 publishedAt)
+     * @param sort 정렬 기준 (publishedAt / updatedAt / view, 기본 publishedAt)
      * @param userId 사용자 ID (비인증 시 null)
      */
     @GetMapping
     public ApiResponse<ClusterFeedResponse> getFeed(
             @RequestParam(name = "cursor", required = false) String cursor,
-            @RequestParam(name = "size", defaultValue = "" + DEFAULT_PAGE_SIZE) int pageSize,
+            @RequestParam(name = "size", required = false) Integer pageSizeParam,
             @RequestParam(name = "tab", defaultValue = "ALL") String tab,
             @RequestParam(name = "tagType", required = false) String tagType,
             @RequestParam(name = "tagCodes", required = false) List<String> tagCodes,
@@ -68,6 +79,7 @@ public class NewsClusterController {
         if (!VALID_SORT_VALUES.contains(normalizedSort)) {
             throw new BusinessException(ErrorCode.FEED_SORT_UNSUPPORTED);
         }
+        boolean isHotSort = SORT_VIEW.equals(normalizedSort);
 
         String normalizedTagType = tagType == null ? null : tagType.trim();
         boolean hasTagType = normalizedTagType != null && !normalizedTagType.isEmpty();
@@ -99,12 +111,29 @@ public class NewsClusterController {
             }
         }
 
-        pageSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
+        int pageSize;
+        if (isHotSort) {
+            int hotMaxSize = newsHotProperties.maxSize();
+            if (pageSizeParam == null) {
+                // size 미지정 — DEFAULT_PAGE_SIZE 와 hotMaxSize 중 작은 쪽 사용.
+                // 운영자가 max-size 를 작게 튜닝했을 때 "size 안 보냈는데 거절당함" UX 방지.
+                pageSize = Math.min(DEFAULT_PAGE_SIZE, hotMaxSize);
+            } else if (pageSizeParam < 1 || pageSizeParam > hotMaxSize) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT,
+                        "sort=view 의 size 는 1 ~ " + hotMaxSize + " 사이여야 합니다: " + pageSizeParam);
+            } else {
+                pageSize = pageSizeParam;
+            }
+        } else {
+            int raw = pageSizeParam == null ? DEFAULT_PAGE_SIZE : pageSizeParam;
+            pageSize = Math.min(Math.max(raw, 1), MAX_PAGE_SIZE);
+        }
 
         OffsetDateTime cursorTime = null;
         Long cursorId = null;
 
-        if (cursor != null) {
+        // sort=view 는 cursor 파라미터를 무시한다 (forward compat: 구 클라이언트가 붙여 보내도 에러 없이 Top N 반환)
+        if (!isHotSort && cursor != null) {
             try {
                 String[] parts = cursor.split("_", 2);
                 if (parts.length != 2) {
@@ -143,7 +172,14 @@ public class NewsClusterController {
 
     /**
      * 클러스터 읽음을 기록한다.
-     * 비회원(userId=null)은 무시한다
+     *
+     * 비회원(userId=null)은 무시한다.
+     *
+     * 호출 계약(FE 권장):
+     * - 상세 진입 세션 당 1회
+     * - 같은 세션 내 재진입은 FE 에서 30초 쿨다운 debounce
+     * 서버는 {@code news.hot.mark-read-throttle-seconds} 내 반복 호출에 대해
+     * read_at UPDATE 를 skip 하여 방어 계층을 이중으로 둔다.
      *
      * @param clusterId 클러스터 ID
      * @param userId 사용자 ID (비인증 시 null)

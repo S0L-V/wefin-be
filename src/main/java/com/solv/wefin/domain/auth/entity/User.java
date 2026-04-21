@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.UuidGenerator;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
@@ -39,6 +40,12 @@ public class User extends BaseEntity {
     @JoinColumn(name = "home_group_id")
     private Group homeGroup;
 
+    @Column(name = "last_read_global_message_id")
+    private Long lastReadGlobalMessageId;
+
+    @Column(name = "last_read_global_at")
+    private OffsetDateTime lastReadGlobalAt;
+
     @Builder
     public User(String email, String nickname, String password) {
         this.email = email;
@@ -53,6 +60,18 @@ public class User extends BaseEntity {
 
     public void changePassword(String password) {
         this.password = password;
+    }
+
+    public void markGlobalChatRead(Long messageId) {
+        if (messageId == null) {
+            this.lastReadGlobalAt = OffsetDateTime.now();
+            return;
+        }
+
+        if (this.lastReadGlobalMessageId == null || messageId >= this.lastReadGlobalMessageId) {
+            this.lastReadGlobalMessageId = messageId;
+            this.lastReadGlobalAt = OffsetDateTime.now();
+        }
     }
 
     public void withdraw() {

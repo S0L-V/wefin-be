@@ -66,8 +66,8 @@ public class GameRoomService {
         }
 
         // start_date 랜덤 추출 + 거래일 보정
-        LocalDate rangeStart = stockDailyRepository.findEarliestTradeDate()
-                .orElseThrow(() -> new IllegalStateException("주가 데이터가 없습니다. 데이터 수집이 필요합니다."));
+        LocalDate rangeStart = stockDailyRepository.findEarliestTradeDateAfter(LocalDate.of(2020, 12, 31))
+                .orElseThrow(() -> new IllegalStateException("2021년 이후 주가 데이터가 없습니다. 데이터 수집이 필요합니다."));
         LocalDate rangeEnd = LocalDate.of(2024, 12, 31).minusMonths(command.periodMonths());
         long daysBetween = ChronoUnit.DAYS.between(rangeStart, rangeEnd);
         long randomDays = ThreadLocalRandom.current().nextLong(daysBetween + 1);

@@ -42,6 +42,12 @@ public class GroupMember {
     @Column(name = "left_at")
     private OffsetDateTime leftAt;
 
+    @Column(name = "last_read_chat_message_id")
+    private Long lastReadChatMessageId;
+
+    @Column(name = "last_read_chat_at")
+    private OffsetDateTime lastReadChatAt;
+
     @Builder
     private GroupMember(User user, Group group, GroupMemberRole role, GroupMemberStatus status) {
         this.user = user;
@@ -91,6 +97,18 @@ public class GroupMember {
 
     public void changeRoleToMember() {
         this.role = GroupMemberRole.MEMBER;
+    }
+
+    public void markGroupChatRead(Long messageId) {
+        if (messageId == null) {
+            this.lastReadChatAt = OffsetDateTime.now();
+            return;
+        }
+
+        if (this.lastReadChatMessageId == null || messageId >= this.lastReadChatMessageId) {
+            this.lastReadChatMessageId = messageId;
+            this.lastReadChatAt = OffsetDateTime.now();
+        }
     }
 
     public boolean isActive() {
