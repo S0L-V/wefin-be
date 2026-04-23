@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 금융 동향 수동 트리거 (로컬/개발 전용)
  */
-@Profile({"local", "dev"})
+@Profile({"local", "dev", "desktop"})
 @RestController
 @RequestMapping("/api/admin/market-trends")
 @RequiredArgsConstructor
