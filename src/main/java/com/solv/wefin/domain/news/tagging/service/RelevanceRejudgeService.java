@@ -59,8 +59,6 @@ public class RelevanceRejudgeService {
      * PENDING 상태의 기사를 배치 크기만큼 재판정한다.
      *
      * 노출 가능한 시간 윈도우({@link #REJUDGE_WINDOW_HOURS}시간) 안의 기사로 한정한다.
-     * 클러스터링이 24시간 안의 기사만 받기 때문에, 윈도우를 벗어난 PENDING은
-     * 재판정해도 클러스터에 진입할 수 없어 LLM 비용만 발생한다.
      *
      * @param limit 한 번에 처리할 최대 기사 수
      *              (허용 범위: 1 ~ {@code batch.news.rejudge-max-limit})
