@@ -43,13 +43,20 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
 
     /**
      * 재판정 가능한 PENDING 기사를 id 오름차순으로 조회한다.
+     *
+     * 클러스터링 단계가 24시간 윈도우(`ClusteringService.HOURS_RANGE`) 안의 기사만 받기 때문에,
+     * 그 윈도우를 벗어난 PENDING은 재판정해 FINANCIAL로 바뀌어도 노출되지 않는다.
+     * 따라서 cron 호출은 노출 가능한 시간 범위 안의 기사로 한정해 LLM 비용 누수를 막는다.
+     * (admin 직접 호출 path인 {@code rejudgeByIds}는 이 제한을 받지 않는다)
      */
     @Query("SELECT a FROM NewsArticle a " +
             "WHERE a.relevance = :relevance " +
             "AND a.content IS NOT NULL AND TRIM(a.content) <> '' " +
+            "AND a.createdAt > :since " +
             "ORDER BY a.id ASC")
     List<NewsArticle> findRejudgeTargets(
             @Param("relevance") NewsArticle.RelevanceStatus relevance,
+            @Param("since") OffsetDateTime since,
             Pageable pageable);
 
     List<NewsArticle> findByCrawlStatusInAndCrawlRetryCountLessThanOrderByCollectedAtDesc(
