@@ -47,7 +47,7 @@ class RelevanceRejudgeServiceTest {
 
     @BeforeEach
     void setUp() {
-        batchProperties = new NewsBatchProperties(500, 500, 500, 500, 50, TEST_REJUDGE_MAX_LIMIT);
+        batchProperties = new NewsBatchProperties(500, 500, 500, 500, 50, TEST_REJUDGE_MAX_LIMIT, 50);
         rejudgeService = new RelevanceRejudgeService(newsArticleRepository, openAiTaggingClient, persistenceService,
                 batchProperties);
     }
