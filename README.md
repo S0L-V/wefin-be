@@ -32,7 +32,7 @@ AI 금융 뉴스 브리핑 및 모의 투자 서비스 백엔드 시스템
 | Cache        | Caffeine (in-memory)                                                  |
 | AI           | OpenAI API (text-embedding-3-small, gpt-4o-mini)                      |
 | Auth         | JWT (jjwt 0.11.5)                                                     |
-| External API | 한국투자증권(KIS) Open API, Yahoo Finance, 한국은행                   |
+| External API | 한국투자증권(KIS) Open API, Yahoo Finance, 한국은행, Dart                   |
 | Build / Test | Gradle, JUnit 5, Testcontainers, Jacoco                               |
 | Infra        | Docker, Docker Compose, Nginx, AWS EC2                                |
 
