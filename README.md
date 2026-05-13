@@ -66,7 +66,7 @@ domain/
 
 ## Architecture
 
-
+<img width="1872" height="1330" alt="Image" src="https://github.com/user-attachments/assets/5e913639-82f2-4868-94a6-a8c2424af376" />
 <img width="1850" height="1308" alt="architecture" src="https://github.com/user-attachments/assets/e1d6dae9-f2f3-4fca-a32b-c8d9139a284b" />
 <img width="6452" height="3900" alt="news_architecture" src="https://github.com/user-attachments/assets/658e76bb-80d9-4451-9c3d-c3d64b5d5b39" />
 
