@@ -55,6 +55,7 @@ jobs:
       - name: Check compose file exists
         run: ls -al ${{ env.COMPOSE_FILE }}
       - name: Debug SSH connectivity
+        if: github.ref_name == 'main'
         run: |
           if [ "$DEPLOY_HOST" = "15.164.59.28" ]; then
             echo "DEPLOY_HOST matches expected IP"
