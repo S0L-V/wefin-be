@@ -24,7 +24,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AdminAuthorizationFilter extends OncePerRequestFilter {
 
-    private static final String ADMIN_PATH_PREFIX = "/api/admin";
+    private static final String ADMIN_ACCOUNTS_PATH_PREFIX = "/api/admin/accounts";
 
     private final ObjectProvider<AdminAuthorizationService> adminAuthorizationServiceProvider;
     private final ObjectMapper objectMapper;
@@ -65,7 +65,8 @@ public class AdminAuthorizationFilter extends OncePerRequestFilter {
 
     private boolean isAdminPath(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.equals(ADMIN_PATH_PREFIX) || path.startsWith(ADMIN_PATH_PREFIX + "/");
+        return path.equals(ADMIN_ACCOUNTS_PATH_PREFIX)
+                || path.startsWith(ADMIN_ACCOUNTS_PATH_PREFIX + "/");
     }
 
     private void writeError(HttpServletResponse response, ErrorCode errorCode) throws IOException {

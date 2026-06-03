@@ -50,7 +50,7 @@ class AdminAuthorizationFilterTest {
     }
 
     @Test
-    @DisplayName("admin 경로가 아니면 권한 검사를 건너뛴다")
+    @DisplayName("admin accounts 경로가 아니면 권한 검사를 건너뛴다")
     void doFilterInternal_skips_non_admin_path() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/news");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -63,7 +63,20 @@ class AdminAuthorizationFilterTest {
     }
 
     @Test
-    @DisplayName("admin 경로에서 인증 정보가 없으면 401을 반환한다")
+    @DisplayName("admin batch 경로는 권한 검사를 건너뛴다")
+    void doFilterInternal_skips_admin_batch_path() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/admin/batch/news");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain filterChain = new MockFilterChain();
+
+        filter.doFilter(request, response, filterChain);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        verify(adminAuthorizationService, never()).requireAdmin(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    @DisplayName("admin accounts 경로에서 인증 정보가 없으면 401을 반환한다")
     void doFilterInternal_returns_unauthorized_when_anonymous() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/admin/accounts");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -75,7 +88,7 @@ class AdminAuthorizationFilterTest {
     }
 
     @Test
-    @DisplayName("admin 경로에서 일반 유저면 403을 반환한다")
+    @DisplayName("admin accounts 경로에서 일반 유저면 403을 반환한다")
     void doFilterInternal_returns_forbidden_when_not_admin() throws Exception {
         UUID userId = UUID.randomUUID();
         setAuthentication(userId);
@@ -94,7 +107,7 @@ class AdminAuthorizationFilterTest {
     }
 
     @Test
-    @DisplayName("admin 경로에서 비활성 유저면 401을 반환한다")
+    @DisplayName("admin accounts 경로에서 비활성 유저면 401을 반환한다")
     void doFilterInternal_returns_unauthorized_when_user_not_active() throws Exception {
         UUID userId = UUID.randomUUID();
         setAuthentication(userId);
@@ -113,7 +126,7 @@ class AdminAuthorizationFilterTest {
     }
 
     @Test
-    @DisplayName("admin 경로에서 ADMIN 유저면 요청을 통과시킨다")
+    @DisplayName("admin accounts 경로에서 ADMIN 유저면 요청을 통과시킨다")
     void doFilterInternal_allows_admin() throws Exception {
         UUID userId = UUID.randomUUID();
         setAuthentication(userId);
