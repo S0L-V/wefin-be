@@ -38,7 +38,8 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/chat/global/messages").permitAll()
                         .requestMatchers("/api/news/recommended/**").authenticated()
-                        .requestMatchers("/api/admin", "/api/admin/**").authenticated()
+                        .requestMatchers("/api/admin/accounts", "/api/admin/accounts/**").authenticated()
+                        .requestMatchers("/api/admin", "/api/admin/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/news/**", "/api/market/**",
                             "/api/market-trends/overview",
                             "/api/stocks/**", "/api/ranking/**").permitAll()
